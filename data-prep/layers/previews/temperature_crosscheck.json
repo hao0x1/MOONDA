@@ -1,0 +1,90 @@
+{
+  "temp-max": {
+    "file": "polar_south_24x6_Tmax.grd",
+    "orientation": "as-read",
+    "r": 0.894,
+    "median_diff_K": 3.61,
+    "sites_ours_vs_SW": {
+      "Shackleton floor": [
+        81.8,
+        97.2
+      ],
+      "Connecting ridge": [
+        222.0,
+        217.4
+      ],
+      "Malapert summit": [
+        223.3,
+        226.3
+      ],
+      "Haworth floor": [
+        60.4,
+        63.2
+      ],
+      "Amundsen floor": [
+        212.1,
+        213.2
+      ],
+      "Faustini floor": [
+        65.5,
+        79.7
+      ],
+      "Shoemaker floor": [
+        63.5,
+        73.6
+      ],
+      "Cabeus floor": [
+        103.0,
+        121.9
+      ],
+      "de Gerlache floor": [
+        60.4,
+        61.7
+      ]
+    }
+  },
+  "temp-avg": {
+    "file": "polar_south_24x6_Tmean.grd",
+    "orientation": "as-read",
+    "r": 0.965,
+    "median_diff_K": 6.45,
+    "sites_ours_vs_SW": {
+      "Shackleton floor": [
+        50.0,
+        59.0
+      ],
+      "Connecting ridge": [
+        125.3,
+        150.3
+      ],
+      "Malapert summit": [
+        129.5,
+        126.3
+      ],
+      "Haworth floor": [
+        36.1,
+        37.4
+      ],
+      "Amundsen floor": [
+        86.0,
+        80.5
+      ],
+      "Faustini floor": [
+        44.1,
+        46.0
+      ],
+      "Shoemaker floor": [
+        41.9,
+        44.1
+      ],
+      "Cabeus floor": [
+        65.7,
+        69.2
+      ],
+      "de Gerlache floor": [
+        40.9,
+        45.9
+      ]
+    }
+  }
+}

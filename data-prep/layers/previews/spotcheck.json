@@ -1,0 +1,470 @@
+{
+  "sites": [
+    {
+      "site": "Shackleton floor",
+      "lat": -89.67,
+      "lon": 129.78,
+      "expect": "~0% sun, PSR, very cold",
+      "sunlight": {
+        "value": 0.0,
+        "min5x5": 0.0,
+        "max5x5": 0.0
+      },
+      "earth": {
+        "value": 0.0,
+        "min5x5": 0.0,
+        "max5x5": 0.0
+      },
+      "ice": {
+        "value": 1.0,
+        "min5x5": 1.0,
+        "max5x5": 1.0
+      },
+      "temp-max": {
+        "value": 81.81,
+        "min5x5": 77.36,
+        "max5x5": 91.49
+      },
+      "temp-avg": {
+        "value": 49.99,
+        "min5x5": 49.64,
+        "max5x5": 53.75
+      },
+      "slope": {
+        "value": 1.98,
+        "min5x5": 1.63,
+        "max5x5": 6.44
+      },
+      "height": {
+        "value": -2785.0,
+        "min5x5": -2793.5,
+        "max5x5": -2745.5
+      },
+      "source240m": {
+        "sun": 0.0,
+        "sunMax600m": 0.0,
+        "earth": 0.0,
+        "earthMax600m": 0.0
+      }
+    },
+    {
+      "site": "Connecting ridge",
+      "lat": -89.45,
+      "lon": 222.7,
+      "expect": "highly lit (~70-90%)",
+      "sunlight": {
+        "value": 79.93,
+        "min5x5": 31.88,
+        "max5x5": 79.93
+      },
+      "earth": {
+        "value": 56.84,
+        "min5x5": 9.25,
+        "max5x5": 58.15
+      },
+      "ice": {
+        "value": 0.0,
+        "min5x5": 0.0,
+        "max5x5": 1.0
+      },
+      "temp-max": {
+        "value": 221.95,
+        "min5x5": 202.53,
+        "max5x5": 271.74
+      },
+      "temp-avg": {
+        "value": 125.31,
+        "min5x5": 92.52,
+        "max5x5": 156.07
+      },
+      "slope": {
+        "value": 2.4,
+        "min5x5": 2.4,
+        "max5x5": 14.9
+      },
+      "height": {
+        "value": 1952.5,
+        "min5x5": 1824.5,
+        "max5x5": 1952.5
+      },
+      "source240m": {
+        "sun": 93.48,
+        "sunMax600m": 93.48,
+        "earth": 57.68,
+        "earthMax600m": 58.2
+      }
+    },
+    {
+      "site": "Malapert summit",
+      "lat": -86.0,
+      "lon": 2.9,
+      "expect": "Earth visible most of the time",
+      "sunlight": {
+        "value": 44.84,
+        "min5x5": 29.62,
+        "max5x5": 66.07
+      },
+      "earth": {
+        "value": 67.76,
+        "min5x5": 56.44,
+        "max5x5": 100.0
+      },
+      "ice": {
+        "value": 0.0,
+        "min5x5": 0.0,
+        "max5x5": 0.0
+      },
+      "temp-max": {
+        "value": 223.32,
+        "min5x5": 181.08,
+        "max5x5": 262.38
+      },
+      "temp-avg": {
+        "value": 129.52,
+        "min5x5": 99.74,
+        "max5x5": 154.5
+      },
+      "slope": {
+        "value": 5.77,
+        "min5x5": 2.42,
+        "max5x5": 9.27
+      },
+      "height": {
+        "value": 5126.5,
+        "min5x5": 5051.0,
+        "max5x5": 5140.0
+      },
+      "source240m": {
+        "sun": 38.48,
+        "sunMax600m": 73.76,
+        "earth": 66.97,
+        "earthMax600m": 100.0
+      }
+    },
+    {
+      "site": "Haworth floor",
+      "lat": -87.45,
+      "lon": -5.17,
+      "expect": "PSR, cold; up, slightly left",
+      "sunlight": {
+        "value": 0.0,
+        "min5x5": 0.0,
+        "max5x5": 0.0
+      },
+      "earth": {
+        "value": 5.68,
+        "min5x5": 0.41,
+        "max5x5": 11.98
+      },
+      "ice": {
+        "value": 1.0,
+        "min5x5": 1.0,
+        "max5x5": 1.0
+      },
+      "temp-max": {
+        "value": 60.43,
+        "min5x5": 52.63,
+        "max5x5": 67.4
+      },
+      "temp-avg": {
+        "value": 36.05,
+        "min5x5": 35.36,
+        "max5x5": 38.76
+      },
+      "slope": {
+        "value": 5.27,
+        "min5x5": 2.26,
+        "max5x5": 6.06
+      },
+      "height": {
+        "value": -3305.5,
+        "min5x5": -3350.5,
+        "max5x5": -3253.5
+      },
+      "source240m": {
+        "sun": 0.0,
+        "sunMax600m": 0.0,
+        "earth": 7.67,
+        "earthMax600m": 13.39
+      }
+    },
+    {
+      "site": "Amundsen floor",
+      "lat": -84.44,
+      "lon": 83.07,
+      "expect": "right of pole",
+      "sunlight": {
+        "value": 15.63,
+        "min5x5": 13.59,
+        "max5x5": 17.72
+      },
+      "earth": {
+        "value": 15.67,
+        "min5x5": 0.26,
+        "max5x5": 31.97
+      },
+      "ice": {
+        "value": 0.0,
+        "min5x5": 0.0,
+        "max5x5": 0.0
+      },
+      "temp-max": {
+        "value": 212.08,
+        "min5x5": 194.14,
+        "max5x5": 244.24
+      },
+      "temp-avg": {
+        "value": 85.96,
+        "min5x5": 82.98,
+        "max5x5": 88.2
+      },
+      "slope": {
+        "value": 3.45,
+        "min5x5": 0.97,
+        "max5x5": 8.5
+      },
+      "height": {
+        "value": -3563.5,
+        "min5x5": -3581.5,
+        "max5x5": -3487.5
+      },
+      "source240m": {
+        "sun": 15.61,
+        "sunMax600m": 18.17,
+        "earth": 24.69,
+        "earthMax600m": 32.36
+      }
+    },
+    {
+      "site": "Faustini floor",
+      "lat": -87.18,
+      "lon": 84.31,
+      "expect": "PSR, cold",
+      "sunlight": {
+        "value": 0.0,
+        "min5x5": 0.0,
+        "max5x5": 0.0
+      },
+      "earth": {
+        "value": 1.76,
+        "min5x5": 0.21,
+        "max5x5": 9.3
+      },
+      "ice": {
+        "value": 1.0,
+        "min5x5": 1.0,
+        "max5x5": 1.0
+      },
+      "temp-max": {
+        "value": 65.48,
+        "min5x5": 59.26,
+        "max5x5": 68.0
+      },
+      "temp-avg": {
+        "value": 44.07,
+        "min5x5": 41.55,
+        "max5x5": 46.02
+      },
+      "slope": {
+        "value": 6.52,
+        "min5x5": 2.01,
+        "max5x5": 15.52
+      },
+      "height": {
+        "value": -2760.0,
+        "min5x5": -2822.5,
+        "max5x5": -2705.5
+      },
+      "source240m": {
+        "sun": 0.0,
+        "sunMax600m": 0.0,
+        "earth": 1.43,
+        "earthMax600m": 9.98
+      }
+    },
+    {
+      "site": "Shoemaker floor",
+      "lat": -88.14,
+      "lon": 45.91,
+      "expect": "PSR, cold",
+      "sunlight": {
+        "value": 0.0,
+        "min5x5": 0.0,
+        "max5x5": 0.0
+      },
+      "earth": {
+        "value": 25.67,
+        "min5x5": 23.57,
+        "max5x5": 27.06
+      },
+      "ice": {
+        "value": 1.0,
+        "min5x5": 1.0,
+        "max5x5": 1.0
+      },
+      "temp-max": {
+        "value": 63.48,
+        "min5x5": 61.85,
+        "max5x5": 68.34
+      },
+      "temp-avg": {
+        "value": 41.87,
+        "min5x5": 41.33,
+        "max5x5": 44.32
+      },
+      "slope": {
+        "value": 1.9,
+        "min5x5": 1.4,
+        "max5x5": 6.92
+      },
+      "height": {
+        "value": -3938.0,
+        "min5x5": -3946.0,
+        "max5x5": -3916.5
+      },
+      "source240m": {
+        "sun": 0.0,
+        "sunMax600m": 0.0,
+        "earth": 25.89,
+        "earthMax600m": 27.79
+      }
+    },
+    {
+      "site": "Cabeus floor",
+      "lat": -85.33,
+      "lon": -42.13,
+      "expect": "partly PSR (LCROSS impact crater)",
+      "sunlight": {
+        "value": 0.0,
+        "min5x5": 0.0,
+        "max5x5": 0.0
+      },
+      "earth": {
+        "value": 0.61,
+        "min5x5": 0.0,
+        "max5x5": 21.09
+      },
+      "ice": {
+        "value": 1.0,
+        "min5x5": 1.0,
+        "max5x5": 1.0
+      },
+      "temp-max": {
+        "value": 103.03,
+        "min5x5": 89.55,
+        "max5x5": 105.56
+      },
+      "temp-avg": {
+        "value": 65.74,
+        "min5x5": 57.38,
+        "max5x5": 65.76
+      },
+      "slope": {
+        "value": 19.89,
+        "min5x5": 16.65,
+        "max5x5": 22.57
+      },
+      "height": {
+        "value": -3706.0,
+        "min5x5": -3936.5,
+        "max5x5": -3413.5
+      },
+      "source240m": {
+        "sun": 0.0,
+        "sunMax600m": 0.0,
+        "earth": 0.0,
+        "earthMax600m": 22.96
+      }
+    },
+    {
+      "site": "de Gerlache floor",
+      "lat": -88.48,
+      "lon": -88.34,
+      "expect": "PSR",
+      "sunlight": {
+        "value": 0.0,
+        "min5x5": 0.0,
+        "max5x5": 0.04
+      },
+      "earth": {
+        "value": 0.0,
+        "min5x5": 0.0,
+        "max5x5": 0.0
+      },
+      "ice": {
+        "value": 1.0,
+        "min5x5": 0.0,
+        "max5x5": 1.0
+      },
+      "temp-max": {
+        "value": 60.4,
+        "min5x5": 57.5,
+        "max5x5": 65.76
+      },
+      "temp-avg": {
+        "value": 40.94,
+        "min5x5": 37.8,
+        "max5x5": 41.6
+      },
+      "slope": {
+        "value": 18.36,
+        "min5x5": 7.69,
+        "max5x5": 20.69
+      },
+      "height": {
+        "value": -1249.0,
+        "min5x5": -1553.5,
+        "max5x5": -1040.5
+      },
+      "source240m": {
+        "sun": 0.0,
+        "sunMax600m": 0.2,
+        "earth": 0.0,
+        "earthMax600m": 0.0
+      }
+    }
+  ],
+  "orientation": {
+    "ice": {
+      "as-is": 0.798,
+      "mirror-x": 0.199,
+      "mirror-y": 0.18,
+      "rot180": 0.19
+    },
+    "temp-max": {
+      "as-is": 93.666,
+      "mirror-x": 204.146,
+      "mirror-y": 202.811,
+      "rot180": 208.924
+    },
+    "height": {
+      "as-is": -2959.101,
+      "mirror-x": -519.505,
+      "mirror-y": -1064.338,
+      "rot180": -1507.987
+    },
+    "sunlight": {
+      "as-is": 1.35,
+      "mirror-x": 18.723,
+      "mirror-y": 19.855,
+      "rot180": 23.235
+    }
+  },
+  "files": {
+    "sunlight.png": 4405883,
+    "sunlight.bin": 8388608,
+    "earth.png": 4100119,
+    "earth.bin": 8388608,
+    "ice.png": 92376,
+    "ice.bin": 8388608,
+    "temp-max.png": 6478771,
+    "temp-max.bin": 8388608,
+    "temp-avg.png": 6372823,
+    "temp-avg.bin": 8388608,
+    "slope.png": 8826508,
+    "slope.bin": 8388608,
+    "height.png": 6756286,
+    "height.bin": 8388608,
+    "manifest.json": 13756
+  }
+}
