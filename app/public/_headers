@@ -1,0 +1,32 @@
+# Browser caching on Netlify, so a second visit starts from the disk instead of the network.
+#
+# /assets/* (the app's code, file names change with every build) and /cesium/* (the map engine, pinned
+# version): kept for a year and never re-checked.
+# Pictures, height maps, sky, lander, sounds: kept and used without asking for 7 days; after that the
+# browser keeps using its copy while it quietly checks for a newer one (stale-while-revalidate), so a
+# redeploy that replaces one of these files (same name, new content) still reaches people.
+# The page itself is always re-checked, so a new deploy is picked up at once.
+# The AI helper (/api/ai, a Netlify Function) is not a static file: these rules do not touch it.
+
+/
+  Cache-Control: no-cache
+/index.html
+  Cache-Control: no-cache
+
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+/cesium/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/data/*
+  Cache-Control: public, max-age=604800, stale-while-revalidate=31536000
+/space/*
+  Cache-Control: public, max-age=604800, stale-while-revalidate=31536000
+/lander/*
+  Cache-Control: public, max-age=604800, stale-while-revalidate=31536000
+/intro/*
+  Cache-Control: public, max-age=604800, stale-while-revalidate=31536000
+/ui/*
+  Cache-Control: public, max-age=604800, stale-while-revalidate=31536000
+/audio/*
+  Cache-Control: public, max-age=604800, stale-while-revalidate=31536000
