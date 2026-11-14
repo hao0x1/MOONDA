@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <!-- MOONDA logo (MOONDA/brand/logo/final): the skyline M. The SVG follows the browser's light/dark theme. -->
+    <link rel="icon" type="image/png" sizes="32x32" href="./favicon-32.png" />
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+    <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#05060a" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="description" content="MOONDA — explore the Moon like a map and check any south-pole landing spot for sunlight and Earth view." />
+    <title>MOONDA · Moon landing site explorer</title>
+    <style>
+      /* Shown for the moment before the app's own code has arrived: the same top part as the start screen
+         (src/ui/start.css), at the same place, so nothing jumps or flashes when it takes over. */
+      html, body { margin: 0; height: 100%; background: #05060a; }
+      /* The space video behind the start screen. It is in the page itself so it is the first thing the
+         browser downloads; the app waits for it (src/main.tsx) before loading the Moon data. Blur and
+         dimming are baked into the file; the shade on top keeps the text readable. */
+      .intro-bg { position: fixed; inset: 0; z-index: 99; pointer-events: none; background: #05060a; transition: opacity 480ms ease-out; }
+      .intro-bg video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+      .intro-bg::after { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse 60% 75% at 50% 48%, rgba(5, 6, 10, .46) 0%, rgba(5, 6, 10, .2) 60%, rgba(5, 6, 10, .06) 100%); }
+      .intro-bg.gone { opacity: 0; }
+      .boot { position: fixed; inset: 0; z-index: 100; box-sizing: border-box; padding-top: max(24px, calc(50vh - 370px * var(--sz, 1))); display: flex; justify-content: center; align-items: flex-start; background: transparent; color: #eeeff1; font-family: 'Google Sans Flex Variable', system-ui, -apple-system, sans-serif; }
+      .boot-col { display: flex; flex-direction: column; align-items: center; zoom: var(--sz, 1); }
+      /* the logo, drawn exactly like the Wordmark in src/ui/kit.tsx + .wordmark in src/styles.css */
+      .boot-name { display: inline-flex; align-items: baseline; font-size: 50px; font-weight: 720; letter-spacing: .16em; line-height: 1; white-space: nowrap; }
+      .boot-name svg { display: block; flex: none; align-self: baseline; width: auto; height: .93em; height: 1.3cap; aspect-ratio: 100 / 101; margin-right: .19em; }
+      .boot-name span { margin-right: -.16em; }
+      .boot-tag { margin: 16px 0 0; color: #b3b5bc; font-size: 14px; }
+    </style>
+    <script>
+      // The start screen is drawn at a size that fits the window height: full size from 960 px tall, smaller below.
+      (function () { function fit() { document.documentElement.style.setProperty('--sz', String(Math.max(0.7, Math.min(1, innerHeight / 960)))); } fit(); addEventListener('resize', fit); })();
+      // CesiumJS loads its workers and assets from here (works locally and on any static host).
+      window.CESIUM_BASE_URL = new URL('cesium/', document.baseURI).href;
+    </script>
+  </head>
+  <body>
+    <div class="intro-bg" id="intro-bg" aria-hidden="true">
+      <video id="intro-video" src="./intro/space.mp4" poster="./intro/space.jpg" autoplay muted loop playsinline preload="auto"></video>
+    </div>
+    <div id="root">
+      <div class="boot" role="status" aria-label="Loading MOONDA">
+        <div class="boot-col">
+          <div class="boot-name" role="img" aria-label="MOONDA"><svg viewBox="0 -1 100 101" aria-hidden="true"><circle cx="53.8" cy="27" r="11.5" fill="#f1c56b" /><path fill="#eeeff1" d="M0 100 L0 56.4 C0.4 55.4 1.6 52.3 2.3 50.3 C3.1 48.3 3.9 46.3 4.7 44.3 C5.5 42.4 6.2 40.4 7 38.6 C7.8 36.8 8.6 35.1 9.4 33.5 C10.1 31.8 10.9 30.3 11.7 28.9 C12.5 27.4 13.3 26.1 14 24.8 C14.8 23.6 15.6 22.4 16.4 21.2 C17.2 20.1 17.9 19 18.7 18 C19.5 17 20.3 16.1 21.1 15.2 C21.8 14.4 22.6 13.7 23.4 13.2 C24.2 12.6 25 12.2 25.7 11.9 C26.5 11.6 27.3 11.5 28.1 11.5 C28.9 11.5 29.6 11.6 30.4 11.8 C31.2 12.1 32 12.4 32.8 12.8 C33.5 13.2 34.3 13.6 35.1 14.1 C35.9 14.6 36.7 15.1 37.4 15.6 C38.2 16.1 39 16.7 39.8 17.2 C40.6 17.8 41.3 18.4 42.1 19 C42.9 19.7 43.7 20.4 44.4 21.2 C45.2 22 46 23 46.8 24 C47.6 25.1 48.3 26.3 49.1 27.5 C49.9 28.7 50.7 30.2 51.5 31.2 C52.2 32.2 53 33.3 53.8 33.6 C54.6 33.8 55.4 33.5 56.1 32.6 C56.9 31.7 57.7 29.9 58.5 28.1 C59.3 26.2 60 23.8 60.8 21.5 C61.6 19.3 62.4 16.7 63.2 14.6 C63.9 12.5 64.7 10.5 65.5 8.8 C66.3 7.1 67.1 5.6 67.8 4.3 C68.6 3.1 69.4 2.1 70.2 1.3 C71 0.6 71.7 0.1 72.5 0 C73.3 -0.1 74.1 0.1 74.9 0.6 C75.6 1.1 76.4 2.1 77.2 3 C78 3.9 78.8 5 79.5 6 C80.3 6.9 81.1 7.7 81.9 8.4 C82.7 9.2 83.4 9.8 84.2 10.7 C85 11.5 85.8 12.4 86.6 13.6 C87.3 14.8 88.1 16.1 88.9 17.8 C89.7 19.5 90.5 21.5 91.2 23.7 C92 25.9 92.8 28.3 93.6 31 C94.4 33.6 95.1 36.5 95.9 39.5 C96.7 42.6 97.6 46.3 98.3 49.3 C98.9 52.2 99.7 55.8 100 57.1 L100 100 L80 100 L80 35.4 L53.8 62 L20 30.5 L20 100 Z" /></svg><span aria-hidden="true">OONDA</span></div>
+          <div class="boot-tag">Explore the Moon. Find a place to land.</div>
+        </div>
+      </div>
+    </div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
