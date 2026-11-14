@@ -1,0 +1,106 @@
+@font-face { font-family: "GSF"; src: url(assets/fonts/gsf.woff2) format("woff2"); font-weight: 1 1000; font-stretch: 25% 151%; font-display: block; }
+@font-face { font-family: "GMono"; src: url(assets/fonts/geist-mono.woff2) format("woff2"); font-weight: 100 900; font-display: block; }
+@font-face { font-family: "Khmer"; src: url(assets/fonts/kantumruy.woff2) format("woff2"); font-weight: 100 700; font-display: block; }
+
+:root {
+  --ink: #f4f3ef;
+  --ink2: #b9bcc2;
+  --ink3: #7c8088;
+  --line: rgba(255,255,255,.12);
+  --sun: #ffb340;
+  --sun2: #ffd27a;
+  --earth: #7fb2ff;
+  --bad: #ff5a4e;
+  --ok: #8be3a8;
+  --paper: #efeee9;
+  --bgc: #040507;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 1920px; height: 1080px; overflow: hidden; background: #000; }
+body { font-family: "GSF", system-ui, sans-serif; color: var(--ink); -webkit-font-smoothing: antialiased; font-optical-sizing: auto; }
+
+#stage { position: relative; width: 1920px; height: 1080px; overflow: hidden; background: var(--bgc); }
+#bg, #gl, #fg { position: absolute; inset: 0; width: 1920px; height: 1080px; }
+#cam { position: absolute; inset: 0; transform-origin: 50% 50%; }
+#scenes { position: absolute; inset: 0; }
+#flash { position: absolute; inset: 0; background: #fff; opacity: 0; pointer-events: none; mix-blend-mode: screen; }
+#vignette { position: absolute; inset: 0; pointer-events: none; background: radial-gradient(120% 95% at 50% 50%, transparent 55%, rgba(0,0,0,.55) 100%); }
+#grain { position: absolute; inset: -64px; pointer-events: none; opacity: .055; mix-blend-mode: overlay; background-size: 256px 256px; }
+#letterbox i { position: absolute; left: 0; right: 0; height: 0; background: #000; }
+#letterbox i:first-child { top: 0; } #letterbox i:last-child { bottom: 0; }
+
+.scene { position: absolute; inset: 0; visibility: hidden; }
+.abs { position: absolute; }
+.center { position: absolute; left: 0; right: 0; text-align: center; }
+
+/* type */
+.h-xl { font-size: 250px; font-weight: 260; letter-spacing: -0.045em; line-height: .9; font-variation-settings: "opsz" 144; }
+.h-l { font-size: 92px; font-weight: 420; letter-spacing: -0.035em; line-height: 1.02; }
+.h-m { font-size: 66px; font-weight: 450; letter-spacing: -0.03em; line-height: 1.08; }
+.h-s { font-size: 46px; font-weight: 520; letter-spacing: -0.02em; line-height: 1.12; }
+.t-l { font-size: 30px; font-weight: 400; color: var(--ink2); line-height: 1.35; letter-spacing: -0.005em; }
+.t-m { font-size: 24px; font-weight: 400; color: var(--ink2); line-height: 1.4; }
+.mono { font-family: "GMono", monospace; font-size: 15px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink3); }
+.sun { color: var(--sun); } .earth { color: var(--earth); } .bad { color: var(--bad); } .ok { color: var(--ok); }
+.dim { color: var(--ink3); }
+.kh { font-family: "Khmer", "GSF"; }
+
+/* split text helpers */
+.split-line { overflow: visible; }
+.char, .word { display: inline-block; will-change: transform, filter, opacity; }
+
+/* app window (footage) */
+.win { position: absolute; border-radius: 18px; overflow: hidden; background: #000;
+  box-shadow: 0 0 0 1px rgba(255,255,255,.10), 0 40px 120px rgba(0,0,0,.65), 0 10px 30px rgba(0,0,0,.5); transform-style: preserve-3d; }
+.win video, .win .vwrap { position: absolute; inset: 0; width: 100%; height: 100%; }
+.win video { object-fit: cover; }
+.vwrap { overflow: hidden; }
+.vwrap > video { transform-origin: 50% 50%; }
+.win .glass { position: absolute; inset: 0; border-radius: 18px; pointer-events: none;
+  background: linear-gradient(160deg, rgba(255,255,255,.07), transparent 30%); }
+.persp { position: absolute; inset: 0; perspective: 2200px; perspective-origin: 50% 40%; }
+
+/* caption block beside footage */
+.cap { position: absolute; width: 520px; }
+.cap .k { margin-bottom: 22px; }
+.cap .h-s { margin-bottom: 18px; }
+.cap .t-m + .mono { margin-top: 26px; }
+
+/* chips */
+.chip { display: inline-flex; align-items: center; gap: 10px; padding: 12px 18px; border-radius: 999px; background: rgba(255,255,255,.06);
+  font-size: 20px; color: var(--ink2); white-space: nowrap; backdrop-filter: blur(6px); }
+.chip b { font-weight: 600; color: var(--ink); }
+
+/* number blocks */
+.num { font-size: 132px; font-weight: 330; letter-spacing: -0.05em; line-height: 1; font-variant-numeric: tabular-nums; }
+.num small { font-size: .42em; letter-spacing: -0.02em; color: var(--ink2); margin-left: 6px; }
+
+/* light (paper) scene */
+.paper { background: var(--paper); color: #111; }
+.paper .t-l { color: #4a4b4f; }
+.paper .mono { color: #77787c; }
+
+/* team */
+.member { position: absolute; width: 400px; }
+.member .nm { font-size: 40px; font-weight: 500; letter-spacing: -0.02em; }
+.member .rl { font-size: 22px; color: var(--ink2); margin-top: 6px; }
+.member .ix { font-family: "GMono"; font-size: 15px; color: var(--ink3); letter-spacing: .08em; margin-bottom: 14px; }
+
+/* diagram */
+svg text { font-family: "GSF"; }
+.lbl { font-family: "GMono", monospace; font-size: 14px; letter-spacing: .08em; text-transform: uppercase; fill: var(--ink3); }
+
+/* layers stack */
+.layer3d { position: absolute; width: 760px; height: 760px; left: 50%; top: 50%; margin: -380px 0 0 -380px; border-radius: 6px;
+  background-size: cover; box-shadow: 0 0 0 1px rgba(255,255,255,.18), 0 30px 80px rgba(0,0,0,.6); }
+.stack { position: absolute; left: 1010px; top: 600px; width: 0; height: 0; transform-style: preserve-3d; }
+.stack-wrap { position: absolute; inset: 0; perspective: 2600px; perspective-origin: 1010px 420px; }
+.ltag { position: absolute; white-space: nowrap; }
+.ltag .mono { color: var(--ink2); }
+.ltag .t-m { font-size: 22px; color: var(--ink); margin-top: 4px; }
+.ltag::before { content: ""; position: absolute; left: -150px; top: 11px; width: 130px; height: 1px; background: rgba(255,255,255,.35); }
+
+/* checks */
+.row { display: grid; grid-template-columns: 520px 260px 360px 80px; align-items: baseline; padding: 22px 0; border-bottom: 1px solid var(--line); font-size: 30px; }
+.row .mono { font-size: 16px; }
+.row .tick { color: var(--ok); font-size: 30px; text-align: right; }
