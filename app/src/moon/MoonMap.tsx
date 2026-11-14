@@ -1,0 +1,619 @@
+// The 3D Moon. CesiumJS streams small map tiles for whatever is on screen, so zooming stays
+// smooth and detail keeps sharpening as you get closer (the same idea as Google Earth).
+// Mountains are real 3D shapes from NASA's LOLA heights, lit by the Sun at the chosen time.
+//
+// The Moon is rotated inside Cesium so the south pole is on Cesium's equator (see frame.ts).
+// Always convert with frame.ts: never feed true lat/lon straight into Cesium.
+
+import './ellipsoid';
+import {
+  Cartesian2, Cartesian3, Color, DirectionalLight, EllipsoidTerrainProvider, Globe, ImageryLayer,
+  ScreenSpaceEventType, VerticalOrigin, Viewer, type Entity,
+} from 'cesium';
+import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
+import type { MoonName } from '../data/names';
+import { PLACES, type Place } from '../data/places';
+import type { Vec3 } from '../science/ephemeris';
+import { shareHeights } from '../science/client';
+import { MoonHeights } from '../science/heights';
+import { cameraStore } from '../ui/stores';
+import { MOON_ELLIPSOID } from './ellipsoid';
+import { toCartesian, toTrueLatLon, trueToDisplayVec } from './frame';
+import { createBaseMosaicProvider, createMoonTrekProvider, createPolarPyramidProvider, createPolarRasterProvider, createSeamFixProvider, imageryPending, imageryReloaded } from './imagery';
+import { NameLabels } from './labels';
+import { LanderView, type LanderSpec, type SkyState } from './lander';
+import { POLAR_EXTENT_M, type LayerDef } from './layers';
+import { LolaTerrainProvider } from './lolaTerrain';
+import { attachNavigation, cameraHeadingPitch, poseGlobe, poseLookingAt, type Navigation } from './navigation';
+import { runPreload, type LoadProgress } from './preload';
+import { applyQuality, initQuality, knobs } from '../app/quality';
+import { settings } from '../app/settings';
+import { t } from '../i18n';
+import { SpaceSky } from './sky';
+import { SkyMarkers } from './skyMarkers';
+import { FlatMap } from './flatMap';
+import { MapModes, type MapMode } from './mapMode';
+import { createDataDetailLayer } from './dataDetail';
+
+export type MapSelection =
+  | { type: 'name'; name: MoonName }
+  | { type: 'place'; place: Place }
+  | { type: 'pin'; lat: number; lon: number };
+
+export interface MapPin { id: string; lat: number; lon: number; letter: string; color: string }
+
+export interface MoonMapHandle {
+  flyTo(lat: number, lon: number, heightKm?: number, tilted?: boolean): void;
+  flyWhole(): void;
+  flyPole(): void;
+  zoomBy(logFactor: number): void;
+  resetNorth(): void;
+  setTilt(pitchDeg: number): void;
+  look(azDeg: number, elDeg: number): void;
+  /** Globe <-> flat map (with the choreographed move). */
+  setMapMode(mode: MapMode): void;
+}
+export type { MapMode };
+
+interface Props {
+  layers: Record<string, boolean>;
+  opacity: Record<string, number>;
+  scienceLayers: LayerDef[];
+  names: MoonName[] | null;
+  selectedPin: { lat: number; lon: number } | null;
+  pins: MapPin[];
+  /** Sun and Earth positions (TRUE frame, metres from the Moon's centre) at the time on the time bar. */
+  bodies: { sun: Vec3; earth: Vec3 };
+  lander: (LanderSpec & { faceAz: number }) | null;
+  sky: SkyState | null;
+  onSelect(sel: MapSelection): void;
+  onHover(pos: { lat: number; lon: number } | null): void;
+  /** The time on the time bar (ms since 1970, UTC): drives the sky. */
+  timeMs?: number;
+  /** Start-up loading progress for the loading screen; `done` arrives exactly once per page load. */
+  onLoadProgress?(p: LoadProgress): void;
+  /** The globe / flat map mode changed (also when the app goes back to the globe by itself, e.g. Stand here). */
+  onMapMode?(mode: MapMode): void;
+}
+export type { LoadProgress };
+
+const svgUrl = (svg: string) => 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+// Map markers are our own small drawings (one family), at about 2x their screen size for sharpness.
+// The pin: a slim teardrop whose tip is at (40, 75) of 80, exactly where the old pin's tip was, so
+// the anchor and the hit area are unchanged. A soft shadow under the tip and a hairline dark edge
+// keep it readable on bright and on dark ground.
+const PIN_BODY = 'M40 75C38 70 25.2 46.9 21.4 39.8A21 21 0 1 1 58.6 39.8C54.8 46.9 42 70 40 75Z';
+const PIN_SVG = (ring: string, label = '') => svgUrl(
+  '<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 80 80">'
+  + '<defs><filter id="b" x="-1" y="-1" width="3" height="3"><feGaussianBlur stdDeviation="1.6"/></filter></defs>'
+  + '<ellipse cx="40" cy="75.5" rx="7.5" ry="2.6" fill="#000" fill-opacity="0.45" filter="url(#b)"/>'
+  + (label
+    ? `<path d="${PIN_BODY}" fill="#f2f3f5" stroke="#0b0d10" stroke-opacity="0.6" stroke-width="1.6"/>`
+      + `<circle cx="40" cy="30" r="15" fill="none" stroke="${ring}" stroke-width="3.5"/>`
+      + `<text x="40" y="37" font-family="'Google Sans Flex Variable', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="20" font-weight="600" fill="#15161a" text-anchor="middle">${label}</text>`
+    : `<path d="${PIN_BODY}" fill="#ff6b5a" stroke="#0b0d10" stroke-opacity="0.6" stroke-width="1.6"/><circle cx="40" cy="30" r="7.5" fill="#fff"/>`)
+  + '</svg>');
+/** A round marker for special places: dark glass disc, white symbol drawn in a 22-unit box, an optional thin coloured ring. */
+const BADGE_SVG = (symbol: string, ring: string) => svgUrl(
+  '<svg xmlns="http://www.w3.org/2000/svg" width="44" height="44" viewBox="0 0 22 22">'
+  + `<circle cx="11" cy="11" r="10" fill="#151619" fill-opacity="0.86" stroke="${ring}" stroke-width="1.1"/>`
+  + `<g fill="none" stroke="#fff" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">${symbol}</g></svg>`);
+const ICON: Record<Place['kind'], string> = {
+  // corner brackets around a dot: "a region picked as a landing target"
+  artemis: BADGE_SVG('<path d="M6.5 9V6.5H9M13 6.5h2.5V9M15.5 13v2.5H13M9 15.5H6.5V13"/><circle cx="11" cy="11" r="1.2" fill="#fff" stroke="none"/>', '#7fcfa8'),
+  spot: BADGE_SVG('<path d="M5.8 14.6 9.4 8.4l2.3 3.6 1.4-1.9 3.1 4.5Z" fill="#fff" stroke-width="1"/>', 'rgba(255,255,255,0.28)'),
+  // a small flag on a pole
+  mission: BADGE_SVG('<path d="M7.6 16.4V5.6"/><path d="M8.3 6.1h6.4l-1.7 2.3 1.7 2.3H8.3Z" fill="#fff" stroke-width="0.8"/>', 'rgba(255,255,255,0.28)'),
+};
+/** A short drop-in when a pin is placed on a new spot: it falls the last few pixels onto it. */
+let lastDrop = '';
+function dropIn(viewer: Viewer, e: Entity, spot: string) {
+  if (spot === lastDrop) return; // the same pin drawn again (e.g. a plan was added): no bounce
+  lastDrop = spot;
+  const t0 = performance.now();
+  const step = () => {
+    if (!e.billboard || viewer.isDestroyed()) return;
+    const k = Math.min(1, (performance.now() - t0) / 260), ease = 1 - (1 - k) ** 3;
+    e.billboard.pixelOffset = new Cartesian2(0, 2 - 12 * (1 - ease)) as never;
+    viewer.scene.requestRender();
+    if (k < 1) requestAnimationFrame(step);
+  };
+  step();
+}
+
+type Tag = { type: string; name?: MoonName; place?: Place } | undefined;
+const tagOf = (id: unknown): Tag => (id as { moonda?: Tag } | undefined)?.moonda;
+
+const WHOLE = { lat: -35, lon: 10, alt: 6_500_000 };
+
+export const MoonMap = forwardRef<MoonMapHandle, Props>(function MoonMap(props, ref) {
+  const host = useRef<HTMLDivElement>(null);
+  const viewerRef = useRef<Viewer | null>(null);
+  const imagery = useRef(new Map<string, ImageryLayer>());
+  const heightsRef = useRef<MoonHeights | null>(null);
+  const labelsRef = useRef<NameLabels | null>(null);
+  const navRef = useRef<Navigation | null>(null);
+  const landerRef = useRef<LanderView | null>(null);
+  const markersRef = useRef<SkyMarkers | null>(null);
+  const skyRef = useRef<SpaceSky | null>(null);
+  const selectedEntity = useRef<Entity | null>(null);
+  const pinEntities = useRef(new Map<string, Entity>());
+  const cb = useRef(props);
+  cb.current = props;
+  const namesLoaded = useRef<() => void>(() => {});
+  const skipPreload = useRef(false);
+  const flatRef = useRef<FlatMap | null>(null);
+  const modesRef = useRef<MapModes | null>(null);
+
+  useEffect(() => {
+    const heights = new MoonHeights(new URL('./data/', document.baseURI).href);
+    heightsRef.current = heights;
+    const viewer = new Viewer(host.current!, {
+      globe: new Globe(MOON_ELLIPSOID),
+      baseLayer: false, terrainProvider: new EllipsoidTerrainProvider({ ellipsoid: MOON_ELLIPSOID }),
+      animation: false, timeline: false, baseLayerPicker: false, geocoder: false, homeButton: false,
+      sceneModePicker: false, navigationHelpButton: false, fullscreenButton: false, infoBox: false,
+      selectionIndicator: false, skyAtmosphere: false, scene3DOnly: true,
+      requestRenderMode: true, maximumRenderTimeChange: Infinity,
+      useBrowserRecommendedResolution: false, msaaSamples: knobs(initQuality()).msaaSamples,
+      creditContainer: document.getElementById('cesium-credits') ?? undefined,
+    });
+    viewerRef.current = viewer;
+    // Small test/debug hook (used by scripts/drive.mjs): is the map finished loading what is on screen?
+    (window as unknown as { __viewer: Viewer }).__viewer = viewer;
+    // idle(): start-up loading is over and the map has nothing left to load for what is on screen
+    const debugHook: Record<string, unknown> = { viewer };
+    debugHook.idle = () => !viewer.isDestroyed() && (debugHook.progress as LoadProgress | undefined)?.done === true && scene.globe.tilesLoaded;
+    (window as unknown as { __moonda: unknown }).__moonda = debugHook;
+    if (import.meta.env.DEV) void import('cesium').then(m => { (window as unknown as { __moondaCesium: unknown }).__moondaCesium = m; }); // lets test scripts build rays in the page
+    const scene = viewer.scene;
+    scene.backgroundColor = Color.fromCssColorString('#04050a');
+    scene.fog.enabled = false;
+    if (scene.sun) scene.sun.show = false;
+    if (scene.moon) scene.moon.show = false;
+    const globe = scene.globe;
+    globe.baseColor = Color.fromCssColorString('#3a3c41');
+    globe.showGroundAtmosphere = false;
+    globe.dynamicAtmosphereLighting = false;
+    globe.lightingFadeOutDistance = 0;
+    globe.lightingFadeInDistance = 1;
+    // sharpness, drawing size, edge smoothing and tile caching come from the graphics mode (app/quality.ts),
+    // and follow it live when the person switches mode (also while the start screen is loading)
+    applyQuality(viewer);
+    const offQuality = settings.subscribe((s, prev) => { if (s.quality !== prev.quality) applyQuality(viewer, s.quality); });
+    globe.depthTestAgainstTerrain = true;
+    globe.vertexShadowDarkness = 0.2; // the night side stays dim but readable, like Google Earth at night
+    globe.lambertDiffuseMultiplier = 1.15;
+    // Redraw only when something changes, but keep drawing while tiles are still arriving.
+    scene.postRender.addEventListener(() => { if (!globe.tilesLoaded) scene.requestRender(); });
+    viewer.cesiumWidget.screenSpaceEventHandler.removeInputAction(ScreenSpaceEventType.LEFT_DOUBLE_CLICK);
+
+    heights.ready.then(() => { if (!viewer.isDestroyed() && cb.current.layers.terrain !== false) viewer.terrainProvider = new LolaTerrainProvider(heights) as never; });
+    heights.ready.then(() => shareHeights(heights)).catch(() => {}); // the background calculator reuses this download
+
+    // Photos and optional map layers (all re-projected into the rotated display frame).
+    const add = (id: string, layer: ImageryLayer) => { viewer.imageryLayers.add(layer); imagery.current.set(id, layer); };
+    // Bottom: a whole-Moon picture stored locally, so the Moon is never blank and works without internet.
+    add('base', new ImageryLayer(createBaseMosaicProvider({ url: './data/base/v5/', credit: 'NASA Moon Trek · LRO WAC, LOLA; NASA SVS CGI Moon Kit; LROC WAC polar summer mosaics · NASA/GSFC/ASU' }) as never));
+    add('photo', new ImageryLayer(createMoonTrekProvider({ layer: 'LRO_WAC_Mosaic_Global_303ppd_v02', ext: 'jpg', maxSourceLevel: 8, minTrueLat: -81.5, credit: 'NASA Moon Trek · LRO WAC', overBase: true }) as never));
+    // Where NASA's WAC mosaic is lit from the other side (true lon -180..-90): albedo x hillshade instead, so no seam shows.
+    add('photoFix', new ImageryLayer(createSeamFixProvider({ credit: 'NASA Moon Trek · LOLA / SLDEM2015 hillshade; NASA SVS CGI Moon Kit' }) as never));
+    add('photoPolar', new ImageryLayer(createPolarRasterProvider({ url: './data/base/southpole4096.jpg', extentM: POLAR_EXTENT_M, credit: 'LROC WAC/NAC · Lunaserv', maximumLevel: 8 }) as never));
+    // Sharp south-pole photos: read from the local store first (public/data/polar/t), the remote server only where nothing is stored.
+    // The layer names must match the stored set exactly.
+    add('polarPhoto', new ImageryLayer(createPolarPyramidProvider({ layers: 'luna_wac_roi_south_summer,luna_nac_pole_control_south', minK: 4, credit: 'LROC NAC south-pole mosaic · NASA/GSFC/ASU' }) as never, { show: false }));
+    add('height', new ImageryLayer(createMoonTrekProvider({ layer: 'LRO_LOLA_ClrShade_Global_256ppd_v06', ext: 'png', maxSourceLevel: 6, minTrueLat: -80.4, credit: 'NASA Moon Trek · LRO LOLA' }) as never, { show: false, alpha: 0.75 }));
+
+    // After a failed download is retried, draw once so the refilled tiles start loading.
+    const offReload = imageryReloaded.addEventListener(() => { if (!viewer.isDestroyed()) scene.requestRender(); });
+
+    // The real sky: Milky Way, stars, planets, a 3D Earth and the Sun, all in their true directions.
+    const sky = new SpaceSky(viewer, { heights });
+    skyRef.current = sky;
+    debugHook.sky = sky;
+    // The lander view only adds name tags for the Sun and Earth; the sky draws the bodies themselves.
+    // The lander view dims the stars and Milky Way when sunlit ground or the Sun is in view (as a camera would).
+    const lander = new LanderView(viewer, heights, { ownBodies: false, onSkyExposure: v => { sky.exposure = v; } });
+    landerRef.current = lander;
+    debugHook.lander = lander; debugHook.heights = heights;
+    // Clicking the Sun or Earth chip glides the camera to a view where that body shows above the Moon's edge.
+    markersRef.current = new SkyMarkers(viewer, { onPick: (_body, dir) => { if (!lander.active) void navRef.current?.showBody(dir); } });
+
+    const labels = new NameLabels(viewer);
+    labelsRef.current = labels;
+    if (import.meta.env.DEV) (window as unknown as { __labels: NameLabels }).__labels = labels;
+    heights.ready.then(() => {
+      if (viewer.isDestroyed()) return;
+      // Artemis regions, famous spots and past landings: icon + name, both placed by the label manager so nothing overlaps
+      labels.setPlaces(PLACES, heights, { artemis: { image: ICON.artemis, size: 22 }, spot: { image: ICON.spot, size: 22 }, mission: { image: ICON.mission, size: 20 } });
+      labels.update(); scene.requestRender();
+    });
+    // Names and icons keep clear of the pins and of the Sun/Earth spots.
+    const pinScratchR = new Cartesian3(), pinWinR = new Cartesian2();
+    labels.reserved = [
+      () => {
+        const out: { x0: number; y0: number; x1: number; y1: number }[] = [];
+        if (cb.current.lander) return out;
+        const list: { lat: number; lon: number }[] = [...cb.current.pins];
+        if (cb.current.selectedPin) list.push(cb.current.selectedPin);
+        const camPos = viewer.camera.positionWC;
+        for (const pin of list) {
+          const pos = toCartesian(pin.lat, pin.lon, heights.heightAt(pin.lat, pin.lon, false), pinScratchR);
+          const toCam = Cartesian3.subtract(camPos, pos, new Cartesian3());
+          if (Cartesian3.dot(toCam, pos) < -0.08 * Cartesian3.magnitude(toCam) * Cartesian3.magnitude(pos)) continue; // well round the far side
+          const w = scene.cartesianToCanvasCoordinates(pos, pinWinR);
+          if (w) out.push({ x0: w.x - 15, y0: w.y - 37, x1: w.x + 15, y1: w.y + 2 });
+        }
+        return out;
+      },
+      () => markersRef.current?.spotBoxes() ?? [],
+      // the page's own panels (info panel, Compare drawer, Layers box, map buttons): names are not put underneath them
+      () => {
+        const out: { x0: number; y0: number; x1: number; y1: number }[] = [];
+        const c = scene.canvas.getBoundingClientRect();
+        for (const el of document.querySelectorAll<HTMLElement>('.panel, .ibtn.glass')) {
+          const r = el.getBoundingClientRect();
+          if (r.width < 2 || r.height < 2) continue;
+          out.push({ x0: r.left - c.left - 6, y0: r.top - c.top - 4, x1: r.right - c.left + 6, y1: r.bottom - c.top + 4 });
+        }
+        return out;
+      },
+    ];
+    let lastLabel = 0, settle = 0;
+    const readBars = () => {
+      const st = getComputedStyle(document.documentElement);
+      const dock = parseFloat(st.getPropertyValue('--dock'));
+      if (Number.isFinite(dock) && dock > 0) labels.bottom = dock + 8;
+    };
+    // Pins are drawn on top of everything (never cut by a hill), so hide the ones round the far side by hand.
+    const pinFacing = () => {
+      const cam = viewer.camera.positionWC;
+      const ents = [...pinEntities.current.values()];
+      if (selectedEntity.current) ents.push(selectedEntity.current);
+      for (const e of ents) {
+        const p = e.position?.getValue(undefined as never) as Cartesian3 | undefined;
+        if (!p) continue;
+        const toCam = Cartesian3.subtract(cam, p, new Cartesian3());
+        const show = Cartesian3.dot(toCam, p) > 0.01 * Cartesian3.magnitude(toCam) * Cartesian3.magnitude(p);
+        if (e.show !== show) e.show = show;
+      }
+    };
+    debugHook.pinFacing = pinFacing;
+    const relabel = () => { readBars(); pinFacing(); labels.update(); scene.requestRender(); };
+    const report = () => {
+      const hp = cameraHeadingPitch(viewer);
+      cameraStore.set({ km: hp.km, heading: lander.active ? lander.headingDeg() : hp.heading, pitch: hp.pitch });
+    };
+    viewer.camera.changed.addEventListener(() => {
+      report();
+      const now = performance.now();
+      if (now - lastLabel > 90) { lastLabel = now; relabel(); }
+      clearTimeout(settle);
+      settle = window.setTimeout(relabel, 140);
+    });
+    viewer.camera.percentageChanged = 0.002;
+    // Window or panel resized: names must be re-fitted to the new screen size.
+    const resizeObs = new ResizeObserver(() => { clearTimeout(settle); settle = window.setTimeout(relabel, 60); flatRef.current?.resize(); });
+    resizeObs.observe(host.current!);
+    // A panel opened or closed (info panel, Compare, Layers): re-place the names once it has slid in.
+    const appEl = host.current!.closest('.app');
+    const panelObs = new MutationObserver(() => { clearTimeout(settle); settle = window.setTimeout(relabel, 260); });
+    if (appEl) panelObs.observe(appEl, { childList: true, attributes: true, attributeFilter: ['class'] });
+
+    // What is under the pointer? Screen-space maths only (asking the GPU costs 10-200 ms per question).
+    const pickPos = new Cartesian2(), pinScratch = new Cartesian3(), pinWin = new Cartesian2();
+    const groundAt = (x: number, y: number) => {
+      const ray = viewer.camera.getPickRay(Cartesian2.fromElements(x, y, pickPos));
+      const hit = ray && globe.pick(ray, scene);
+      if (!hit) return null;
+      const t = toTrueLatLon(hit);
+      return { lat: t.lat, lon: t.lon };
+    };
+    const tagAt = (x: number, y: number) => tagOf(labels.hitTest(x, y));
+    /** A compare pin (or the selected pin) drawn at this screen position, if any. */
+    const pinAt = (x: number, y: number): { lat: number; lon: number } | null => {
+      const list: { lat: number; lon: number }[] = [...cb.current.pins];
+      if (cb.current.selectedPin) list.push(cb.current.selectedPin);
+      for (const pin of list) {
+        const w = scene.cartesianToCanvasCoordinates(toCartesian(pin.lat, pin.lon, heights.heightAt(pin.lat, pin.lon, false), pinScratch), pinWin);
+        if (w && x >= w.x - 15 && x <= w.x + 15 && y >= w.y - 40 && y <= w.y + 2) return { lat: pin.lat, lon: pin.lon };
+      }
+      return null;
+    };
+    let lastHover = 0;
+    navRef.current = attachNavigation(viewer, heights, {
+      onFovWheel: d => lander.zoomFov(d),
+      isClickableAt: (x, y) => !!tagAt(x, y) || !!pinAt(x, y),
+      // Click: a name or marker first, then a pin, otherwise drop a new pin on the ground.
+      onClick: (x, y) => {
+        if (lander.active) return;
+        const tag = tagAt(x, y);
+        if (tag?.type === 'name' && tag.name) return cb.current.onSelect({ type: 'name', name: tag.name });
+        if (tag?.type === 'place' && tag.place) return cb.current.onSelect({ type: 'place', place: tag.place });
+        const g = pinAt(x, y) ?? groundAt(x, y);
+        if (g) cb.current.onSelect({ type: 'pin', ...g });
+      },
+      onHoverMove: (x, y) => {
+        labels.setHover(labels.hitTest(x, y));
+        const now = performance.now();
+        if (now - lastHover > 80) { lastHover = now; cb.current.onHover(groundAt(x, y)); }
+      },
+    });
+    debugHook.nav = navRef.current;
+
+    // The flat map (2D) and the move between it and the globe (flatMap.ts, mapMode.ts).
+    const flat = new FlatMap(host.current!, {
+      labels: () => labels.flatEntries(),
+      icon: kind => labels.iconOf(kind),
+      pins: () => {
+        const out: { lat: number; lon: number; image: string }[] = cb.current.pins.map(p => ({ lat: p.lat, lon: p.lon, image: PIN_SVG(p.color, p.letter) }));
+        if (cb.current.selectedPin) out.push({ ...cb.current.selectedPin, image: PIN_SVG('') });
+        return out;
+      },
+      panelBoxes: () => {
+        const out: { x0: number; y0: number; x1: number; y1: number }[] = [];
+        const c = host.current!.getBoundingClientRect();
+        for (const el of document.querySelectorAll<HTMLElement>('.panel, .ibtn.glass, .tbar-clock')) {
+          const r = el.getBoundingClientRect();
+          if (r.width >= 2 && r.height >= 2) out.push({ x0: r.left - c.left - 6, y0: r.top - c.top - 4, x1: r.right - c.left + 6, y1: r.bottom - c.top + 4 });
+        }
+        return out;
+      },
+      // fixed margins (the button column, the top bar, the time bar): panels opening later must not shift the map
+      insets: () => ({ top: labels.top + 8, bottom: labels.bottom + 34, left: 64, right: 76 }),
+      onClickTag: id => {
+        const tag = tagOf(id);
+        if (tag?.type === 'name' && tag.name) cb.current.onSelect({ type: 'name', name: tag.name });
+        else if (tag?.type === 'place' && tag.place) cb.current.onSelect({ type: 'place', place: tag.place });
+      },
+      onClickGround: (lat, lon) => cb.current.onSelect({ type: 'pin', lat, lon }),
+      onHover: pos => cb.current.onHover(pos),
+      // the status line's eye height: the height a camera would need to see what the flat map shows
+      onView: km => cameraStore.set({ km, heading: 0, pitch: -90 }),
+      // zooming in at the flat map's closest zoom: offer to roll back to the globe right there
+      limitText: () => ({ msg: t('map.flatLimit'), go: t('map.flatCloser') }),
+      onCloser: (lat, lon) => { void modesRef.current?.toGlobe({ at: { lat, lon, km: 140 } }); },
+    });
+    flatRef.current = flat;
+    const modes = new MapModes(flat, {
+      viewer, nav: navRef.current,
+      heightAt: (lat, lon) => heights.heightAt(lat, lon, false),
+      setGlobeExtras: on => {
+        const p = cb.current;
+        labels.visible = on && !!p.layers.names && !p.lander;
+        labels.placesVisible = { artemis: on && !!p.layers.artemis && !p.lander, spot: on && !!p.layers.artemis && !p.lander, mission: on && !!p.layers.missions && !p.lander };
+        labels.update();
+        const m = markersRef.current;
+        if (m) m.show = on && p.layers.realSun !== false && !p.lander;
+        viewer.entities.show = on;
+        scene.requestRender();
+      },
+    });
+    modes.onChange = m => cb.current.onMapMode?.(m);
+    modesRef.current = modes;
+    debugHook.flat = flat; debugHook.modes = modes;
+
+    // Start: whole Moon, tilted so the south pole is visible, true north up.
+    const start = poseGlobe(WHOLE.lat, WHOLE.lon, WHOLE.alt);
+    viewer.camera.setView({ destination: start.destination, orientation: { direction: start.direction, up: start.up } });
+    report();
+
+    // Behind the loading screen: load data and quietly visit the south-pole views so they are instant later.
+    const debug = debugHook as { progress?: LoadProgress; skipLoading?: () => void };
+    debug.skipLoading = () => { skipPreload.current = true; };
+    navRef.current.enabled = false;
+    void runPreload(viewer, {
+      heightsReady: heights.ready,
+      namesReady: new Promise<void>(res => { namesLoaded.current = res; }),
+      startView: start,
+      skyReady: sky.ready,
+      imageryPending,
+      lander: lander as { prewarm?: () => Promise<unknown> },
+      warmViews: () => {
+        const ridge = { lat: -89.45, lon: -136.7 }; // Shackleton – de Gerlache connecting ridge
+        const g = heights.heightAt(ridge.lat, ridge.lon, false);
+        return [
+          { pose: poseLookingAt(-90, 0, 0, 820_000, 0, -90), label: 'Getting the south pole ready…', maxMs: 6000 },
+          { pose: poseLookingAt(ridge.lat, ridge.lon, g, 90_000, 20, -38), label: 'Building the 3D mountains…', maxMs: 5000 },
+          { pose: poseLookingAt(ridge.lat, ridge.lon, g, 12_000, 60, -18), label: 'Sharpening the landing area…', maxMs: 4000 },
+        ];
+      },
+      onProgress: p => {
+        debug.progress = p;
+        if (p.done && navRef.current && !lander.active) navRef.current.enabled = true;
+        // the flat map's picture and shaders, quietly, once the start-up loading is over (the first switch must not hitch)
+        if (p.done) { const go = () => void flat.prepare(settings.get().quality === 'light').catch(e => console.warn('Flat map not available:', e)); if ('requestIdleCallback' in window) requestIdleCallback(go, { timeout: 1500 }); else setTimeout(go, 300); }
+        cb.current.onLoadProgress?.(p);
+      },
+      cancelled: () => skipPreload.current,
+    });
+
+    return () => { flat.destroy(); offQuality(); offReload(); resizeObs.disconnect(); panelObs.disconnect(); clearTimeout(settle); navRef.current?.destroy(); lander.destroy(); markersRef.current?.destroy(); labels.destroy(); sky.destroy(); skyRef.current = null; viewer.destroy(); viewerRef.current = null; };
+  }, []);
+
+  // Names
+  useEffect(() => {
+    const labels = labelsRef.current, heights = heightsRef.current;
+    if (!labels || !heights || !props.names) return;
+    let live = true;
+    Promise.all([document.fonts.load('500 13px "Inter Variable"'), heights.ready]).finally(() => {
+      if (!live) return;
+      labels.setNames(props.names!, heights);
+      labels.update();
+      namesLoaded.current();
+      viewerRef.current?.scene.requestRender();
+    });
+    return () => { live = false; };
+  }, [props.names]);
+
+  // Layers
+  useEffect(() => {
+    const viewer = viewerRef.current;
+    if (!viewer) return;
+    if (props.layers.dataDetail && !imagery.current.get('dataDetail')) {
+      const layer = createDataDetailLayer();
+      viewer.imageryLayers.add(layer);
+      imagery.current.set('dataDetail', layer);
+    }
+    for (const def of props.scienceLayers) {
+      const id = def.id === 'height' ? 'heightPolar' : def.id;
+      const on = def.id === 'height' ? !!props.layers.height : !!props.layers[def.id];
+      if (on && !imagery.current.get(id)) {
+        const layer = new ImageryLayer(createPolarRasterProvider({ url: `./data/layers/${def.id}.png`, extentM: POLAR_EXTENT_M, credit: def.source?.name ?? 'NASA', maximumLevel: 9, clipTrueLatDeg: -80.02 }) as never);
+        viewer.imageryLayers.add(layer);
+        imagery.current.set(id, layer);
+      }
+    }
+    for (const [id, layer] of imagery.current) {
+      layer.show = id === 'photoPolar' || id === 'base' || id === 'photoFix' ? !!props.layers.photo : id === 'heightPolar' ? !!props.layers.height : !!props.layers[id];
+      const opKey = id === 'heightPolar' ? 'height' : id === 'base' || id === 'photoFix' ? 'photo' : id;
+      layer.alpha = id === 'dataDetail' ? 1 : props.opacity[opKey] ?? (id === 'photo' || id === 'base' || id === 'photoFix' || id === 'photoPolar' || id === 'polarPhoto' ? 1 : 0.7);
+    }
+    for (const def of props.scienceLayers) { const l = imagery.current.get(def.id === 'height' ? 'heightPolar' : def.id); if (l) viewer.imageryLayers.raiseToTop(l); }
+    const dd = imagery.current.get('dataDetail');
+    if (dd) viewer.imageryLayers.raiseToTop(dd);
+    const labels = labelsRef.current;
+    const onGlobe = (modesRef.current?.mode ?? 'globe') === 'globe' && !modesRef.current?.moving;
+    if (labels) {
+      labels.visible = onGlobe && !!props.layers.names && !props.lander;
+      labels.placesVisible = { artemis: onGlobe && !!props.layers.artemis && !props.lander, spot: onGlobe && !!props.layers.artemis && !props.lander, mission: onGlobe && !!props.layers.missions && !props.lander };
+      labels.flatNames = !!props.layers.names;
+      labels.flatPlaces = { artemis: !!props.layers.artemis, spot: !!props.layers.artemis, mission: !!props.layers.missions };
+      labels.update();
+    }
+    const flat = flatRef.current;
+    if (flat) { flat.detail = props.layers.dataDetail ? 1 : 0; flat.refreshLabels(); }
+    viewer.scene.requestRender();
+  }, [props.layers, props.opacity, props.scienceLayers, props.lander]);
+
+  // 3D mountains on/off
+  useEffect(() => {
+    const viewer = viewerRef.current, heights = heightsRef.current;
+    if (!viewer || !heights) return;
+    heights.ready.then(() => {
+      if (viewer.isDestroyed()) return;
+      const want3d = props.layers.terrain !== false;
+      const is3d = viewer.terrainProvider instanceof LolaTerrainProvider;
+      if (want3d && !is3d) viewer.terrainProvider = new LolaTerrainProvider(heights) as never;
+      if (!want3d && is3d) viewer.terrainProvider = new EllipsoidTerrainProvider({ ellipsoid: MOON_ELLIPSOID });
+    });
+  }, [props.layers.terrain]);
+
+  // Selected pin + compare pins. Placed at the real ground height and drawn over everything:
+  // "clamped to ground" pins get partly cut by nearby hills in Cesium, so we do not use that.
+  useEffect(() => {
+    const viewer = viewerRef.current;
+    if (!viewer) return;
+    const h = heightsRef.current;
+    const pinPos = (lat: number, lon: number) => toCartesian(lat, lon, (h?.heightAt(lat, lon, true) ?? 0) + 3);
+    if (selectedEntity.current) { viewer.entities.remove(selectedEntity.current); selectedEntity.current = null; }
+    if (props.selectedPin && !props.lander) {
+      selectedEntity.current = viewer.entities.add({
+        position: pinPos(props.selectedPin.lat, props.selectedPin.lon),
+        billboard: { image: PIN_SVG(''), width: 38, height: 38, verticalOrigin: VerticalOrigin.BOTTOM, pixelOffset: new Cartesian2(0, 2), disableDepthTestDistance: Number.POSITIVE_INFINITY },
+      });
+      dropIn(viewer, selectedEntity.current, `${props.selectedPin.lat},${props.selectedPin.lon}`);
+    }
+    for (const [, e] of pinEntities.current) viewer.entities.remove(e);
+    pinEntities.current.clear();
+    if (!props.lander) for (const p of props.pins) {
+      pinEntities.current.set(p.id, viewer.entities.add({
+        position: pinPos(p.lat, p.lon),
+        billboard: { image: PIN_SVG(p.color, p.letter), width: 38, height: 38, verticalOrigin: VerticalOrigin.BOTTOM, pixelOffset: new Cartesian2(0, 2), disableDepthTestDistance: Number.POSITIVE_INFINITY },
+      }));
+    }
+    (viewerRef.current && (window as unknown as { __moonda?: { pinFacing?: () => void } }).__moonda?.pinFacing?.());
+    labelsRef.current?.update(); // names step aside for the pins
+    flatRef.current?.request();
+    viewer.scene.requestRender();
+  }, [props.selectedPin, props.pins, props.lander]);
+
+  // Real sunlight at the chosen time: shading of the whole Moon, the Sun/Earth chips and the sky.
+  useEffect(() => {
+    const viewer = viewerRef.current;
+    if (!viewer) return;
+    const sunOn = props.layers.realSun !== false;
+    const s = trueToDisplayVec(props.bodies.sun);
+    const d = Cartesian3.normalize(new Cartesian3(s[0], s[1], s[2]), new Cartesian3());
+    viewer.scene.light = new DirectionalLight({ direction: Cartesian3.negate(d, d), intensity: 2.0 });
+    viewer.scene.globe.enableLighting = sunOn;
+    const m = markersRef.current;
+    const flat = flatRef.current;
+    if (flat) {
+      const len = Math.hypot(...props.bodies.sun) || 1, le = Math.hypot(...props.bodies.earth) || 1;
+      flat.sun = [props.bodies.sun[0] / len, props.bodies.sun[1] / len, props.bodies.sun[2] / len];
+      flat.earth = [props.bodies.earth[0] / le, props.bodies.earth[1] / le, props.bodies.earth[2] / le];
+      flat.sunOn = sunOn;
+      flat.request();
+    }
+    const onGlobe = (modesRef.current?.mode ?? 'globe') === 'globe' && !modesRef.current?.moving;
+    if (m) { m.show = sunOn && !props.lander && onGlobe; m.spots = props.layers.skymarkers === true; m.update(props.bodies.sun, props.bodies.earth); labelsRef.current?.update(); }
+    skyRef.current?.update(props.timeMs ?? Date.now(), props.bodies);
+    viewer.scene.requestRender();
+  }, [props.layers.realSun, props.layers.skymarkers, props.bodies, props.lander, props.timeMs]);
+
+  // Stars, Milky Way, planets and their name tags follow the layer switches (the Sun and Earth are always drawn).
+  useEffect(() => {
+    const sky = skyRef.current;
+    if (!sky) return;
+    const stars = props.layers.stars !== false;
+    sky.show = { stars, milkyWay: stars, planets: stars, earth: true, sun: true, names: stars && props.layers.skyNames !== false };
+    viewerRef.current?.scene.requestRender();
+  }, [props.layers.stars, props.layers.skyNames]);
+
+  // First-person lander view
+  const landerKey = props.lander ? `${props.lander.lat},${props.lander.lon},${props.lander.mastM},${!!props.lander.skyline}` : '';
+  useEffect(() => {
+    const lander = landerRef.current, nav = navRef.current;
+    if (!lander || !nav) return;
+    if (props.lander && props.sky) {
+      const spec = props.lander, sky = props.sky;
+      const go = () => { nav.enabled = false; lander.enter(spec, sky, spec.faceAz); };
+      const modes = modesRef.current;
+      // from the flat map: first a shortened move back to the globe at that spot
+      if (modes && modes.mode === 'flat') void modes.toGlobe({ at: { lat: spec.lat, lon: spec.lon, km: 40 }, fast: true, handOff: go });
+      else go();
+    } else if (!props.lander && lander.active) {
+      lander.exit(); // first: it puts Cesium's input switch back the way navigation left it
+      nav.enabled = true;
+    }
+  }, [landerKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (props.sky) landerRef.current?.updateSky(props.sky); }, [props.sky]);
+
+  const flatOn = () => modesRef.current?.mode === 'flat' && !modesRef.current.moving ? flatRef.current : null;
+  useImperativeHandle(ref, () => ({
+    flyTo(lat, lon, heightKm = 60, tilted = false) {
+      const v = viewerRef.current;
+      if (!v || modesRef.current?.moving) return;
+      const flat = flatOn();
+      if (flat) { void flat.flyTo(flat.viewAt(lat, lon, Math.max(20, heightKm * 1.15))); return; }
+      const ground = heightsRef.current?.heightAt(lat, lon, false) ?? 0;
+      const pose = tilted ? poseLookingAt(lat, lon, ground, heightKm * 1600, cameraHeadingPitch(v).heading, -38) : poseLookingAt(lat, lon, ground, heightKm * 1000, 0, -90);
+      void navRef.current?.flyTo(pose);
+    },
+    flyWhole() {
+      const flat = flatOn();
+      if (flat) { void flat.flyTo(flat.wholeView()); return; }
+      const p = poseGlobe(WHOLE.lat, WHOLE.lon, WHOLE.alt);
+      void navRef.current?.flyTo(p);
+    },
+    flyPole() {
+      // Straight down on the south pole, nearside (0° longitude) at the top — like NASA's polar maps.
+      const p = poseLookingAt(-90, 0, 0, 820_000, 0, -90);
+      // the pole is badly stretched on a flat map: go back to the globe and fly there
+      if (modesRef.current?.mode === 'flat') { void modesRef.current.toGlobe({ at: { lat: -90, lon: 0, km: 900 }, pose: p }); return; }
+      void navRef.current?.flyTo(p);
+    },
+    zoomBy(f) { const flat = flatOn(); if (flat) flat.zoomBy(f); else navRef.current?.zoomBy(f); },
+    resetNorth() { if (!flatOn()) navRef.current?.resetNorth(); },
+    setTilt(p) { if (!flatOn()) navRef.current?.setTilt(p); },
+    setMapMode(m) {
+      const modes = modesRef.current;
+      if (!modes || modes.moving || landerRef.current?.active || (window as unknown as { __moonda?: { progress?: LoadProgress } }).__moonda?.progress?.done !== true) return;
+      if (m === 'flat') void modes.toFlat(); else void modes.toGlobe();
+    },
+    look(az, el) { landerRef.current?.look(az, el); },
+  }), []);
+
+  return <div ref={host} className="moon-canvas" />;
+});

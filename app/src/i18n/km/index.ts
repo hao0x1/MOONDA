@@ -1,0 +1,15 @@
+// All Khmer text, one object (same keys as English; anything missing falls back to English).
+import { ai } from './ai';
+import { common } from './common';
+import { compare } from './compare';
+import { hud } from './hud';
+import { lander } from './lander';
+import { layers } from './layers';
+import { markers } from './markers';
+import { places } from './places';
+import { science } from './science';
+import { shell } from './shell';
+import { start } from './start';
+import { timebar } from './timebar';
+
+export const km: Partial<Record<string, string>> = { ...common, ...shell, ...timebar, ...compare, ...ai, ...lander, ...hud, ...markers, ...start, ...layers, ...places, ...science };

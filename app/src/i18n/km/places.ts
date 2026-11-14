@@ -1,0 +1,113 @@
+// Khmer text for: places (same keys as ../en/places.ts; a missing key shows the English).
+//
+// Also the special places of src/data/places.ts: 'pl.<id>.short' (one line) and 'pl.<id>.detail'.
+// Their names (Shackleton, Apollo 11, …) are official or mission names and stay in Latin letters.
+// 'kind.Statio' is left out on purpose (it is the IAU's own Latin word).
+import type { places as en } from '../en/places';
+
+/** Every Artemis region starts with the same line and ends with the same caution. */
+const ARTEMIS_SHORT = 'តំបន់ជម្រើសរបស់ NASA សម្រាប់ការចុះចតដោយមានមនុស្សលើកដំបូងនៅប៉ូលខាងត្បូង';
+const artemis = (detail: string) => `${detail} សញ្ញានេះជាចំណុចប្រហាក់ប្រហែលមួយក្នុងតំបន់ ព្រោះតំបន់របស់ NASA មានទទឹងច្រើនគីឡូម៉ែត្រ។`;
+
+export const places: Partial<Record<keyof typeof en | `pl.${string}`, string>> = {
+  'search.placeholder': 'ស្វែងរកលើព្រះច័ន្ទ',
+  'search.clear': 'សម្អាតការស្វែងរក',
+  'search.none': 'គ្មានកន្លែងណាលើព្រះច័ន្ទឈ្មោះ «{q}» ទេ។ សាកវាយឈ្មោះរណ្ដៅ ដូចជា Tycho ឬ Shackleton។',
+  'search.sub.artemis': 'តំបន់ចុះចត Artemis',
+  'search.sub.landing': 'ចុះចត · {date}',
+
+  // the kinds of official names
+  'kind.Crater': 'រណ្ដៅ',
+  'kind.Small crater': 'រណ្ដៅតូច',
+  'kind.Channel': 'ប្រឡាយ',
+  'kind.Landing-site name': 'ឈ្មោះកន្លែងចុះចត',
+  'kind.Mountain': 'ភ្នំ',
+  'kind.Small dark plain': 'វាលរាបងងឹតតូច',
+  'kind.Wrinkle ridge': 'ខ្នងភ្នំជ្រួញ',
+  'kind.Crater chain': 'ជួររណ្ដៅ',
+  'kind.Valley': 'ជ្រលងភ្នំ',
+  'kind.Bay': 'ឆក',
+  'kind.Cape': 'ជ្រោយ',
+  'kind.Cliff': 'ច្រាំងថ្មចោត',
+  'kind.Dark plain (marsh)': 'វាលរាបងងឹត (វាលភក់)',
+  'kind.Ocean': 'មហាសមុទ្រ',
+  'kind.Bright marking': 'ស្នាមភ្លឺ',
+  'kind.Plain': 'វាលរាប',
+
+  // the "How to use MOONDA" card
+  'welcome.title': 'តើយានគួរចុះចតត្រង់ណាលើព្រះច័ន្ទ?',
+  'welcome.lead': 'នៅជិតប៉ូលខាងត្បូង ព្រះអាទិត្យនៅទាបជានិច្ច ដូច្នេះភ្នំតែមួយអាចបាំងពន្លឺព្រះអាទិត្យ ឬបាំងផែនដីពីយានចុះចតបានច្រើនថ្ងៃ។ ស្វែងយល់ពីព្រះច័ន្ទដូចមើលផែនទី ហើយពិនិត្យកន្លែងណាក៏បាន។',
+  'welcome.step.look': 'មើលជុំវិញ',
+  'welcome.step.look.text': 'អូសដើម្បីរំកិល រមូរដើម្បីពង្រីក អូសដោយប៊ូតុងស្ដាំដើម្បីផ្អៀង។',
+  'welcome.step.click': 'ចុចកន្លែងណាមួយ',
+  'welcome.step.click.text': 'មើលថាពេលណាវាមានពន្លឺព្រះអាទិត្យ និងមើលឃើញផែនដី រួចទៅឈរនៅទីនោះ។',
+  'welcome.step.compare': 'ប្រៀបធៀបផែនការ',
+  'welcome.step.compare.text': 'ដាក់ផែនការចុះចតរហូតដល់បួនទន្ទឹមគ្នា ហើយមើលថាមួយណាល្អ។',
+  'welcome.toPole': 'នាំខ្ញុំទៅប៉ូលខាងត្បូង',
+  'welcome.explore': 'មើលព្រះច័ន្ទទាំងមូល',
+  'welcome.sources': 'ប្រភពទិន្នន័យ',
+  'welcome.src.photos': 'រូបថតព្រះច័ន្ទ',
+  'welcome.src.heights': 'កម្ពស់ និងភ្នំ',
+  'welcome.src.names': 'ឈ្មោះទីកន្លែង',
+  'welcome.src.positions': 'ទីតាំងព្រះអាទិត្យ និងផែនដី',
+  'welcome.src.artemis': 'តំបន់ Artemis',
+  'welcome.src.engine': 'កម្មវិធីផែនទី 3D',
+  'welcome.src.music': 'តន្ត្រី',
+  'welcome.fine': 'លទ្ធផលពន្លឺព្រះអាទិត្យ និងការមើលឃើញផែនដី គណនាពីរូបរាងដីតែប៉ុណ្ណោះ។ ត្រូវមើលឃើញផែនដីទើបមានវិទ្យុផ្ទាល់បាន ប៉ុន្តែវាមិនបញ្ជាក់ថាវិទ្យុដំណើរការពិតទេ។ មិនមែនជាផលិតផលផ្លូវការរបស់ NASA ទេ។',
+
+  // well-known sunny spots
+  'pl.s-connecting-ridge.short': 'កន្លែងមួយដែលមានពន្លឺថ្ងៃច្រើនជាងគេលើព្រះច័ន្ទ (ឈ្មោះមិនផ្លូវការ)',
+  'pl.s-connecting-ridge.detail': 'ខ្នងភ្នំដែលតភ្ជាប់មាត់រណ្ដៅ Shackleton និង de Gerlache។ ដោយសារវាខ្ពស់ ហើយនៅជិតប៉ូល ព្រះអាទិត្យនៅលើខ្សែជើងមេឃរបស់វាស្ទើរពេញមួយឆ្នាំ។ សាកពិនិត្យវាមើល។',
+  'pl.s-shackleton-rim.short': 'ចំណុចខ្ពស់មួយនៅលើមាត់រណ្ដៅ Shackleton ដែលមានពន្លឺថ្ងៃញឹកញាប់ (ឈ្មោះមិនផ្លូវការ)',
+  'pl.s-shackleton-rim.detail': 'មាត់រណ្ដៅ Shackleton នៅជាប់នឹងប៉ូល និងជាប់នឹងបាតរណ្ដៅដែលនៅក្នុងស្រមោលជានិច្ច ជាកន្លែងដែលអាចមានទឹកកកជាប់នៅ។',
+
+  // NASA's Artemis candidate regions
+  'pl.a-cabeus-b.short': ARTEMIS_SHORT,
+  'pl.a-cabeus-b.detail': artemis('កំពូលភ្នំខ្ពស់មួយនៅជិតរណ្ដៅ Cabeus B នៅគែមតំបន់ប៉ូលខាងដែលបែរមកផែនដី។'),
+  'pl.a-haworth.short': ARTEMIS_SHORT,
+  'pl.a-haworth.detail': artemis('ខ្នងភ្នំនៅក្បែររណ្ដៅ Haworth ដែលបាតរបស់វានៅក្នុងស្រមោលជានិច្ច ហើយអាចមានទឹកកកជាប់នៅ។'),
+  'pl.a-malapert.short': ARTEMIS_SHORT,
+  'pl.a-malapert.detail': artemis('ភ្នំខ្ពស់ប្រហែល 5 km ដែលបែរមុខទៅផែនដី ដូច្នេះមើលឃើញផែនដីបានយូរ។'),
+  'pl.a-mouton-plateau.short': ARTEMIS_SHORT,
+  'pl.a-mouton-plateau.detail': artemis('ខ្ពង់រាបធំទូលាយ កំពូលរាបស្មើ នៅក្បែរ Mons Mouton។'),
+  'pl.a-mouton.short': ARTEMIS_SHORT,
+  'pl.a-mouton.detail': artemis('ភ្នំធំកំពូលរាបស្មើ ដាក់ឈ្មោះតាម Melba Mouton ជាគណិតវិទូរបស់ NASA។'),
+  'pl.a-nobile-1.short': ARTEMIS_SHORT,
+  'pl.a-nobile-1.detail': artemis('ផ្នែកមួយនៃមាត់រណ្ដៅ Nobile។'),
+  'pl.a-nobile-2.short': ARTEMIS_SHORT,
+  'pl.a-nobile-2.detail': artemis('ផ្នែកមួយទៀតនៃមាត់រណ្ដៅ Nobile ឆ្ងាយពីប៉ូលជាង។'),
+  'pl.a-degerlache-2.short': ARTEMIS_SHORT,
+  'pl.a-degerlache-2.detail': artemis('មាត់រណ្ដៅ de Gerlache នៅជិតប៉ូល និងជិត Shackleton។'),
+  'pl.a-slater.short': ARTEMIS_SHORT,
+  'pl.a-slater.detail': artemis('វាលរាបនៅជិតរណ្ដៅ Slater នៅម្ខាងទៀតនៃប៉ូល។'),
+
+  // past landings
+  'pl.m-chandrayaan3.short': 'ការចុះចតលើកដំបូងនៅជិតតំបន់ប៉ូលខាងត្បូង (ឥណ្ឌា, ISRO)',
+  'pl.m-chandrayaan3.detail': 'យានចុះចត Vikram និងរថយន្តរុករក Pragyan របស់ឥណ្ឌា បានចុះចតត្រង់កន្លែងដែល ISRO ដាក់ឈ្មោះថា "Shiv Shakti point"។ វានៅចម្ងាយប្រហែល 600 km ពីប៉ូល ក្រៅតំបន់ប៉ូលស្នូល។',
+  'pl.m-im1.short': 'ការចុះចតលើកដំបូងរបស់អាមេរិក ចាប់តាំងពី Apollo (Intuitive Machines)',
+  'pl.m-im1.detail': 'Odysseus បានចុះចតជិតរណ្ដៅ Malapert A ហើយដួលផ្អៀងម្ខាង ប៉ុន្តែនៅតែបញ្ជូនទិន្នន័យមកវិញបាន។',
+  'pl.m-im2.short': 'ការចុះចតដែលជិតប៉ូលខាងត្បូងបំផុតមកទល់ពេលនេះ (Intuitive Machines)',
+  'pl.m-im2.detail': 'Athena បានចុះចតលើ Mons Mouton ប៉ុន្តែដួលផ្អៀងក្នុងរណ្ដៅតូចមួយ ធ្វើឱ្យផ្ទាំងសូឡាផលិតភ្លើងមិនបាន។ នេះជាឧទាហរណ៍ពិតដែលបង្ហាញថា រូបរាងដី និងពន្លឺព្រះអាទិត្យសំខាន់ប៉ុណ្ណា។',
+  'pl.m-lcross.short': 'NASA បានទម្លាក់កំណាត់រ៉ុក្កែតមួយបុកទីនេះ ហើយរកឃើញទឹកកក',
+  'pl.m-lcross.detail': 'LCROSS បានបុកបាតរណ្ដៅ Cabeus ដែលនៅក្នុងស្រមោលជានិច្ច ហើយក្នុងធូលីដែលខ្ទាតឡើងមានទឹកកក។',
+  'pl.m-change4.short': 'ការចុះចតដោយរលូនលើកដំបូងនៅផ្នែកម្ខាងទៀតនៃព្រះច័ន្ទ (ចិន, CNSA)',
+  'pl.m-change4.detail': 'បានចុះចតក្នុងរណ្ដៅ Von Kármán។ ពីផ្នែកម្ខាងទៀតនៃព្រះច័ន្ទ មិនដែលមើលឃើញផែនដីទេ ដូច្នេះវាទាក់ទងផែនដីតាមរយៈផ្កាយរណបបញ្ជូនបន្ត។',
+  'pl.m-change6.short': 'សំណាកដំបូងពីផ្នែកម្ខាងទៀតនៃព្រះច័ន្ទ (ចិន, CNSA)',
+  'pl.m-change6.detail': 'បានប្រមូលថ្ម និងដីពីអាង Apollo ហើយនាំត្រឡប់មកផែនដីវិញ។',
+  'pl.m-slim.short': 'យានចុះចតចំគោលដៅរបស់ជប៉ុន (JAXA)',
+  'pl.m-slim.detail': 'បានចុះចតខុសពីគោលដៅត្រឹមប្រហែល 100 m ជិតរណ្ដៅ Shioli ប៉ុន្តែផ្កាប់ក្បាលចុះក្រោម។',
+  'pl.m-blueghost.short': 'យានចុះចតរបស់ Firefly Aerospace នៅ Mare Crisium',
+  'pl.m-blueghost.detail': 'បានចុះចតឈរត្រង់ ហើយធ្វើការពេញមួយថ្ងៃរបស់ព្រះច័ន្ទ។',
+  'pl.m-apollo11.short': 'មនុស្សដំបូងគេលើព្រះច័ន្ទ',
+  'pl.m-apollo11.detail': 'Neil Armstrong និង Buzz Aldrin បានចុះចតនៅ Sea of Tranquility (សមុទ្រនៃភាពស្ងប់ស្ងាត់)។',
+  'pl.m-apollo12.short': 'ការចុះចតដោយមានមនុស្សលើកទី 2',
+  'pl.m-apollo12.detail': 'បានចុះចតក្បែរយានរ៉ូបូត Surveyor 3 នៅ Ocean of Storms (មហាសមុទ្រព្យុះ)។',
+  'pl.m-apollo14.short': 'ការចុះចតដោយមានមនុស្សលើកទី 3',
+  'pl.m-apollo14.detail': 'បានចុះចតនៅតំបន់ខ្ពង់រាប Fra Mauro។',
+  'pl.m-apollo15.short': 'ការបើករថយន្តលើព្រះច័ន្ទលើកដំបូង',
+  'pl.m-apollo15.detail': 'បានចុះចតនៅចន្លោះជួរភ្នំ Apennine និង Hadley Rille។',
+  'pl.m-apollo16.short': 'ការចុះចតនៅតំបន់ខ្ពង់រាប',
+  'pl.m-apollo16.detail': 'បានរុករកតំបន់ខ្ពង់រាប Descartes។',
+  'pl.m-apollo17.short': 'ការចុះចតដោយមានមនុស្សចុងក្រោយ មកទល់ពេលនេះ',
+  'pl.m-apollo17.detail': 'បានរុករកជ្រលងភ្នំ Taurus-Littrow។',
+};

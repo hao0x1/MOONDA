@@ -1,0 +1,109 @@
+/* "Stand here" view: the controls on top of the 3D view (LanderHud.tsx) and the small things
+   lander.ts puts over the canvas (fade curtain, Sun / Earth name tags). */
+
+/* ---------- over the canvas (made by lander.ts) ---------- */
+.lv-fade { position: absolute; inset: 0; z-index: 6; background: #000; opacity: 0; pointer-events: none; transition: opacity 340ms ease-out; display: grid; place-items: center; }
+.lv-fade.on { opacity: 1; pointer-events: auto; transition: opacity 170ms ease-in; }
+.lv-fade-note { display: flex; align-items: center; gap: 10px; color: var(--text-2, #b3b5bc); font: 500 14px/1.3 var(--sans, system-ui, sans-serif); opacity: 0; transition: opacity 200ms ease-out; }
+.lv-fade-note.show { opacity: 1; }
+.lv-spin { width: 14px; height: 14px; border-radius: 50%; border: 2px solid rgba(255, 255, 255, .16); border-top-color: var(--text, #eeeff1); animation: lv-spin .8s linear infinite; }
+@keyframes lv-spin { to { transform: rotate(360deg); } }
+
+.lv-sky { position: absolute; inset: 0; z-index: 2; pointer-events: none; overflow: hidden; }
+.lv-tag { position: absolute; left: 0; top: 0; will-change: transform; --r: 6px; }
+.lv-tag span { position: absolute; left: 0; top: calc(var(--r) + 10px); transform: translateX(-50%); white-space: nowrap;
+  font: 500 12px/1.2 var(--sans, system-ui, sans-serif); letter-spacing: .02em; color: #fff; text-shadow: 0 1px 2px rgba(0, 0, 0, .9), 0 0 8px rgba(0, 0, 0, .7); }
+.lv-tag i { display: none; }
+/* below the horizon or behind a hill: the tag sits on the skyline and points down at where the body is */
+.lv-tag[data-state='below'] span, .lv-tag[data-state='hidden'] span { color: rgba(255, 255, 255, .78); }
+.lv-tag[data-state='below'] span::before, .lv-tag[data-state='hidden'] span::before { content: ''; display: inline-block; width: 6px; height: 6px; margin: 0 7px 3px 0; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; transform: rotate(45deg); opacity: .8; }
+
+/* ---------- controls (LanderHud.tsx) ---------- */
+.lv-glass { background: var(--glass); box-shadow: var(--shadow); backdrop-filter: blur(24px) saturate(1.25); -webkit-backdrop-filter: blur(24px) saturate(1.25); }
+.lv-hud { font-size: var(--fs-14); line-height: 1.4; color: var(--text); font-variant-numeric: tabular-nums; }
+.lv-hud button { font: inherit; color: inherit; cursor: pointer; }
+/* a soft shade behind the top row so the compass reads on bright ground as well as on the black sky */
+.lv-scrim { position: absolute; left: 0; right: 0; top: 0; height: 120px; z-index: 11; pointer-events: none; background: linear-gradient(rgba(0, 0, 0, .5), rgba(0, 0, 0, 0)); }
+
+/* top left: back + where you are */
+.lv-top { position: absolute; top: 12px; left: 12px; z-index: 12; display: flex; align-items: center; gap: 14px; height: 48px; padding: 0 20px 0 6px; border-radius: 24px; max-width: min(560px, calc(50vw - 252px)); animation: lv-in 220ms ease-out both; }
+.lv-back { flex: none; display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 16px 0 12px; border: 0; border-radius: 18px; background: var(--white); color: var(--ink) !important; font-weight: 600 !important; white-space: nowrap; transition: background 160ms ease-out; }
+.lv-back:hover { background: #fff; }
+.lv-place { min-width: 0; }
+.lv-name { font-size: var(--fs-14); line-height: 18px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lv-sub { font-size: var(--fs-12); line-height: 16px; color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lv-sub b { color: var(--text); font-weight: 500; }
+
+/* top centre: the compass tape. No box: ticks, letters and degrees float over the sky like an instrument */
+.lv-compass { position: absolute; top: 14px; left: 50%; z-index: 12; width: 480px; height: 66px; margin-left: -240px; pointer-events: none; animation: lv-in 220ms ease-out both; }
+.lv-tape-clip { position: absolute; inset: 0 0 20px; overflow: hidden; -webkit-mask-image: linear-gradient(90deg, transparent, #000 22%, #000 78%, transparent); mask-image: linear-gradient(90deg, transparent, #000 22%, #000 78%, transparent); }
+.lv-tape { position: absolute; left: 50%; top: 0; height: 46px; width: 2880px; will-change: transform;
+  background-image: linear-gradient(90deg, rgba(255, 255, 255, .85) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, .45) 1px, transparent 1px);
+  background-size: 60px 9px, 20px 5px; background-repeat: repeat-x; background-position: 0 16px, 0 16px; }
+.lv-tape span { position: absolute; top: 29px; transform: translateX(-50%); white-space: nowrap; text-shadow: 0 1px 3px rgba(0, 0, 0, .9); }
+.lv-tape .card { font-size: var(--fs-14); line-height: 16px; font-weight: 600; color: #fff; }
+.lv-tape .card.n { color: #ff6a5c; }
+.lv-tape .inter { font-size: var(--fs-11); line-height: 16px; font-weight: 500; color: rgba(255, 255, 255, .78); letter-spacing: .04em; }
+.lv-tape .num { font-family: var(--mono); font-size: var(--fs-11); line-height: 16px; color: rgba(255, 255, 255, .55); }
+.lv-tape i { position: absolute; top: 0; width: 14px; height: 14px; margin-left: -7px; }
+.lv-caret { position: absolute; left: 50%; top: 12px; width: 2px; height: 16px; margin-left: -1px; border-radius: 1px; background: #fff; box-shadow: 0 0 0 1px rgba(0, 0, 0, .5); }
+.lv-facing { position: absolute; left: 0; right: 0; bottom: 0; text-align: center; font-size: var(--fs-12); line-height: 16px; color: rgba(255, 255, 255, .78); text-shadow: 0 1px 3px rgba(0, 0, 0, .9); }
+.lv-facing b { margin-right: 6px; color: #fff; font-weight: 500; }
+
+/* bottom left: what the lander gets right now. Each line is a button: it turns the view to the Sun or Earth.
+   Always there, also while driving, and narrow so it never reaches the middle of the view. */
+.lv-status { position: absolute; left: 12px; bottom: calc(var(--tb, 72px) + 28px); z-index: 12; width: 268px; padding: 6px 6px 10px; border-radius: 16px; display: flex; flex-direction: column; gap: 2px; animation: lv-in-up 220ms ease-out both; }
+.lv-row { display: grid; grid-template-columns: 20px 1fr; column-gap: 10px; align-items: start; width: 100%; padding: 6px 8px; border: 0; border-radius: 12px; background: transparent; text-align: left; transition: background 160ms ease-out; }
+.lv-row:hover:not(:disabled) { background: var(--fill-1); }
+.lv-row:disabled { cursor: default; }
+.lv-row .glyph { margin-top: 1px; justify-self: center; }
+.lv-row > span { display: flex; flex-direction: column; min-width: 0; }
+.lv-verdict { font-size: var(--fs-13); line-height: 18px; font-weight: 500; }
+.lv-row.off .lv-verdict { color: var(--text-2); }
+.lv-note { font-size: var(--fs-12); line-height: 16px; color: var(--text-2); }
+.lv-foot { display: flex; align-items: flex-start; gap: 8px; margin: 4px 8px 0; padding-top: 8px; border-top: 1px solid var(--line); font-size: var(--fs-11); line-height: 15px; color: var(--text-3); cursor: help; }
+.lv-foot svg { flex: none; margin-top: 1px; }
+
+/* bottom right: zoom the lens */
+.lv-lens { position: absolute; right: 12px; bottom: calc(var(--tb-r, var(--tb, 72px)) + 28px); z-index: 12; display: flex; flex-direction: column; border-radius: 22px; overflow: hidden; animation: lv-in-up 220ms ease-out both; }
+.lv-lens button { width: 44px; height: 44px; display: grid; place-items: center; border: 0; background: transparent; transition: background 160ms ease-out; }
+.lv-lens button:hover { background: var(--fill-2); }
+.lv-lens button + button { box-shadow: inset 0 1px 0 var(--line); }
+.lv-zoom { position: absolute; right: 64px; bottom: calc(var(--tb-r, var(--tb, 72px)) + 38px); z-index: 12; padding: 4px 10px; border-radius: 999px; font-size: var(--fs-12); color: var(--text-2); opacity: 0; transition: opacity 240ms ease-out; pointer-events: none; }
+.lv-zoom.show { opacity: 1; }
+
+/* bottom centre: driving the MOONDA rover. The key hints float above the bar (no box) only while driving. */
+.lv-drive { position: absolute; left: 50%; bottom: calc(var(--tb, 72px) + 28px); z-index: 12; translate: -50% 0; display: flex; flex-direction: column; align-items: center; gap: 10px; animation: lv-in-up 220ms ease-out both; max-width: calc(100vw - 2 * 296px); }
+.lv-walkbar { display: flex; align-items: center; gap: 6px; height: 48px; padding: 0 6px; border-radius: 24px; white-space: nowrap; }
+.lv-walk { display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 16px 0 12px; border: 0; border-radius: 18px; background: var(--surface-2); font-weight: 500; transition: background 160ms ease-out; }
+.lv-walk:hover { background: var(--surface-3); }
+.lv-walk.on { background: var(--white); color: var(--ink) !important; font-weight: 600; }
+.lv-seg { display: flex; height: 36px; padding: 3px; border-radius: 18px; background: var(--fill-1); }
+.lv-seg button { height: 30px; padding: 0 12px; border: 0; border-radius: 15px; background: transparent; font-size: var(--fs-13); font-weight: 500; color: var(--text-2) !important; transition: background 160ms ease-out, color 160ms ease-out; }
+.lv-seg button:hover { color: var(--text) !important; }
+.lv-seg button.on { background: var(--surface-3); color: var(--text) !important; }
+.lv-light { width: 36px; height: 36px; display: grid; place-items: center; border: 0; border-radius: 18px; background: transparent; color: var(--text-2) !important; transition: background 160ms ease-out; }
+.lv-light:hover { background: var(--fill-2); }
+.lv-light.on { color: var(--sun) !important; }
+.lv-keys { display: inline-flex; align-items: center; gap: 5px; font-size: var(--fs-12); color: rgba(255, 255, 255, .82); text-shadow: 0 1px 3px rgba(0, 0, 0, .9); white-space: nowrap; }
+.lv-keys kbd { display: inline-grid; place-items: center; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 6px; background: rgba(0, 0, 0, .45); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .16); font: 500 var(--fs-11)/1 var(--mono); color: var(--text); }
+.lv-keys i { width: 1px; height: 12px; margin: 0 6px; background: var(--line-2); }
+.lv-keys em { font-style: normal; color: var(--sun); font-weight: 500; padding: 0 6px; }
+
+/* a short tip that goes away by itself */
+.lv-hint { position: absolute; left: 50%; bottom: calc(var(--tb, 72px) + 88px); z-index: 11; transform: translateX(-50%); display: flex; align-items: center; gap: 8px; padding: 8px 16px; border-radius: 999px; font-size: var(--fs-13); color: var(--text-2); white-space: nowrap; pointer-events: none; animation: lv-hint 7s ease-out both; }
+@keyframes lv-hint { 0% { opacity: 0; } 8% { opacity: 1; } 80% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes lv-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+@keyframes lv-in-up { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+
+html.lang-km .lv-verdict { line-height: 24px; }
+html.lang-km .lv-note, html.lang-km .lv-foot { line-height: 21px; }
+
+@media (max-width: 1100px) {
+  .lv-top { max-width: calc(100vw - 24px); }
+  .lv-compass { top: 68px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lv-top, .lv-compass, .lv-status, .lv-lens, .lv-drive { animation: none; }
+  .lv-hint { animation-duration: 7s; }
+}

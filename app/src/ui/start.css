@@ -1,0 +1,54 @@
+/* The start screen (StartScreen.tsx). One calm centred column on the dark sky; only the two
+   graphics choices have an outline. index.html's boot screen draws the same top part, so nothing jumps. */
+
+.start { position: fixed; inset: 0; box-sizing: border-box; padding-top: max(24px, calc(50vh - 370px * var(--sz, 1))); /* same as .boot in index.html */ z-index: 100; overflow-y: auto; display: flex; justify-content: center;
+  background: transparent; /* the space video (index.html, .intro-bg) shows through */
+  transition: opacity 480ms ease-out; }
+.start.leaving { opacity: 0; pointer-events: none; }
+.start-col > * { flex: none; }
+.start-col { width: min(560px, calc(100% - 32px)); padding: 0 0 24px; zoom: var(--sz, 1); /* scaled to the window height, see index.html */ display: flex; flex-direction: column; align-items: center; }
+
+.start-head { display: flex; flex-direction: column; align-items: center; text-align: center; }
+.start-name { margin: 0; font-size: 50px; line-height: 1; } /* holds the Wordmark (kit.tsx); same size as .boot-name in index.html */
+.start-tag { margin-top: 16px; color: var(--text-2); font-size: var(--fs-14); }
+
+/* what is loading: plain rows with hairlines */
+.start-stages { list-style: none; padding: 0; margin-top: 24px; width: 100%; border-top: 1px solid var(--line); }
+.st-row { position: relative; display: flex; align-items: center; gap: 12px; height: 32px; border-bottom: 1px solid var(--line); font-size: var(--fs-14); }
+.st-name { flex: 1; min-width: 0; color: var(--text-2); transition: color var(--slow) ease-out; }
+.st-row.loading .st-name, .st-row.done .st-name { color: var(--text); }
+.st-right { display: inline-flex; align-items: center; gap: 8px; color: var(--text-2); }
+.st-row.done .st-right svg { color: var(--text); animation: fade var(--slow) ease-out; }
+.st-num { font-family: var(--mono); font-size: var(--fs-12); color: var(--text-3); }
+.st-quiet { font-size: var(--fs-12); color: var(--text-3); }
+/* the thin progress line sits on the row's bottom hairline */
+.st-line { position: absolute; left: 0; right: 0; bottom: -1px; height: 1px; overflow: hidden; }
+.st-line i { position: absolute; inset: 0; transform-origin: left; transform: scaleX(var(--f)); background: var(--white); transition: transform 400ms var(--ease); }
+.st-line.busy i { transform: none; width: 30%; animation: st-busy 1.4s ease-in-out infinite; }
+@keyframes st-busy { from { transform: translateX(-100%); } to { transform: translateX(340%); } }
+
+/* graphics: two choices side by side */
+.start-modes { width: 100%; margin-top: 24px; }
+.start-modes h2 { font-size: var(--fs-14); font-weight: 500; color: var(--text-2); margin-bottom: 10px; }
+.start-mode-list { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.start-mode { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; padding: 14px 16px; border: 0; border-radius: var(--r-16);
+  background: transparent; box-shadow: inset 0 0 0 1px var(--line-2); text-align: left; cursor: pointer;
+  transition: background var(--fast) ease-out, box-shadow var(--fast) ease-out; }
+.start-mode:hover { background: var(--fill-1); }
+.start-mode.on { background: var(--fill-2); box-shadow: inset 0 0 0 1.5px var(--white); }
+.start-mode:focus-visible { outline: 2px solid rgba(255, 255, 255, .75); outline-offset: 2px; }
+.start-mode b { font-size: var(--fs-16); font-weight: 500; color: var(--text); }
+.start-mode span { font-size: var(--fs-13); line-height: 18px; color: var(--text-2); }
+.start-mode em { margin-top: 4px; font-style: normal; font-size: var(--fs-12); color: var(--text-3); }
+
+/* language and music */
+.start-prefs { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 16px; }
+.start-music { display: inline-flex; align-items: center; gap: 10px; color: var(--text-2); font-size: var(--fs-14); cursor: pointer; }
+
+.start-enter { width: 240px; margin-top: 24px; }
+.start-skip { margin-top: 10px; padding: 4px 8px; border: 0; border-radius: 6px; background: none; color: var(--text-3); font-size: var(--fs-13); cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+.start-skip:hover { color: var(--text); }
+
+
+@media (max-width: 520px) { .start-mode-list { grid-template-columns: 1fr; } }
+@media (prefers-reduced-motion: reduce) { .st-line.busy i { animation: none; width: 100%; opacity: .4; } }

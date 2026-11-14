@@ -1,0 +1,7 @@
+# Deployed with: npx netlify-cli deploy --dir dist --functions netlify/functions --prod --site <id>
+[build]
+  publish = "dist"
+  functions = "netlify/functions"
+
+[functions]
+  node_bundler = "esbuild"

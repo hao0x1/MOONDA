@@ -1,0 +1,38 @@
+/* Khmer-only layout fixes. Every rule starts with html.lang-km, so English is never touched.
+   Khmer letters stack marks above and below the line: they need taller lines, no letter-spacing,
+   and room to wrap where an English label would fit on one line. (The first few rules of this kind
+   are in section 12 of styles.css; everything else is here.) */
+
+/* 1. Small Khmer text is hard to read on a projector: the two smallest sizes go up one pixel. */
+html.lang-km { --fs-11: 12px; --fs-12: 13px; }
+
+/* 2. No letter-spacing on Khmer words (it pulls the stacked marks apart). The MOONDA name keeps its spacing. */
+html.lang-km .skym, html.lang-km .lv-tag span, html.lang-km .lv-tape .inter, html.lang-km .welcome h1,
+html.lang-km .tile-value, html.lang-km .cmp-h, html.lang-km .ctl-tilt b { letter-spacing: 0; }
+
+/* 3. Taller lines where a fixed line-height was tuned for Latin letters. */
+html.lang-km .skym { line-height: 1.5; }
+html.lang-km .lv-tag span { line-height: 1.5; }
+html.lang-km .layer-title { line-height: 22px; }
+html.lang-km .layer-desc { line-height: 20px; }
+html.lang-km .layer-group-title { gap: 2px; line-height: 20px; }
+html.lang-km .legend-one, html.lang-km .strength { line-height: 20px; }
+html.lang-km .drawer-sub { line-height: 20px; }
+html.lang-km .start-mode span { line-height: 21px; }
+html.lang-km .lv-name { line-height: 24px; }
+html.lang-km .lv-sub, html.lang-km .lv-facing, html.lang-km .lv-foot { line-height: 20px; }
+html.lang-km .lv-note { line-height: 21px; }
+html.lang-km .mbtn-val { line-height: 24px; }
+html.lang-km .st-words { line-height: 20px; }
+html.lang-km .result-sub { line-height: 20px; }
+html.lang-km .welcome-lead, html.lang-km .welcome-steps span, html.lang-km .welcome-sources p { line-height: 1.7; }
+html.lang-km .tooltip { line-height: 1.65; }
+
+/* 4. Big words in the place card: Khmer needs more height than a big numeral. */
+html.lang-km .stat-num { line-height: 40px; }
+
+/* 5. The AI helper. */
+html.lang-km .ai-empty h3, html.lang-km .ai-head-text span, html.lang-km .ai-fine, html.lang-km .ai-suggest > span { line-height: 1.6; }
+html.lang-km .ai-empty p { line-height: 1.7; }
+html.lang-km .ai-step-title, html.lang-km .ai-step-sum, html.lang-km .ai-tile small, html.lang-km .ai-tile-note,
+html.lang-km .ai-kv, html.lang-km .ai-pills, html.lang-km .ai-chip, html.lang-km .ai-rt th { line-height: 1.6; letter-spacing: 0; text-transform: none; }

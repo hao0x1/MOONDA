@@ -1,0 +1,99 @@
+/* Compare plans: the parts inside the right-hand drawer (the drawer itself is in styles.css, section 6).
+   Reads top to bottom: the question, the answer, the two needs, then one table with a row per plan. */
+
+/* a little wider than Layers, so four plans fit as a table; the colour key moves along with it */
+.app.drawer-open { --drawer-w: 472px; }
+
+/* the question (one line), then the answer as one sentence */
+.cmp-q { margin: 16px 0 6px; font-size: var(--fs-13); line-height: 18px; color: var(--text-3); text-wrap: balance; }
+.cmp-answer { animation: fade var(--slow) ease-out; }
+.cmp-answer-text { display: flex; align-items: baseline; gap: 8px; font-size: var(--fs-16); line-height: 22px; font-weight: 500; color: var(--text); text-wrap: pretty; }
+.cmp-answer-text .spinner { align-self: center; }
+.cmp-answer-note { margin-top: 4px; font-size: var(--fs-13); line-height: 18px; color: var(--text-2); text-wrap: pretty; }
+
+/* what the lander can handle: one sentence each, the blank is a small menu */
+.cmp-needs { margin-top: 14px; padding: 8px 0; border-top: 1px solid var(--line); }
+.need { display: flex; align-items: center; flex-wrap: wrap; gap: 0 6px; min-height: 32px; font-size: var(--fs-13); color: var(--text-2); }
+.need-lead { cursor: help; text-decoration: underline dotted rgba(255, 255, 255, .22); text-underline-offset: 4px; border-radius: 4px; }
+.need-pick { display: inline-flex; align-items: center; gap: 4px; height: 26px; padding: 0 7px 0 9px; border: 0; border-radius: var(--r-8); background: var(--surface-2); color: var(--text); font: inherit; font-weight: 500; cursor: pointer; white-space: nowrap; transition: background var(--fast) ease-out; }
+.need-pick:hover, .need-pick[aria-expanded='true'] { background: var(--surface-3); }
+.need-pick svg { color: var(--text-3); }
+.need-pick.off { color: var(--text-2); }
+.need-menu { min-width: 210px; }
+
+/* the table: plan | longest dark | longest without Earth | … */
+.cmp-table { border-top: 1px solid var(--line); }
+.cmp-thead, .cmp-row { display: grid; grid-template-columns: minmax(0, 1fr) 100px 100px 28px; column-gap: 10px; }
+.cmp-thead { align-items: end; padding: 12px 8px 8px; }
+.cmp-th { display: flex; align-items: flex-start; gap: 6px; min-width: 0; font-size: var(--fs-12); line-height: 16px; color: var(--text-3); }
+.cmp-th[data-tip] { cursor: help; color: var(--text-2); }
+.cmp-th[data-tip] span { text-decoration: underline dotted rgba(255, 255, 255, .22); text-underline-offset: 3px; }
+.cmp-th .glyph { margin-top: 0; }
+
+.cmp-rows { display: flex; flex-direction: column; margin: 0 -8px; }
+.cmp-row { align-items: center; padding: 8px; border-top: 1px solid var(--line); border-radius: var(--r-12); transition: background var(--fast) ease-out; }
+.cmp-row:hover { background: var(--fill-1); }
+.cmp-row.best { background: var(--fill-2); border-top-color: transparent; }
+.cmp-row.best + .cmp-row { border-top-color: transparent; }
+.cmp-row.open { background: var(--fill-1); }
+.cmp-row.best.open { background: var(--fill-2); }
+
+/* who and when: the letter (like the map pin: light body, coloured ring), the name, the landing */
+.cmp-who { display: flex; align-items: center; gap: 10px; min-width: 0; padding: 2px 0; border: 0; border-radius: var(--r-8); background: none; color: inherit; text-align: left; cursor: pointer; }
+.cmp-badge { display: grid; place-items: center; flex: none; width: 24px; height: 24px; border-radius: 50%; background: var(--white); color: var(--ink); font-size: var(--fs-13); font-weight: 600; box-shadow: 0 0 0 2px var(--ring, var(--line-2)); }
+.cmp-text { display: flex; flex-direction: column; min-width: 0; }
+.cmp-name { font-size: var(--fs-14); line-height: 18px; font-weight: 500; overflow-wrap: normal; word-break: normal; }
+.cmp-best { margin-left: 6px; font-size: var(--fs-12); font-weight: 600; color: var(--good); white-space: nowrap; }
+.cmp-when { font-size: var(--fs-12); line-height: 16px; color: var(--text-3); }
+
+/* one measure: number + small unit, a check or a cross, then a slim bar with a tick at the limit */
+.cmp-cell-hit { min-width: 0; cursor: pointer; }
+.cmp-cell { min-width: 0; cursor: help; }
+.cmp-val { display: flex; align-items: baseline; height: 24px; font-size: var(--fs-20); line-height: 24px; font-weight: 500; letter-spacing: -.01em; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.cmp-val small { margin-left: 3px; font-size: var(--fs-12); font-weight: 400; letter-spacing: 0; color: var(--text-2); }
+.cmp-none { font-size: var(--fs-16); color: var(--text-2); }
+.cmp-mark { flex: none; align-self: center; margin-left: 6px; }
+.cmp-cell.pass .cmp-mark { color: var(--good); }
+.cmp-cell.fail .cmp-mark, .cmp-cell.fail .cmp-val { color: var(--bad); }
+.cmp-cell.fail .cmp-val small { color: var(--bad); opacity: .85; }
+.cmp-track { position: relative; display: block; height: 4px; margin-top: 6px; border-radius: 2px; background: var(--fill-2); }
+.cmp-bar { position: absolute; top: 0; bottom: 0; left: 0; border-radius: 2px; background: rgba(255, 255, 255, .42); transition: width var(--slow) var(--ease); }
+.cmp-cell.fail .cmp-bar { background: var(--bad); opacity: .75; }
+.cmp-tick { position: absolute; top: -3px; bottom: -3px; width: 2px; margin-left: -1px; border-radius: 1px; background: var(--text); box-shadow: 0 0 0 1px rgba(9, 9, 11, .8); transition: left var(--slow) var(--ease); }
+
+.cmp-msg { grid-column: span 2; display: flex; align-items: center; gap: 8px; min-height: 34px; font-size: var(--fs-13); color: var(--text-2); }
+.cmp-msg.bad { color: var(--bad); }
+.cmp-more { justify-self: end; color: var(--text-3); }
+.cmp-menu { min-width: 0; }
+.cmp-menu .menu-item { padding: 0 12px; }
+.cmp-menu .menu-item:disabled { opacity: .45; cursor: default; }
+.cmp-menu .cmp-remove .menu-label { color: var(--bad); }
+
+/* an opened row: the mission timeline, the plain sentence, what you can do */
+.cmp-detail { grid-column: 1 / -1; padding: 10px 0 0; animation: fade var(--fast) ease-out; }
+.cmp-tracks { display: grid; grid-template-columns: 24px 1fr; column-gap: 10px; cursor: help; }
+.cmp-tracks .mt-keys .glyph { left: 6px; }
+.cmp-line { margin: 10px 0 0 34px; font-size: var(--fs-13); line-height: 18px; color: var(--text); text-wrap: pretty; }
+.cmp-acts { display: flex; flex-wrap: wrap; gap: 0; margin: 6px -8px 0 26px; }
+.cmp-acts .btn:last-child { margin-left: auto; }
+.cmp-acts .btn { padding: 0 8px; color: var(--text-2); font-weight: 500; }
+.cmp-acts .btn:hover:not(:disabled) { color: var(--text); }
+.cmp-acts .btn:disabled { opacity: .4; cursor: default; }
+
+/* under the table: add the selected spot, or say how */
+.cmp-add { display: flex; justify-content: flex-start; width: calc(100% + 16px); margin: 6px -8px 0; padding: 0 8px; color: var(--text-2); }
+.cmp-add span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.cmp-add:hover:not(:disabled) { color: var(--text); }
+.cmp-hint { margin-top: 10px; font-size: var(--fs-12); line-height: 16px; color: var(--text-3); }
+
+/* nothing added yet */
+.cmp-empty { display: flex; flex-direction: column; align-items: flex-start; }
+.cmp-intro { font-size: var(--fs-14); line-height: 20px; color: var(--text); text-wrap: pretty; }
+.cmp-empty .btn { margin-top: 14px; }
+.cmp-empty .btn:disabled { opacity: .45; cursor: default; }
+.cmp-empty .cmp-hint { margin-top: 8px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .cmp-answer, .cmp-detail { animation: none; }
+  .cmp-bar, .cmp-tick { transition: none; }
+}
