@@ -124,6 +124,8 @@ averages, not forecasts. Artemis markers are approximate points inside NASA's re
 
 Not an official NASA product. NASA data is public; credit the sources above.
 
+MOONDA's own code is under the MIT licence (`LICENSE`). Third-party data, models, fonts and music keep their own terms.
+
 ## Folders
 
 - `app/` — the website (React + TypeScript + CesiumJS). Science code is in `app/src/science/`.
