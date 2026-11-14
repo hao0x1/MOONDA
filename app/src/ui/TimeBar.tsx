@@ -121,8 +121,8 @@ export function TimeBar(p: Props) {
   for (let i = 0; i <= nTicks; i++) ticks.push({ x: (i / nTicks) * 100, major: i % tpd === 0 });
   const atEnd = p.cursor >= p.arrival + span;
 
-  const dayOptions = DAY_CHOICES.map(d => ({ value: d, label: t('tb.days', { n: d }) }));
-  const speedOptions = SPEED_CHOICES.map(s => ({ value: s as number, label: t(`tb.speed.${s}`), note: t(SPEED_NOTE[s]) }));
+  const dayOptions = DAY_CHOICES.map(d => ({ value: d, label: t('tb.days', { n: d }), tip: t('tb.length.optionTip', { n: d }) }));
+  const speedOptions = SPEED_CHOICES.map(s => ({ value: s as number, label: t(`tb.speed.${s}`), note: t(SPEED_NOTE[s]), tip: t('tb.speed.optionTip', { n: s }) }));
   const speedShort = p.speed === 1 || p.speed === 6 || p.speed === 24 ? t(`tb.speed.${p.speed}.short`) : `${p.speed} h / sec`;
   const tl = p.timeline;
 
@@ -131,15 +131,15 @@ export function TimeBar(p: Props) {
       <div className="tb-shade" aria-hidden="true" />
       <div ref={bar} className="timebar" role="region" aria-label={t('tb.region')}>
         <div ref={menus} className="tbar-menus">
-          <button ref={dateBtn} type="button" className="mbtn" aria-haspopup="dialog" aria-expanded={calOpen} onClick={() => setCalOpen(o => !o)}>
+          <button ref={dateBtn} type="button" className="mbtn" aria-haspopup="dialog" aria-expanded={calOpen} data-tip={calOpen ? undefined : t('tb.arrives.tip')} onClick={() => setCalOpen(o => !o)}>
             <span className="mbtn-cap">{t('tb.arrives')}</span>
             <span className="mbtn-val">{fmtDay(p.arrival)} • {fmtClockUtc(p.arrival)}</span>
             <CaretDown className="mbtn-caret" size={11} weight="bold" aria-hidden="true" />
           </button>
           <MenuButton caption={t('tb.length')} text={t('tb.days', { n: p.days })} options={dayOptions} value={p.days} onChange={p.onDays}
-            help={t('tb.length.help')} placement="top-start" />
+            help={t('tb.length.help')} tip={t('tb.length.tip')} placement="top-start" />
           <MenuButton caption={t('tb.speed')} text={speedShort} options={speedOptions} value={p.speed} onChange={p.onSpeed}
-            help={t('tb.speed.help')} placement="top-start" />
+            help={t('tb.speed.help')} tip={t('tb.speed.tip')} placement="top-start" />
         </div>
 
         <div ref={mid} className="tbar-mid">

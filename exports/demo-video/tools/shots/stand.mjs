@@ -10,7 +10,7 @@ const heading = page => page.evaluate(() => { try { const l = window.__moonda?.l
 export async function record(ctx) {
   const { page } = ctx;
   await ctx.hold(0.3);
-  await ctx.clickText('Stand here', { sec: 0.7 });
+  await ctx.clickText('Land here', { sec: 0.7 });
   await ctx.hold(3.0);
   await ctx.glide(1250, 300, 0.8);
   await ctx.hold(0.6);

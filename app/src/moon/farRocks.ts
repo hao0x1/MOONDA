@@ -9,7 +9,7 @@
 
 import {
   Appearance, Cartesian3, ComponentDatatype, GeometryInstanceAttribute, Cartographic, ColorGeometryInstanceAttribute, EllipsoidGeometry, GeometryInstance, Material, Matrix3, Matrix4,
-  Primitive, Quaternion, ShadowMode, VertexFormat, type Viewer,
+  Primitive, Quaternion, ShadowMode, VertexFormat, type BoundingSphere, type Viewer,
 } from 'cesium';
 
 export const FAR_ROCKS = {
@@ -38,9 +38,13 @@ out vec3 v_positionEC;
 out vec4 v_color;
 void main() {
     vec4 p = czm_computePosition();
+    // New fine ground tiles can arrive after this batch was made. Move the whole stone with its seat,
+    // without rebuilding thousands of little meshes on the main thread.
+    vec3 rise = UP * czm_batchTable_rise(batchId);
+    p.xyz += rise;
     // grow out of the dust as the near rock model of the same rock shrinks into it (lander.ts rockSpots), and shrink
     // away at the far end: the whole stone at once, so there is no edge and no dither pattern
-    vec3 c = czm_batchTable_centre(batchId) - EYE; // (a per-stone value: Primitive's batch table)
+    vec3 c = czm_batchTable_centre(batchId) + rise - EYE; // (a per-stone value: Primitive's batch table)
     float dist = length(c);
     vec4 R = RANGE;
     float k = smoothstep(R.x, R.x + R.y, dist) * (1.0 - smoothstep(R.z * 0.8, R.z, dist));
@@ -125,6 +129,11 @@ export class FarRocks {
   private next: Primitive | null = null;
   private at: [number, number] | null = null;
   private spotsNow: FarSpot[] = [];
+  private groundNow: number[] = [];
+  private reseatAt = 0;
+  private reseatLeft = 0;
+  private reseatAgain = false;
+  private readonly offReseat: () => void;
   private readonly material: Material;
   private readonly appearance: Appearance;
   private readonly builtOrigin = new Cartesian3();
@@ -152,9 +161,11 @@ export class FarRocks {
     this.appearance = new Appearance({
       // (the vertex shader reads two of the material's uniforms by the names Material gave them)
       material: this.material, vertexShaderSource: VS.replace('EYE', uName(this.material, 'u_eye')).replace('RANGE', uName(this.material, 'u_range'))
-        .replace('in vec4 color;', `in vec4 color;\nuniform vec3 ${uName(this.material, 'u_eye')};\nuniform vec4 ${uName(this.material, 'u_range')};`), fragmentShaderSource: FS.replace(/TONE_MAX/g, TONE_MAX.toFixed(3)), translucent: false, closed: true,
+        .replace('UP', uName(this.material, 'u_up'))
+        .replace('in vec4 color;', `in vec4 color;\nuniform vec3 ${uName(this.material, 'u_eye')};\nuniform vec3 ${uName(this.material, 'u_up')};\nuniform vec4 ${uName(this.material, 'u_range')};`), fragmentShaderSource: FS.replace(/TONE_MAX/g, TONE_MAX.toFixed(3)), translucent: false, closed: true,
       renderState: { depthTest: { enabled: true }, cull: { enabled: true } },
     } as ConstructorParameters<typeof Appearance>[0]);
+    this.offReseat = viewer.scene.postRender.addEventListener(() => this.seatOld());
   }
 
   /** The material's uniforms (Sun, light, exposure: copied from the near rocks each time they are lit). */
@@ -171,6 +182,7 @@ export class FarRocks {
     const instances: GeometryInstance[] = [];
     const geom = new EllipsoidGeometry({ radii: new Cartesian3(1, 1, 1), slicePartitions: 7, stackPartitions: 5, vertexFormat: VertexFormat.POSITION_ONLY });
     const kept: FarSpot[] = [];
+    const grounds: number[] = [];
     for (const s of spots) {
       const W = Cartesian3.add(E.origin, Cartesian3.add(Cartesian3.multiplyByScalar(E.east, s.e, sA), Cartesian3.multiplyByScalar(E.north, s.n, sB), sB), sC);
       const c = E.toCartographic(W, sCarto);
@@ -200,9 +212,11 @@ export class FarRocks {
         attributes: {
           color: new ColorGeometryInstanceAttribute(this.env.vis(s.e, s.n), tone, 0, 1),
           centre: new GeometryInstanceAttribute({ componentDatatype: ComponentDatatype.FLOAT, componentsPerAttribute: 3, value: [base.x - E.origin.x, base.y - E.origin.y, base.z - E.origin.z] }),
+          rise: new GeometryInstanceAttribute({ componentDatatype: ComponentDatatype.FLOAT, componentsPerAttribute: 1, value: [0] }),
         },
       }));
       kept.push(s);
+      grounds.push(g);
     }
     this.at = [we, wn];
     Cartesian3.clone(E.origin, this.builtOrigin);
@@ -216,19 +230,57 @@ export class FarRocks {
     p.show = false;
     const off = this.viewer.scene.postRender.addEventListener(() => {
       if (p.isDestroyed() || this.next !== p) { off(); return; }
-      if (p.ready) { off(); this.swapIn(p, kept); } else this.viewer.scene.requestRender();
+      if (p.ready) { off(); this.swapIn(p, kept, grounds); } else this.viewer.scene.requestRender();
     });
     this.viewer.scene.requestRender();
   }
 
-  private swapIn(p: Primitive, kept: FarSpot[]) {
+  private swapIn(p: Primitive, kept: FarSpot[], grounds: number[]) {
     if (this.next !== p || p.isDestroyed()) return;
     if (this.prim) this.viewer.scene.primitives.remove(this.prim);
-    this.prim = p; this.next = null; this.spotsNow = kept; this.count = kept.length;
+    this.prim = p; this.next = null; this.spotsNow = kept; this.groundNow = grounds; this.count = kept.length;
+    this.reseatLeft = 0; this.reseatAgain = false;
+    // Primitive's worker has finished: its aggregate bounds are now in world metres. The custom
+    // shader can lift seats by a few metres, which Cesium cannot infer. Pad the source and cached
+    // bounds once before showing the batch. These private names are checked against Cesium 1.147's
+    // Primitive._updateBoundingVolumes; changing its model matrix later still keeps the padding.
+    const bounded = p as unknown as { _boundingSpheres?: BoundingSphere[]; _boundingSphereWC?: BoundingSphere[]; _boundingSphereCV?: BoundingSphere[]; _boundingSphere2D?: BoundingSphere[]; _boundingSphereMorph?: BoundingSphere[] };
+    const bounds = new Set([...(bounded._boundingSpheres ?? []), ...(bounded._boundingSphereWC ?? []), ...(bounded._boundingSphereCV ?? []), ...(bounded._boundingSphere2D ?? []), ...(bounded._boundingSphereMorph ?? [])]);
+    for (const sphere of bounds) sphere.radius += 32;
     p.show = true;
     this.visSunAz = NaN; // the hill shadows were worked out when the batch was made: check them again
     this.env.changed?.();
+    this.reseat();
     this.viewer.scene.requestRender();
+  }
+
+  /** The drawn ground changed: re-seat existing stones in short chunks, then stop asking for frames. */
+  reseat() {
+    if (!this.prim?.ready) return;
+    if (this.reseatLeft) { this.reseatAgain = true; return; }
+    this.reseatAt = 0; this.reseatLeft = this.spotsNow.length;
+    if (this.reseatLeft) this.viewer.scene.requestRender();
+  }
+
+  private seatOld() {
+    const p = this.prim, E = this.env;
+    if (!p?.show || !p.ready || !this.reseatLeft) return;
+    const until = performance.now() + 0.8;
+    do {
+      const i = this.reseatAt++, s = this.spotsNow[i];
+      const W = Cartesian3.add(E.origin, Cartesian3.add(Cartesian3.multiplyByScalar(E.east, s.e, sA), Cartesian3.multiplyByScalar(E.north, s.n, sB), sB), sC);
+      const g = E.height(E.toCartographic(W, sCarto));
+      if (g !== undefined) {
+        const a = p.getGeometryInstanceAttributes(i) as { rise: Float32Array } | undefined;
+        if (a) {
+          const rise = a.rise, delta = g - this.groundNow[i];
+          if (Math.abs(rise[0] - delta) > 0.002) { rise[0] = delta; a.rise = rise; }
+        }
+      }
+      this.reseatLeft--;
+    } while (this.reseatLeft && performance.now() < until);
+    if (this.reseatLeft) this.viewer.scene.requestRender();
+    else if (this.reseatAgain) { this.reseatAgain = false; this.reseat(); }
   }
 
   /** The stones in the batch now (m east / north of the landing spot, size): their short shadows are drawn into the
@@ -257,10 +309,11 @@ export class FarRocks {
 
   show(on: boolean) {
     if (this.prim) this.prim.show = on;
-    if (!on) this.at = null;
+    if (!on) { this.at = null; this.reseatLeft = 0; this.reseatAgain = false; }
   }
 
   destroy() {
+    this.offReseat();
     const P = this.viewer.scene.primitives;
     if (this.prim) P.remove(this.prim);
     if (this.next) P.remove(this.next);

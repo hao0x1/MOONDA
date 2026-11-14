@@ -53,7 +53,7 @@ export interface WalkInput {
 }
 
 /** A rock (or one circle of a long rock's outline): p its middle on the ground it lies on, r its radius there, h its height (m). */
-export interface WalkObstacle { p: Cartesian3; r: number; h: number }
+export interface WalkObstacle { p: Cartesian3; r: number; h: number; /** how rounded its top is (2 = a dome, 3 = a block; see robotBody.ts) */ pow?: number }
 
 export interface WalkEnv {
   /** height of the ground (m above the 1,737.4 km sphere) under a world position, as drawn */
@@ -259,13 +259,17 @@ export class Walker {
 //   - grip is a sixth of Earth's: the wheels can push, brake or turn the body only so hard (GRIP x 1.62 m/s^2),
 //     so it takes longer to stop, slides wider in fast turns and gets light over crests, where it leaves the
 //     ground for a long, slow hop and lands softly on its springs;
-//   - climbing slows it down; slopes steeper than 25 degrees cannot be climbed (the wheels spin in the dust
-//     and it slides back);
+//   - gravity is real along the slope (1.62 m/s^2 x the sine of the slope under the six wheels): downhill it runs
+//     faster than on the flat (the motors only brake gently), uphill it is slower, and with the keys released it
+//     rolls on down anything steeper than about 9 degrees until you brake (S) or the ground levels out. Parked
+//     (not driving) its geared wheels hold it. Slopes steeper than 25 degrees cannot be climbed (the wheels spin
+//     in the dust and it slides back); on ground too steep for the tyres to hold it slides;
 //   - rocks: its real outline (robotBody.ts: the six wheels, their legs and the body, from the model) meets each
-//     rock's real outline (rockOutline.ts). A rock lower than the axles is climbed by the wheel that meets it;
-//     a bigger one stops the part that touches it: that corner loses its speed into the rock (no bounce), the robot
-//     slides along the rock with a little friction and turns a little about the touching point. A contact never
-//     adds speed, and the body dips forward on its springs when it stops hard;
+//     rock's real outline (rockOutline.ts, measured from the scanned stones). A rock up to three quarters of a
+//     wheel high is driven over: the wheel that meets it rides up and the body rocks. Only a bigger one stops the
+//     part that touches it: that corner loses its speed into the rock (no bounce), the robot slides along the rock
+//     with a little friction and turns a little about the touching point. A contact never adds speed, and the body
+//     dips forward on its springs when it stops hard;
 //   - the soil: the tyres sink 1-2 cm into the dust (more while they slip), the wheels slip a little pulling away
 //     and climbing, the ground's bumps nudge the steering at speed.
 // Directions are measured in a frame that keeps the LANDER's north (projected onto the ground where it is).
@@ -295,20 +299,26 @@ export const DRIVE = {
   speed: 2, fast: 5,
   /** how quickly the speed follows the keys when grip allows (s); strongest push of the motors (m/s^2) */
   accelS: 0.55, motor: 1.5,
-  /** wheel grip on the dust as a share of the weight (on Earth tyres manage about 1; loose regolith is less) */
-  grip: 1.05,
-  /** with nothing pressed the wheels' drag in the dust slows it by this much (m/s^2) plus this much per m/s */
-  rollDrag: 0.3, rollDragV: 0.18,
+  /** wheel grip on the dust as a share of the weight (on Earth tyres manage about 1; loose regolith is less): it holds to about 40 degrees */
+  grip: 0.85,
+  /** losses in the soil, always against the motion: a share of the weight (rolling resistance) plus this much per m/s */
+  rollRes: 0.1, rollDragV: 0.2,
+  /** keys released while driving: the geared motors hold back only this hard (m/s^2), so it rolls on down slopes
+   *  steeper than about 9 degrees; going faster than asked (downhill) they brake this hard at most, this softly (s) */
+  hold: 0.08, engineBrake: 0.45, overS: 2,
+  /** it never goes faster than this, however long the slope (m/s) */
+  vMax: 7,
   /** turning rate standing still / at full speed (degrees per second), and how quickly the turn starts and stops (s) */
   turnDeg: 55, turnDegFast: 30, turnS: 0.22,
   /** steepest slope it can climb (degrees); the top speed falls by this share at that slope */
-  maxSlopeDeg: 25, climbLoss: 0.55,
+  maxSlopeDeg: 25, climbLoss: 0.35,
   /** the body's springs: how far each wheel sinks the body at rest (sag), how far it can hang down and be pushed up (m); damping ratio */
   sag: 0.045, drop: 0.085, travelUp: 0.075, damp: 0.32,
   /** height of the body's centre of mass above the wheels' contact (m), and its turning inertia (radius of gyration, m) */
   cgH: 0.42 * S, gyrPitch: 0.95 * S, gyrRoll: 0.85 * S,
-  /** the tallest rock a wheel climbs (m: up to its axle; anything taller stops it) */
-  climb: WHEEL_AXLE_Y * S,
+  /** the tallest rock it drives over (m): three quarters of a wheel's height, as a rocker-bogie rover manages;
+   *  anything taller stops the part that touches it */
+  climb: 1.5 * WHEEL_R * S,
   /** rock contact: friction along the rock, how much harder the robot is to turn than a free body (its wheels
    *  hold it) and the most one touch turns it (deg/s), the body's nose-down pitch per m/s lost (rad/s) and its largest kick (rad/s) */
   rockFriction: 0.3, rockTurnHold: 10, rockTurnMax: 25, rockPitch: 0.12, rockPitchMax: 0.35,
@@ -324,6 +334,8 @@ export interface DriveInput {
   /** forward (+1) / back (-1), and steering right (+1) / left (-1) */
   fwd: number; turn: number;
   fast: boolean;
+  /** not being driven: the brakes are on, it stays where it is (up to what the tyres can hold) */
+  parked?: boolean;
 }
 
 const d1 = new Cartesian3(), d2 = new Cartesian3(), d3 = new Cartesian3(), d4 = new Cartesian3();
@@ -385,6 +397,13 @@ export class Driver {
   private bodyH = 0;
   private vp = 0;
   private vr = 0;
+  /** the slope of the ground itself under the six wheels (tangents: + = rising ahead / to the right), no rocks, no springs */
+  gTanF = 0;
+  gTanS = 0;
+  /** how long a rock has really been holding it (s): the HUD only says so after a moment */
+  private rockHold = 0;
+  private restless = false;
+  private wheelTerrain = new Float64Array(6);
   private comp = new Float64Array(6);
   private prevGround = new Float64Array(6);
   private gRate = new Float64Array(6);
@@ -392,6 +411,7 @@ export class Driver {
   private origin = new Cartesian3();
   private F0 = new Cartesian3();
   private R0 = new Cartesian3();
+  private nextP = new Cartesian3();
 
   /** Park the rover at `p` (world) facing `headingDeg`; `north0` is the lander's north. */
   reset(p: Cartesian3, north0: Cartesian3, headingDeg: number, env: WalkEnv, origin?: Cartesian3) {
@@ -399,7 +419,7 @@ export class Driver {
     this.heading = headingDeg;
     this.speed = 0; this.yawRate = 0; this.turned = 0; this.blocked = ''; this.slide = 0;
     this.air = 0; this.landed = 0; this.slip = 0; this.vUp = 0; this.vp = 0; this.vr = 0;
-    this.impact = 0; this.pressing = false; this.sink = DRIVE.sink;
+    this.impact = 0; this.pressing = false; this.sink = DRIVE.sink; this.rockHold = 0;
     this.wheelSpeed.fill(0);
     this.place(p, env.ground(p));
     Cartesian3.clone(origin ?? this.feet, this.origin);
@@ -423,6 +443,15 @@ export class Driver {
 
   /** Straight-line distance from the landing spot (m). */
   distanceFromStart(): number { return Cartesian3.distance(this.feet, this.origin); }
+
+  /** The plane through the bare ground under the six wheels (least squares): what gravity and grip act on. */
+  private groundPlane() {
+    const g = this.wheelTerrain;
+    let m = 0, pf = 0, pr = 0;
+    for (let i = 0; i < 6; i++) m += g[i] / 6;
+    for (let i = 0; i < 6; i++) { pf += (g[i] - m) * (WF[i] - MEAN_F); pr += (g[i] - m) * WR[i]; }
+    this.gTanF = pf / SUM_F2C; this.gTanS = pr / SUM_R2;
+  }
 
   /**
    * Advance by dt seconds. Returns true while anything still moves (driving, coasting, turning, bouncing).
@@ -448,42 +477,50 @@ export class Driver {
     const dpsi = this.turned * Math.PI / 180, c = Math.cos(dpsi), s = Math.sin(dpsi);
     let vF = this.speed * c + this.slide * s, vS = this.slide * c - this.speed * s;
 
-    // slope along and across the way it faces, from the body's own tilt (follows the wheels)
-    const slopeF = Math.sin(this.pitch), slopeS = Math.sin(this.roll);
+    // the slope the forces use: the plane through the GROUND under the six wheels (no rocks, no spring bounce)
+    this.groundPlane();
+    const tF = this.gTanF, tS = this.gTanS;
+    const cosF = 1 / Math.hypot(1, tF), cosS = 1 / Math.hypot(1, tS), sinF = tF * cosF, sinS = tS * cosS;
+    const load = G / Math.sqrt(1 + tF * tF + tS * tS) * onShare;         // how hard the ground pushes back (per unit mass)
+    const gF = grounded ? -G * sinF : 0, gS = grounded ? -G * sinS : 0;  // gravity along / across the ground (none in the air)
     const top = input.fast ? DRIVE.fast : DRIVE.speed;
-    const climbing = input.fwd !== 0 && slopeF * input.fwd > 0;
-    const climbShare = climbing ? Math.min(1, Math.abs(slopeF) / MAX_DRIVE_SIN) : 0;
+    const climbing = input.fwd !== 0 && sinF * input.fwd > 0;
+    const climbShare = climbing ? Math.min(1, Math.abs(sinF) / MAX_DRIVE_SIN) : 0;
     const want = input.fwd * top * (1 - DRIVE.climbLoss * climbShare);
-    // gravity along the ground
-    const gF = -G * slopeF, gS = -G * slopeS;
-    // what the wheels would like to do, then what the grip lets them
-    let aF: number;
-    if (input.fwd !== 0) {
-      aF = (want - vF) / DRIVE.accelS - gF;
-      if (Math.sign(aF) === input.fwd) aF = Math.sign(aF) * Math.min(Math.abs(aF), DRIVE.motor); // pushing: the motors' limit
-    } else {
-      // rolling drag in the dust, and the wheels hold it on a slope (they are geared: it does not roll away)
-      const drag = DRIVE.rollDrag + DRIVE.rollDragV * Math.abs(vF);
-      aF = -gF - Math.sign(vF) * Math.min(drag, Math.abs(vF) / dt);
-    }
-    let aS = -vS / 0.12 - gS; // the wheels resist sliding sideways
-    const limit = DRIVE.grip * G * onShare * Math.cos(Math.asin(Math.min(0.99, Math.hypot(slopeF, slopeS))));
-    // the grip goes first to holding the line (sideways), what is left drives or brakes
+    const limit = DRIVE.grip * load;
+    // sideways the tyres resist; the grip goes first to holding the line, what is left drives, brakes or holds
+    let aS = -vS / 0.12 - gS;
     let slip = 0;
-    const want2 = Math.hypot(aF, aS);
-    if (Math.abs(aS) > limit) aS = Math.sign(aS) * limit;
+    if (Math.abs(aS) > limit) { slip = (Math.abs(aS) - limit) * 0.35; aS = Math.sign(aS) * limit; }
     const leftF = Math.sqrt(Math.max(0, limit * limit - aS * aS));
-    if (Math.abs(aF) > leftF) aF = Math.sign(aF) * leftF;
-    if (want2 > limit) slip = (want2 - limit) * 0.35;
-    // too steep: the wheels dig in and spin, and it slides back
+    // losses in the soil (always against the motion) and what the wheels do
+    const rr = DRIVE.rollRes * load, kv = DRIVE.rollDragV;
+    let aF = 0, hold = 0;
     this.blocked = '';
-    if (climbing && Math.abs(slopeF) > MAX_DRIVE_SIN) {
-      aF = Math.sign(input.fwd) * Math.min(Math.abs(aF), G * MAX_DRIVE_SIN * 0.85);
-      this.blocked = 'slope'; slip = Math.max(slip, 1.2);
-    }
-    vF += (aF + gF) * dt; vS += (aS + gS) * dt;
-    if (input.fwd === 0 && Math.abs(vF) < 0.02 && Math.abs(slopeF) < MAX_DRIVE_SIN) vF = 0;
-    if (Math.abs(vS) < 0.01) vS = 0;
+    if (input.fwd !== 0) {
+      const over = (vF - want) * input.fwd > 0;                          // faster than asked (downhill): the motors only brake gently
+      aF = (want - vF) / (over ? DRIVE.overS : DRIVE.accelS) + input.fwd * (rr + kv * Math.abs(want));
+      const push = Math.min(DRIVE.motor, leftF), brake = Math.min(DRIVE.engineBrake, leftF);
+      aF = input.fwd > 0 ? Math.max(-brake, Math.min(push, aF)) : Math.max(-push, Math.min(brake, aF));
+      // too steep to climb: the wheels dig in and spin, and it slides back
+      if (climbing && Math.abs(sinF) > MAX_DRIVE_SIN) {
+        aF = Math.sign(input.fwd) * Math.min(Math.abs(aF), G * MAX_DRIVE_SIN * 0.85);
+        this.blocked = 'slope'; slip = Math.max(slip, 1.2);
+      }
+    } else hold = Math.min(input.parked ? 1e9 : DRIVE.hold, leftF);      // parked: the brakes; driving with the keys released: a gentle hold
+    if (grounded && Math.hypot(gF, gS) > limit + rr) { this.blocked = 'slope'; slip = Math.max(slip, 0.8); } // too steep for the tyres: it slides
+    // at rest it stays at rest until the push beats the losses (15 % harder to start than to keep going: no creeping on and off)
+    const free = aF + gF, still = grounded ? (rr + hold) * 1.15 : 0, resist = grounded ? rr + hold + kv * Math.abs(vF) : 0;
+    if (vF !== 0) {
+      const v1 = vF + (free - Math.sign(vF) * resist) * dt;
+      vF = v1 * vF <= 0 ? 0 : v1;                                         // the losses never push it backwards
+    } else if (Math.abs(free) > still) vF = (free - Math.sign(free) * (rr + hold)) * dt;
+    if (input.fwd === 0 && Math.abs(vF) < 0.012 && Math.abs(free) <= still) vF = 0;
+    // standing still for this instant, but the slope pulls harder than the wheels hold: it is about to roll (not at rest)
+    this.restless = grounded && Math.abs(free) > still;
+    vF = Math.max(-DRIVE.vMax, Math.min(DRIVE.vMax, vF));
+    vS += (aS + gS) * dt;
+    if (Math.abs(vS) < 0.01 && Math.abs(gS) <= limit) vS = 0;
     // the soil: pulling away and climbing, the tyres churn a little faster than the ground goes by (m/s)
     let spin = 0;
     if (input.fwd && grounded) spin = DRIVE.takeoffSlip * Math.abs(aF) + 0.4 * climbShare;
@@ -492,12 +529,20 @@ export class Driver {
     // move: world direction of forward and right on the flat ground
     const a = this.heading * Math.PI / 180, ca = Math.cos(a), sa = Math.sin(a);
     const F = this.flatDir(ca, sa, this.F0), Rt = this.flatDir(-sa, ca, this.R0);
-    const next = Cartesian3.add(this.feet, Cartesian3.add(Cartesian3.multiplyByScalar(F, vF * dt, d1), Cartesian3.multiplyByScalar(Rt, vS * dt, d2), d1), new Cartesian3());
-    // rocks: the robot's outline against theirs (see collide)
+    // (speeds are along the ground; the step on the flat map is shorter on a slope)
+    const next = Cartesian3.clone(this.feet, this.nextP);
+    // rocks: the robot's outline against theirs (see collide), in pieces of about 6 cm so nothing is skipped at speed
     this.speed = vF; this.slide = vS;
     this.impact = 0; this.pressing = false;
-    if (obstacles.length) this.collide(next, F, Rt, obstacles);
+    const pieces = obstacles.length ? Math.max(1, Math.min(8, Math.ceil(Math.hypot(vF, vS) * dt / 0.06))) : 1, hp = dt / pieces;
+    for (let k = 0; k < pieces; k++) {
+      Cartesian3.add(next, Cartesian3.add(Cartesian3.multiplyByScalar(F, this.speed * cosF * hp, d1), Cartesian3.multiplyByScalar(Rt, this.slide * cosS * hp, d2), d1), next);
+      if (obstacles.length) this.collide(next, F, Rt, obstacles);
+    }
     vF = this.speed; vS = this.slide;
+    // the HUD says "a rock is in the way" only when one really holds it (not for a brush, and not flickering)
+    this.rockHold = this.pressing && input.fwd !== 0 && Math.abs(vF) < 0.15 ? Math.min(1, this.rockHold + dt) : Math.max(0, this.rockHold - 2 * dt);
+    if (this.rockHold > 0.3) this.blocked = 'rock';
     const moved = Cartesian3.distance(next, this.feet);
     this.odometer += moved * Math.sign(vF || 1);
     this.place(next, env.ground(next));
@@ -562,7 +607,9 @@ export class Driver {
     }
     this.orient();
     const bouncing = Math.abs(this.vUp) > 0.004 || Math.abs(this.vp) > 0.004 || Math.abs(this.vr) > 0.004;
-    return Math.abs(this.speed) > 0.01 || Math.abs(this.slide) > 0.01 || Math.abs(this.yawRate) > 0.05 || bouncing || this.air > 0;
+    // (any speed at all keeps it awake: on a slope it passes through nought on its way to rolling back down, and
+    // must not be put to sleep there; at rest the speeds are exactly nought, see the forces above)
+    return this.speed !== 0 || this.slide !== 0 || this.restless || Math.abs(this.yawRate) > 0.05 || bouncing || this.air > 0;
   }
 
   /** Where the middle of the model's base is (world): under the body, at the wheels' rest height, the tyres pressed into the dust. */
@@ -576,7 +623,7 @@ export class Driver {
    * Each rock touched gives one contact: the deepest ball of the robot's outline in it. The robot is moved straight
    * out by that depth (position only: no speed comes from it), then the touching point's speed into the rock is
    * taken away by an impulse there (a rigid body of mass 1, harder to turn than a free one because its wheels hold
-   * it), with friction along the rock. A rock lower than the axles is left to the wheel (climbed, see sampleWheels).
+   * it), with friction along the rock. A rock low enough to drive over (DRIVE.climb) is left to the wheels (see sampleWheels).
    */
   private collide(next: Cartesian3, F: Cartesian3, Rt: Cartesian3, obstacles: readonly WalkObstacle[]) {
     const tp = Math.tan(this.pitch), tr = Math.tan(this.roll);
@@ -592,26 +639,26 @@ export class Driver {
         const dx = Cartesian3.subtract(o.p, next, d4);
         const rf = Cartesian3.dot(dx, F), rr = Cartesian3.dot(dx, Rt);
         if (Math.hypot(rf, rr) > o.r + reach) continue;
+        if (o.h <= DRIVE.climb) continue; // low enough to drive over: the wheels ride up it (sampleWheels), nothing is stopped
         const rockGround = Cartesian3.magnitude(o.p) - R;
-        const climbable = o.h <= DRIVE.climb;
         let deep = 0, nf = 0, nr = 0, af = 0, ar = 0;
         for (const c of BODY_CELLS) {
-          if (climbable && c.wheel >= 0) continue;
           const cf = c.f * S, cr = c.r * S, rad = c.rad * S;
           // the ball's bottom over the rock's ground, with the body's tilt (and the wheel's own travel)
           const bottom = this.bodyH + cf * tp + cr * tr + c.y * S + (c.wheel >= 0 ? this.wheelLift[c.wheel] : 0) - rockGround;
           if (bottom >= o.h) continue;
           const df = cf - rf, dr = cr - rr, D = Math.hypot(df, dr);
-          const pen = rockRadiusAt(o.r, o.h, bottom) + rad - D;
+          const pen = rockRadiusAt(o.r, o.h, bottom, o.pow) + rad - D;
           if (pen <= deep) continue;
           deep = pen;
           if (D > 1e-6) { nf = df / D; nr = dr / D; } else { nf = -Math.sign(rf) || 1; nr = 0; }
           af = cf - nf * rad; ar = cr - nr * rad;
         }
-        if (deep <= 0.002) continue;
+        // (a millimetre of touch is kept below, so a rock that holds the robot is felt on every step, not every other one)
+        if (deep <= 0.0004) continue;
         any = true; pressing = true;
         // out of the rock (keeping a millimetre of touch so the contact holds without jitter)
-        const out = deep - 0.001;
+        const out = Math.max(0, deep - 0.001);
         Cartesian3.add(next, Cartesian3.add(Cartesian3.multiplyByScalar(F, nf * out, d1), Cartesian3.multiplyByScalar(Rt, nr * out, d2), d1), next);
         // the touching point's speed: the body's plus its turn (a point ahead of the middle moves right when turning right)
         const pf = vF - w * ar, ps = vS + w * af;
@@ -641,9 +688,7 @@ export class Driver {
     // (the wheels' grip on the dust keeps the turn small: a touch swings it by a few degrees, it never spins it)
     const wMax = DRIVE.rockTurnMax * Math.PI / 180;
     this.yawRate = (w0 + Math.max(-wMax, Math.min(wMax, w - w0))) * 180 / Math.PI;
-    this.pressing = pressing;
-    if (pressing) { this.contactBefore = v0; this.contactAfter = Math.hypot(vF, vS); this.contactAngle = hitAngle; }
-    if (pressing) this.blocked = 'rock';
+    if (pressing) { this.pressing = true; this.contactBefore = v0; this.contactAfter = Math.hypot(vF, vS); this.contactAngle = hitAngle; }
   }
 
   /** Where wheel i touches the ground (world). */
@@ -673,12 +718,12 @@ export class Driver {
         let lift = 0;
         for (let k = -3; k <= 3; k++) {
           const x = Rw * k / 3.2;
-          const l = rockTopAt(o.r, o.h, Math.abs(dist + x)) - (Rw - Math.sqrt(Rw * Rw - x * x));
+          const l = rockTopAt(o.r, o.h, Math.abs(dist + x), o.pow) - (Rw - Math.sqrt(Rw * Rw - x * x));
           if (l > lift) lift = l;
         }
         if (lift > 0) g = Math.max(g, g0 + lift);
       }
-      this.wheelGround[i] = g;
+      this.wheelGround[i] = g; this.wheelTerrain[i] = g0;
     }
   }
 

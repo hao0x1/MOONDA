@@ -18,6 +18,30 @@
 .lv-tag[data-state='below'] span, .lv-tag[data-state='hidden'] span { color: rgba(255, 255, 255, .78); }
 .lv-tag[data-state='below'] span::before, .lv-tag[data-state='hidden'] span::before { content: ''; display: inline-block; width: 6px; height: 6px; margin: 0 7px 3px 0; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; transform: rotate(45deg); opacity: .8; }
 
+/* waypoints: the pins of the map, drawn over the view so they show through any hill (like a waypoint in a game).
+   The marker's point is the place on the ground; the name and the distance sit over it. */
+.lv-way { position: absolute; left: 0; top: 0; will-change: transform; --ring: #fff; }
+.lv-way > i { position: absolute; left: -15px; top: -42px; width: 30px; height: 30px; display: grid; place-items: center; border-radius: 50%; background: rgba(21, 22, 25, .86); box-shadow: 0 0 0 1.6px var(--ring), 0 2px 8px rgba(0, 0, 0, .5); color: #fff; font-style: normal; }
+.lv-way > i::after { content: ''; position: absolute; left: 50%; top: 100%; width: 2px; height: 11px; margin-left: -1px; border-radius: 1px; background: var(--ring); box-shadow: 0 0 0 1px rgba(0, 0, 0, .35); }
+.lv-way > i b { font: 600 14px/1 var(--sans, system-ui, sans-serif); }
+.lv-way > div { position: absolute; left: 0; top: -74px; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; white-space: nowrap; text-shadow: 0 1px 2px rgba(0, 0, 0, .95), 0 0 8px rgba(0, 0, 0, .75); }
+.lv-way > div b { font: 600 12px/14px var(--sans, system-ui, sans-serif); color: #fff; }
+.lv-way > div span { font: 500 11px/14px var(--mono, ui-monospace, monospace); color: rgba(255, 255, 255, .86); }
+.lv-way.k-dest { --ring: #8ad4ff; }
+.lv-way.k-dest > div b { color: #c9ecff; }
+/* the next point of the planned route: small and quiet, only its distance */
+.lv-way.k-next > i { left: -11px; top: -32px; width: 22px; height: 22px; background: rgba(21, 22, 25, .7); --ring: rgba(138, 212, 255, .9); }
+.lv-way.k-next > i::after { height: 8px; }
+.lv-way.k-next > div { top: -48px; }
+.lv-way.k-next > div b { display: none; }
+/* off the screen: it waits at the edge and an arrow shows the way to turn */
+.lv-way[data-off='left'] > i::before, .lv-way[data-off='right'] > i::before, .lv-way[data-off='up'] > i::before, .lv-way[data-off='down'] > i::before { content: ''; position: absolute; top: 50%; width: 8px; height: 8px; margin-top: -4px; border-left: 2px solid #fff; border-bottom: 2px solid #fff; filter: drop-shadow(0 0 2px rgba(0, 0, 0, .8)); }
+.lv-way[data-off='left'] > i::before { left: -15px; transform: rotate(45deg); }
+.lv-way[data-off='right'] > i::before { right: -15px; transform: rotate(-135deg); }
+.lv-way[data-off='up'] > i::before { left: 50%; top: -9px; margin-left: -4px; transform: rotate(135deg); }
+.lv-way[data-off='down'] > i::before { left: 50%; top: auto; bottom: -22px; margin-left: -4px; transform: rotate(-45deg); }
+.lv-way[data-off='left'] > i::after, .lv-way[data-off='right'] > i::after, .lv-way[data-off='up'] > i::after, .lv-way[data-off='down'] > i::after { display: none; }
+
 /* ---------- controls (LanderHud.tsx) ---------- */
 .lv-glass { background: var(--glass); box-shadow: var(--shadow); backdrop-filter: blur(24px) saturate(1.25); -webkit-backdrop-filter: blur(24px) saturate(1.25); }
 .lv-hud { font-size: var(--fs-14); line-height: 1.4; color: var(--text); font-variant-numeric: tabular-nums; }
@@ -85,6 +109,8 @@
 .lv-light { width: 36px; height: 36px; display: grid; place-items: center; border: 0; border-radius: 18px; background: transparent; color: var(--text-2) !important; transition: background 160ms ease-out; }
 .lv-light:hover { background: var(--fill-2); }
 .lv-light.on { color: var(--sun) !important; }
+.lv-reset { width: 36px; height: 36px; display: grid; place-items: center; border: 0; border-radius: 18px; background: transparent; color: var(--text-2) !important; transition: background 160ms ease-out; }
+.lv-reset:hover { background: var(--fill-2); color: var(--text) !important; }
 .lv-keys { display: inline-flex; align-items: center; gap: 5px; font-size: var(--fs-12); color: rgba(255, 255, 255, .82); text-shadow: 0 1px 3px rgba(0, 0, 0, .9); white-space: nowrap; }
 .lv-keys kbd { display: inline-grid; place-items: center; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 6px; background: rgba(0, 0, 0, .45); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .16); font: 500 var(--fs-11)/1 var(--mono); color: var(--text); }
 .lv-keys i { width: 1px; height: 12px; margin: 0 6px; background: var(--line-2); }

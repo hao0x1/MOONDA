@@ -1,0 +1,444 @@
+[
+  {
+    "id": "chandrayaan-1-mip",
+    "name": "Chandrayaan-1 Moon Impact Probe",
+    "status": "past",
+    "kind": "impact",
+    "operator": "ISRO",
+    "country": "India",
+    "date": "2008-11-14",
+    "lat": -89.55,
+    "lon": -122.93,
+    "precisionKm": 2,
+    "outcome": "success",
+    "short": "India's first probe to reach the Moon hit a ridge near the south pole.",
+    "detail": "The probe sent pictures and measurements while falling toward the Moon. Researchers matched its last pictures to maps to estimate where it hit.",
+    "source": {
+      "name": "NASA: Chandrayaan-1 / Moon Impact Probe",
+      "url": "https://science.nasa.gov/mission/chandrayaan-1/"
+    },
+    "coordSource": {
+      "name": "Stooke, Ahmed and Subramanian (2021), LPSC abstract 1013: impact location refined",
+      "url": "https://www.hou.usra.edu/meetings/lpsc2021/pdf/1013.pdf"
+    },
+    "inQuickMap": false,
+    "verify": true,
+    "note": "Estimated impact point from the final descent pictures, not a crater located in LROC imagery. Authors give near 89.55 S, 122.93 W and say the crater/ejecta has not been found; 2 km is a conservative display uncertainty, not a published error bar. This supersedes widely repeated legacy estimates near 89.76 S, 39.40 W."
+  },
+  {
+    "id": "change-3",
+    "name": "Chang'e-3",
+    "status": "past",
+    "kind": "lander",
+    "operator": "CNSA",
+    "country": "China",
+    "date": "2013-12-14",
+    "lat": 44.1214,
+    "lon": -19.5117,
+    "precisionKm": 0.01,
+    "outcome": "success",
+    "short": "China's first Moon lander, beside a wide crater in the Sea of Rains.",
+    "detail": "The lander delivered the Yutu rover to a plain made by ancient lava. Its telescope later watched the sky from the Moon.",
+    "source": {
+      "name": "CNSA: China's lunar probe sets record for longest stay",
+      "url": "https://www.cnsa.gov.cn/english/n6465652/n6465653/c6480404/content.html"
+    },
+    "coordSource": {
+      "name": "LROC QuickMap anthropogenic objects: Chang'e 3 Lander",
+      "url": "https://lroc.im-ldi.com/images/637"
+    },
+    "inQuickMap": true,
+    "verify": true,
+    "note": "Current operating status could not be confirmed for 2026-11-14. The cited CNSA operations report is from 2016; past is a conservative display fallback, not a claim that the lander has stopped. Yutu is a separate pin."
+  },
+  {
+    "id": "yutu",
+    "name": "Yutu",
+    "status": "past",
+    "kind": "rover",
+    "operator": "CNSA",
+    "country": "China",
+    "date": "2013-12-14",
+    "lat": 44.1208,
+    "lon": -19.5122,
+    "precisionKm": 0.0129,
+    "outcome": "success",
+    "short": "China's first Moon rover worked for 972 days.",
+    "detail": "Yutu drove near the Chang'e-3 lander before a fault stopped its wheels. It kept taking measurements until July 2016.",
+    "source": {
+      "name": "CNSA: A delivery from the Moon (2022 retrospective)",
+      "url": "https://www.cnsa.gov.cn/n6758823/n6758844/n6760445/n6760446/c6841528/content.html"
+    },
+    "coordSource": {
+      "name": "LROC QuickMap anthropogenic objects: Chang'e 3 Yutu Rover",
+      "url": "https://lroc.im-ldi.com/images/637"
+    },
+    "inQuickMap": true,
+    "verify": false,
+    "note": "Pin is the rover position in the supplied QuickMap list, not its landing carrier. Date is landing aboard Chang'e-3, before rover deployment. CNSA confirms operations ended on 2016-07-31."
+  },
+  {
+    "id": "change-4-yutu-2",
+    "name": "Chang'e-4 / Yutu-2",
+    "status": "past",
+    "kind": "lander",
+    "operator": "CNSA",
+    "country": "China",
+    "date": "2019-01-03",
+    "lat": -45.4562,
+    "lon": 177.5886,
+    "precisionKm": 0.02,
+    "outcome": "success",
+    "short": "The first soft landing on the Moon's far side.",
+    "detail": "Chang'e-4 landed inside Von Kármán crater and released Yutu-2. A satellite relays their signals because the Moon blocks a direct view of Earth.",
+    "source": {
+      "name": "CNSA: Chang'e and Yutu exploration retrospective (2025)",
+      "url": "https://www.cnsa.gov.cn/n6758968/n6758973/c10666020/content.html"
+    },
+    "coordSource": {
+      "name": "LROC QuickMap anthropogenic objects: Chang'e 4 Lander",
+      "url": "https://lroc.im-ldi.com/images/1168"
+    },
+    "inQuickMap": true,
+    "verify": true,
+    "note": "Pin is the fixed lander, not Yutu-2's current position. CNSA described continuing record-setting work on 2025-04-25, but operation on 2026-11-14 could not be confirmed. Past is a conservative display fallback, not a claim that the mission ended. QuickMap lists 177.5886 E; the 2020 LROC article gives 177.5885 E and 13 m uncertainty."
+  },
+  {
+    "id": "beresheet",
+    "name": "Beresheet",
+    "status": "past",
+    "kind": "impact",
+    "operator": "SpaceIL / Israel Aerospace Industries",
+    "country": "Israel",
+    "date": "2019-04-11",
+    "lat": 32.5953,
+    "lon": 19.3495,
+    "precisionKm": 0.03,
+    "outcome": "failed",
+    "short": "Israel's first Moon lander left a dark scar after its engine failed",
+    "detail": "Beresheet crashed after its main engine failed during descent. LROC images reveal a dark scar and bright debris in the Sea of Serenity.",
+    "source": {
+      "name": "LROC: Beresheet Crash Site Spotted",
+      "url": "https://lroc.im-ldi.com/images/1101"
+    },
+    "coordSource": {
+      "name": "LROC QuickMap anthropogenic_objects: Beresheet; LROC crash image",
+      "url": "https://lroc.im-ldi.com/images/1101"
+    },
+    "inQuickMap": true,
+    "verify": false,
+    "note": "Uses supplied QuickMap terrain-registered point; the original article gives 32.5956 N, 19.3496 E, about 9 metres away. Precision is rounded conservatively above the published 20 by 8 metre confidence interval."
+  },
+  {
+    "id": "chandrayaan-2-vikram",
+    "name": "Chandrayaan-2 Vikram",
+    "status": "past",
+    "kind": "impact",
+    "operator": "ISRO",
+    "country": "India",
+    "date": "2019-09-06",
+    "lat": -70.8811,
+    "lon": 22.7834,
+    "precisionKm": 0.01,
+    "outcome": "failed",
+    "short": "India's first Moon lander broke apart during its landing attempt.",
+    "detail": "Vikram lost contact during descent and crashed in the southern highlands. A public search helped NASA locate the scattered pieces.",
+    "source": {
+      "name": "LROC: Vikram Lander Found",
+      "url": "https://lroc.im-ldi.com/images/1131"
+    },
+    "coordSource": {
+      "name": "LROC QuickMap anthropogenic objects: Chandrayaan-2 Vikram Lander",
+      "url": "https://lroc.im-ldi.com/images/1131"
+    },
+    "inQuickMap": true,
+    "verify": false,
+    "note": "UTC impact date is 2019-09-06; it was already September 7 in India. This pin is the impact site, not the still-operating Chandrayaan-2 orbiter."
+  },
+  {
+    "id": "change-5",
+    "name": "Chang'e-5",
+    "status": "past",
+    "kind": "sample-return",
+    "operator": "CNSA",
+    "country": "China",
+    "date": "2020-12-01",
+    "lat": 43.0576,
+    "lon": -51.9161,
+    "precisionKm": 0.02,
+    "outcome": "success",
+    "short": "Brought Moon rocks to Earth for the first time since 1976.",
+    "detail": "The spacecraft drilled and scooped soil from a young lava plain in the Ocean of Storms. Its sample capsule returned 1,731 grams to Earth.",
+    "source": {
+      "name": "CNSA: Chang'e-5 retrieves 1,731 grams of Moon samples",
+      "url": "https://www.cnsa.gov.cn/english/n6465652/n6465653/c6810963/content.html"
+    },
+    "coordSource": {
+      "name": "LROC QuickMap anthropogenic objects: Chang'e 5 Lander",
+      "url": "https://lroc.im-ldi.com/images/1172"
+    },
+    "inQuickMap": true,
+    "verify": false,
+    "note": "Pin is the lander that remained on the Moon, not the capsule that returned to Earth."
+  },
+  {
+    "id": "hakuto-r-mission-1",
+    "name": "HAKUTO-R Mission 1",
+    "status": "past",
+    "kind": "impact",
+    "operator": "ispace",
+    "country": "Japan",
+    "date": "2023-04-25",
+    "lat": 47.58,
+    "lon": 44.0938,
+    "precisionKm": 0.02,
+    "outcome": "failed",
+    "short": "Japan’s first private Moon lander crashed near Atlas crater.",
+    "detail": "The lander lost track of its height above the ground and crashed near Atlas crater. Images from lunar orbit show the impact mark and pieces of the spacecraft.",
+    "source": {
+      "name": "ispace: Mission 1 landing analysis",
+      "url": "https://www.ispace-inc.com/2023/05/26/ispace-announces-results-of-the-hakuto-r-mission-1-lunar-landing/"
+    },
+    "coordSource": {
+      "name": "LROC QuickMap anthropogenic objects: HakutoR1; associated LROC image report",
+      "url": "https://lroc.im-ldi.com/images/1302"
+    },
+    "inQuickMap": true,
+    "verify": false,
+    "note": "The company release uses 26 April in Japan; the lunar impact was 25 April in UTC. The Rashid rover carried by this lander never deployed."
+  },
+  {
+    "id": "luna-25",
+    "name": "Luna 25",
+    "status": "past",
+    "kind": "impact",
+    "operator": "Roscosmos",
+    "country": "Russia",
+    "date": "2023-08-19",
+    "lat": -57.8651,
+    "lon": 61.3588,
+    "precisionKm": 0.05,
+    "outcome": "failed",
+    "short": "A failed orbit change sent Russia's lander into a crater rim",
+    "detail": "Luna 25 crashed before its planned landing near the south pole. LROC found a new crater on the steep inner rim of Pontécoulant G, about 400 kilometres from its intended site.",
+    "source": {
+      "name": "NASA: LRO Observes Crater Likely from Luna 25 Impact",
+      "url": "https://www.nasa.gov/humans-in-space/nasas-lro-observes-crater-likely-from-luna-25-impact/"
+    },
+    "coordSource": {
+      "name": "LROC QuickMap anthropogenic_objects: Luna25; LROC impact image",
+      "url": "https://lroc.im-ldi.com/images/1311"
+    },
+    "inQuickMap": true,
+    "verify": true,
+    "note": "Crash and date are confirmed; NASA/LROC describe attribution of this new crater as likely rather than certain. The supplied QuickMap point refines the article's rounded 57.865 S, 61.360 E; 50 m uncertainty conservatively covers the original better-than-40 m location accuracy."
+  },
+  {
+    "id": "chandrayaan-3",
+    "name": "Chandrayaan-3 / Pragyan",
+    "status": "past",
+    "kind": "lander",
+    "operator": "ISRO",
+    "country": "India",
+    "date": "2023-08-23",
+    "lat": -69.374,
+    "lon": 32.3187,
+    "precisionKm": 0.01,
+    "outcome": "success",
+    "short": "India's first soft Moon landing sent a small rover across the soil.",
+    "detail": "The Vikram lander and Pragyan rover studied the southern highlands during one lunar day. The site is about 600 km from the south pole.",
+    "source": {
+      "name": "ISRO: Chandrayaan-3 mission updates",
+      "url": "https://www.isro.gov.in/Chandrayaan3.html"
+    },
+    "coordSource": {
+      "name": "LROC QuickMap anthropogenic objects: Chandrayaan-3 Vikram Lander",
+      "url": "https://lroc.im-ldi.com/images/1314"
+    },
+    "inQuickMap": true,
+    "verify": false,
+    "note": "Pin is Vikram, not Pragyan's final parking spot. ISRO says both were put to sleep in September 2023 and later communication attempts continued; no confirmed resumed surface operations were found. Passive laser-reflector use does not mean powered surface operations."
+  },
+  {
+    "id": "slim",
+    "name": "SLIM",
+    "status": "past",
+    "kind": "lander",
+    "operator": "JAXA",
+    "country": "Japan",
+    "date": "2024-01-19",
+    "lat": -13.316,
+    "lon": 25.251,
+    "precisionKm": 0.02,
+    "outcome": "success",
+    "short": "Japan landed close to its target and survived three cold lunar nights",
+    "detail": "SLIM reached its target near Shioli crater, where two small robots explored nearby. JAXA ended surface operations in August 2024 after the lander survived three lunar nights.",
+    "source": {
+      "name": "JAXA: Conclusion of Lunar Activities of SLIM",
+      "url": "https://global.jaxa.jp/press/2024/08/20240826-1_e.html"
+    },
+    "coordSource": {
+      "name": "LROC QuickMap anthropogenic_objects: SLIM; LROC landing image",
+      "url": "https://lroc.im-ldi.com/images/1358"
+    },
+    "inQuickMap": true,
+    "verify": false,
+    "note": "Landing was 19 January at 15:20 UTC, or 20 January in Japan. The supplied QuickMap point is the lander, not the two nearby robots. JAXA reported extra success despite the unusual landing attitude."
+  },
+  {
+    "id": "im-1-odysseus",
+    "name": "IM-1 Odysseus",
+    "status": "past",
+    "kind": "lander",
+    "operator": "Intuitive Machines (NASA CLPS)",
+    "country": "United States",
+    "date": "2024-02-22",
+    "lat": -80.1276,
+    "lon": 1.4367,
+    "precisionKm": 0.02,
+    "outcome": "partial",
+    "short": "First US Moon landing since Apollo; the lander tipped over.",
+    "detail": "Odysseus landed near Malapert A and tipped onto its side, but sent back science data for about a week. The sloping ground shows why choosing a landing spot matters.",
+    "source": {
+      "name": "NASA: first surface science via a commercial Moon mission",
+      "url": "https://www.nasa.gov/missions/artemis/clps/nasa-collects-first-surface-science-in-decades-via-commercial-moon-mission/"
+    },
+    "coordSource": {
+      "name": "LROC QuickMap anthropogenic objects: IM1; associated LROC image report",
+      "url": "https://lroc.im-ldi.com/images/1360"
+    },
+    "inQuickMap": true,
+    "verify": false,
+    "note": "Outcome is partial because the lander tipped over, despite returning data from NASA payloads. Surface operations ended on 29 February 2024; the company later confirmed that it did not revive."
+  },
+  {
+    "id": "change-6",
+    "name": "Chang'e-6",
+    "status": "past",
+    "kind": "sample-return",
+    "operator": "CNSA",
+    "country": "China",
+    "date": "2024-06-01",
+    "lat": -41.6383,
+    "lon": -153.9857,
+    "precisionKm": 0.03,
+    "outcome": "success",
+    "short": "The first mission to bring home rocks from the Moon's far side.",
+    "detail": "Chang'e-6 collected soil in the Apollo basin on the far side. It returned 1,935.3 grams to Earth for scientists to study.",
+    "source": {
+      "name": "CNSA: Chang'e-6 collects 1,935.3 grams of far-side samples",
+      "url": "https://www.cnsa.gov.cn/english/n6465652/n6465653/c10573149/content.html"
+    },
+    "coordSource": {
+      "name": "LROC QuickMap anthropogenic objects: Chang'e 6 Lander",
+      "url": "https://lroc.im-ldi.com/images/1374"
+    },
+    "inQuickMap": true,
+    "verify": false,
+    "note": "UTC landing date is 2024-06-01 (22:23 UTC), although China's local date was June 2. Supplied QuickMap coordinates are the preferred later catalogue values; the initial LROC article gives -41.6385, -153.9852 with 30 m uncertainty."
+  },
+  {
+    "id": "blue-ghost-mission-1",
+    "name": "Blue Ghost Mission 1",
+    "status": "past",
+    "kind": "lander",
+    "operator": "Firefly Aerospace (NASA CLPS)",
+    "country": "United States",
+    "date": "2025-03-02",
+    "lat": 18.5622,
+    "lon": 61.8102,
+    "precisionKm": 0.02,
+    "outcome": "success",
+    "short": "Worked for a full lunar day in Mare Crisium.",
+    "detail": "Blue Ghost landed upright in Mare Crisium and ran ten NASA experiments for about two weeks. It watched a solar eclipse and a lunar sunset before its mission ended.",
+    "source": {
+      "name": "NASA: Blue Ghost Mission 1 concludes",
+      "url": "https://www.nasa.gov/news-release/nasa-science-continues-after-fireflys-first-moon-mission-concludes/"
+    },
+    "coordSource": {
+      "name": "LROC QuickMap anthropogenic objects: BlueGhost1; associated LROC image report",
+      "url": "https://lroc.im-ldi.com/images/1407"
+    },
+    "inQuickMap": true,
+    "verify": false,
+    "note": "Mission concluded 16 March 2025. A passive laser reflector can still be useful after powered operations end; that does not make the lander an active mission. The supplied QuickMap point differs from the rounded LROC article point by a few metres."
+  },
+  {
+    "id": "im-2-athena",
+    "name": "IM-2 Athena",
+    "status": "past",
+    "kind": "lander",
+    "operator": "Intuitive Machines (NASA CLPS)",
+    "country": "United States",
+    "date": "2025-03-06",
+    "lat": -84.7906,
+    "lon": 29.19567,
+    "precisionKm": 0.02,
+    "outcome": "partial",
+    "short": "Landed on its side in a south-pole crater and soon lost power.",
+    "detail": "Athena reached Mons Mouton but came to rest on its side inside a small crater. It returned some data before its batteries ran out, showing how shade and rough ground can end a mission.",
+    "source": {
+      "name": "NASA: IM-2 mission ends after returning some data",
+      "url": "https://www.nasa.gov/news-release/nasa-receives-some-data-before-intuitive-machines-ends-lunar-mission/"
+    },
+    "coordSource": {
+      "name": "LROC QuickMap anthropogenic objects: IM2; associated LROC image report",
+      "url": "https://lroc.im-ldi.com/images/1409"
+    },
+    "inQuickMap": true,
+    "verify": false,
+    "note": "Mission ended 7 March 2025. The point is the measured resting place, not the announced landing target; the existing app latitude -84.81 is about 0.59 km farther south."
+  },
+  {
+    "id": "hakuto-r-mission-2",
+    "name": "HAKUTO-R Mission 2 / RESILIENCE",
+    "status": "past",
+    "kind": "impact",
+    "operator": "ispace",
+    "country": "Japan",
+    "date": "2025-06-05",
+    "lat": 60.4445,
+    "lon": -4.588,
+    "precisionKm": 0.02,
+    "outcome": "failed",
+    "short": "RESILIENCE crashed in Mare Frigoris before its rover could deploy.",
+    "detail": "RESILIENCE could not slow down enough and struck Mare Frigoris. Orbital images show a dark impact mark where the lander and its small rover were lost.",
+    "source": {
+      "name": "ispace: Mission 2 status and mission end",
+      "url": "https://www.ispace-inc.com/2025/06/06/status-update-on-ispace-mission-2-smbc-x-hakuto-r-venture-moon/"
+    },
+    "coordSource": {
+      "name": "LROC QuickMap anthropogenic objects: HakutoR2; associated LROC image report",
+      "url": "https://lroc.im-ldi.com/images/1456"
+    },
+    "inQuickMap": true,
+    "verify": false,
+    "note": "The company release uses 6 June in Japan; the lunar impact was 5 June in UTC. The TENACIOUS rover remained aboard and did not begin a separate surface mission."
+  },
+  {
+    "id": "falcon-9-upper-stage-2026",
+    "name": "Falcon 9 upper-stage impact (2026)",
+    "status": "past",
+    "kind": "impact",
+    "operator": "SpaceX",
+    "country": "United States",
+    "date": "2026-08-05",
+    "lat": 19.4759,
+    "lon": -93.2862,
+    "precisionKm": 0.1,
+    "outcome": "failed",
+    "short": "A spent rocket stage made a fresh 18-metre crater on the far side",
+    "detail": "A spent Falcon 9 upper stage hit the Moon at 06:35 UTC on 5 August 2026. LROC found an 18-metre crater with bright and dark streaks of thrown-out soil.",
+    "source": {
+      "name": "LROC: Falcon 9 Impact, 18 August 2026",
+      "url": "https://www.lroc.im-ldi.com/images/1499"
+    },
+    "coordSource": {
+      "name": "LROC refined crater position; supplied QuickMap F9_2026 also contains this site",
+      "url": "https://www.lroc.im-ldi.com/images/1499"
+    },
+    "inQuickMap": true,
+    "verify": false,
+    "note": "Uses the LROC article's refined 19.4759 N, 266.7138 E, converted to -93.2862 east-positive longitude. Supplied QuickMap has 19.473 N, -93.286 E, about 88 m away; 0.1 km is conservative because the article gives no formal uncertainty. Outcome failed describes the unplanned surface collision, not the landers launched by this stage."
+  }
+]

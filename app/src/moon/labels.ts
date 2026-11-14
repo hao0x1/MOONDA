@@ -23,6 +23,7 @@ interface Item {
   weight: number; // importance multiplier
   fixed: number; // >0: special place (2 = past mission, 3 = Artemis region / famous spot)
   kindOfPlace: Place['kind'] | null;
+  iconKey: string; // which picture it gets (its kind, or a finer key such as 'ice-confirmed')
   w: number; h: number; // approx. label box in px
   fill: Color; outline: Color; // full-opacity colours
   alpha: number; // current opacity 0..1
@@ -35,7 +36,7 @@ interface Item {
 /** A name or place as the flat map needs it (it draws its own names: the Cesium labels live on the globe). */
 export interface FlatLabel {
   text: string; font: string; color: string; lat: number; lon: number; sizeM: number; weight: number; fixed: number;
-  kind: Place['kind'] | null; iconR: number; w: number; h: number; id: unknown;
+  kind: Place['kind'] | null; iconKey: string; iconR: number; w: number; h: number; id: unknown;
 }
 
 /** What a special place looks like on the map: a picture and its size in CSS pixels. */
@@ -57,13 +58,16 @@ const FONT = '"Google Sans Flex Variable", "Kantumruy Pro Variable", system-ui, 
 const HAIR = '\u200A';
 /** Seas are written in widely spaced capitals, like on a printed map (labels here cannot set letter spacing). */
 const tracked = (s: string) => [...s.toUpperCase()].join(HAIR).replace(new RegExp(`${HAIR} ${HAIR}`, 'g'), `${HAIR}  ${HAIR}`);
+/** Which picture a place gets: its kind, except ice evidence, which has one per strength of evidence. */
+export const iconKeyOf = (p: Place): string => (p.kind === 'ice' && p.ice ? `ice-${p.ice}` : p.kind);
+
 const HOVER = Color.fromCssColorString('#8ab4f8'); // Google-Earth blue when the pointer is over a name
 
 export class NameLabels {
   private viewer: Viewer;
   private lc: LabelCollection;
   private bc: BillboardCollection;
-  private icons: Partial<Record<Place['kind'], PlaceIcon>> = {};
+  private icons: Partial<Record<string, PlaceIcon>> = {};
   private items: Item[] = [];
   private fading = new Set<Item>();
   private iconFading = new Set<Item>();
@@ -81,7 +85,7 @@ export class NameLabels {
   private removeTick: () => void;
   visible = true;
   private hovered: Item | null = null;
-  placesVisible: Record<Place['kind'], boolean> = { artemis: true, mission: true, spot: true };
+  placesVisible: Record<Place['kind'], boolean> = { artemis: true, mission: true, spot: true, active: true, planned: true, ice: false };
 
   constructor(viewer: Viewer) {
     this.viewer = viewer;
@@ -106,7 +110,7 @@ export class NameLabels {
     const isPlace = kindOfPlace !== null;
     this.items.push({
       label: null, text, font: `${style.weight} ${style.size}px ${FONT}`, isPlace, id,
-      pos, unit: Cartesian3.normalize(pos, new Cartesian3()), sizeM, weight, fixed, kindOfPlace,
+      pos, unit: Cartesian3.normalize(pos, new Cartesian3()), sizeM, weight, fixed, kindOfPlace, iconKey: kindOfPlace ?? '',
       w: text.replaceAll(HAIR, '').length * style.size * (text.includes(HAIR) ? 0.8 : 0.6) + 10, h: style.size + 8, fill, outline: OUTLINE, alpha: 0, target: 0,
       icon: null, iconAlpha: 0, iconTarget: 0, iconR: 0, lat, lon, color: style.color,
     });
@@ -137,13 +141,20 @@ export class NameLabels {
     }
   }
 
-  setPlaces(places: Place[], heights: MoonHeights, icons: Partial<Record<Place['kind'], PlaceIcon>> = {}) {
+  /** `icons` are keyed by a place's kind, or by a finer key (`iconKeyOf`) for places of one kind that differ, like ice evidence. */
+  setPlaces(places: Place[], heights: MoonHeights, icons: Partial<Record<string, PlaceIcon>> = {}) {
     this.icons = icons;
     for (const p of places) {
-      this.add(p.name, p.lat, p.lon, heights.heightAt(p.lat, p.lon, false), 0, 1, p.kind === 'mission' ? 2 : 3, p.kind,
+      // landings show their flag from any distance (2); regions, spots, ice craters and impact sites only closer in (3).
+      // Among equals the weight decides who gets the room: crewed landings first, impact sites last.
+      const impact = p.kind === 'mission' && p.what === 'impact';
+      const fixed = (p.kind === 'mission' || p.kind === 'active' || p.kind === 'planned') && !impact ? 2 : 3;
+      const weight = impact ? 0.5 : p.what === 'crewed' ? 1.3 : p.kind === 'planned' || p.kind === 'active' ? 1.2 : 1;
+      this.add(p.name, p.lat, p.lon, heights.heightAt(p.lat, p.lon, false), 0, weight, fixed, p.kind,
         { size: 12, weight: 500, color: '#e9ebef' }, { moonda: { type: 'place', place: p } });
       const it = this.items[this.items.length - 1];
-      it.iconR = (icons[p.kind]?.size ?? 24) / 2;
+      it.iconKey = iconKeyOf(p);
+      it.iconR = ((icons[it.iconKey] ?? icons[p.kind])?.size ?? 24) / 2;
     }
   }
 
@@ -173,9 +184,9 @@ export class NameLabels {
           if (it.fixed) {
             // icons: past landings from anywhere; the crowded south-pole regions only from closer than 3,200 km
             wantIcon = it.fixed === 2 || dist < 3.2e6;
-            if (wantIcon) iconCand.push({ it, score: 1e6 * it.fixed - dist / 1000 + (it.iconTarget === 1 ? 5e5 : 0) });
+            if (wantIcon) iconCand.push({ it, score: 1e6 * it.fixed + 1e5 * (it.weight - 1) - dist / 1000 + (it.iconTarget === 1 ? 5e5 : 0) });
             if ((it.fixed === 2 && dist > 4.5e6) || (it.fixed === 3 && dist > 1.4e6)) want = false;
-            else cand.push({ it, score: 1e6 * it.fixed - dist / 1000 });
+            else cand.push({ it, score: 1e6 * it.fixed + 1e5 * (it.weight - 1) - dist / 1000 });
           } else {
             const score = (it.sizeM / dist) * pxPerRad * it.weight;
             if (score < MIN_PX) want = false;
@@ -221,7 +232,7 @@ export class NameLabels {
     cand.sort((a, b) => b.score - a.score);
     for (const { it } of cand) {
       let ok = false;
-      if ((placed < MAX_LABELS || it.fixed) && (!it.fixed || iconOn.has(it) || !this.icons[it.kindOfPlace!])) {
+      if ((placed < MAX_LABELS || it.fixed) && (!it.fixed || iconOn.has(it) || !(this.icons[it.iconKey] ?? this.icons[it.kindOfPlace!]))) {
         const w = SceneTransforms.worldToWindowCoordinates(scene, it.pos, this.win);
         if (w) {
           const isPlace = it.kindOfPlace !== null;
@@ -246,15 +257,15 @@ export class NameLabels {
     for (const it of this.items) {
       if (it.kindOfPlace === null ? !this.flatNames : !this.flatPlaces[it.kindOfPlace]) continue;
       out.push({ text: it.text, font: it.font, color: it.color, lat: it.lat, lon: it.lon, sizeM: it.sizeM, weight: it.weight, fixed: it.fixed,
-        kind: it.kindOfPlace, iconR: it.iconR, w: it.w, h: it.h, id: it.id });
+        kind: it.kindOfPlace, iconKey: it.iconKey, iconR: it.iconR, w: it.w, h: it.h, id: it.id });
     }
     return out;
   }
   /** The icon picture of a kind of place (the flat map draws the same ones). */
-  iconOf(kind: Place['kind']): PlaceIcon | undefined { return this.icons[kind]; }
+  iconOf(kind: string): PlaceIcon | undefined { return this.icons[kind]; }
   /** What the switches say, kept apart from `visible` / `placesVisible` (those are turned off on the globe while the flat map shows). */
   flatNames = true;
-  flatPlaces: Record<Place['kind'], boolean> = { artemis: true, mission: true, spot: true };
+  flatPlaces: Record<Place['kind'], boolean> = { artemis: true, mission: true, spot: true, active: true, planned: true, ice: false };
 
   /** The name or place under a screen position (canvas CSS pixels), or undefined. Pure maths: no GPU read-back. */
   hitTest(x: number, y: number): unknown {
@@ -307,7 +318,7 @@ export class NameLabels {
         it.iconAlpha = 0; this.iconFading.delete(it); continue;
       }
       if (!it.icon) {
-        const look = this.icons[it.kindOfPlace!];
+        const look = this.icons[it.iconKey] ?? this.icons[it.kindOfPlace!];
         if (!look) { this.iconFading.delete(it); continue; }
         it.icon = this.bc.add({ position: it.pos, image: look.image, width: look.size, height: look.size, disableDepthTestDistance: Number.POSITIVE_INFINITY, color: Color.WHITE.withAlpha(0) });
         (it.icon as unknown as { id: unknown }).id = it.id;

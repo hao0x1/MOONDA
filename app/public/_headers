@@ -20,6 +20,12 @@
 
 /data/*
   Cache-Control: public, max-age=604800, stale-while-revalidate=31536000
+# The small lists that say WHICH maps and features exist are re-checked on every visit (a cheap "not changed"
+# answer when they are the same): a returning visitor must see a new layer at once, not a week later.
+/data/layers/manifest.json
+  Cache-Control: no-cache
+/data/features/*
+  Cache-Control: no-cache
 /space/*
   Cache-Control: public, max-age=604800, stale-while-revalidate=31536000
 /lander/*

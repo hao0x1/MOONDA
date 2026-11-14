@@ -49,6 +49,28 @@ export const ai = {
   'ai.deleteChat': 'Delete this chat',
   'ai.addedToCompare': 'Added {n} spots to Compare.',
 
+  // control tips
+  'ai.tip.close': 'Close the AI helper (Esc)',
+  'ai.tip.copy': 'Copy this answer to the clipboard',
+  'ai.tip.retry': 'Try answering this question again',
+  'ai.tip.runAgain': 'Start this question again from the beginning',
+  'ai.tip.newChat': 'Start a new chat with the AI helper',
+  'ai.tip.openChat': 'Open the saved chat “{name}” (Enter)',
+  'ai.tip.deleteChat': 'Delete this saved chat from this browser',
+  'ai.tip.stop': 'Stop the answer being worked on',
+  'ai.tip.send': 'Send your question to the AI helper (Enter)',
+  'ai.tip.ask': 'Ask the AI helper this question',
+  'ai.tip.history': 'Open chats saved in this browser',
+  'ai.tip.backToChat': 'Return to the current chat',
+  'ai.tip.showStep': 'Show what went into this step and what came back',
+  'ai.tip.hideStep': 'Hide the details of this step',
+  'ai.tip.showThinking': 'Show the notes from this thinking step',
+  'ai.tip.hideThinking': 'Hide the notes from this thinking step',
+  'ai.tip.showTrace': 'Show the steps used to work out this answer',
+  'ai.tip.hideTrace': 'Hide the steps used to work out this answer',
+  'ai.tip.showOnMap': 'Show this spot on the map (Enter)',
+  'ai.tip.compare': 'Add these landing spots to Compare',
+
   // the steps while it works
   'ai.starting': 'Starting',
   'ai.working': 'Working',

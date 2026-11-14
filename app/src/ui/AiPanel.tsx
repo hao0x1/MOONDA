@@ -91,7 +91,7 @@ function CopyButton({ text }: { text: string }) {
   const [done, setDone] = useState(false);
   return (
     <button type="button" className="ai-mini-btn" onClick={() => { void navigator.clipboard?.writeText(text).then(() => { setDone(true); setTimeout(() => setDone(false), 1400); }); }}
-      aria-label={t('ai.copyLabel')}>
+      aria-label={t('ai.copyLabel')} data-tip={t('ai.tip.copy')}>
       {done ? <Check size={13} weight="bold" /> : <Copy size={13} />}{done ? t('ai.copied') : t('ai.copy')}
     </button>
   );
@@ -129,7 +129,7 @@ function AiTurn({ t: turn, question, isLast, busy, bridge, asked, onAsk }: {
             <div className="ai-note bad" role="alert">
               <WarningCircle size={16} />
               <p>{s.text}</p>
-              {s.retry && !busy && question && <button type="button" className="ai-note-btn" onClick={() => onAsk(question)}><ArrowClockwise size={13} />{t('ai.retry')}</button>}
+              {s.retry && !busy && question && <button type="button" className="ai-note-btn" onClick={() => onAsk(question)} data-tip={t('ai.tip.retry')}><ArrowClockwise size={13} />{t('ai.retry')}</button>}
             </div>
           )}
         </Fragment>
@@ -138,7 +138,7 @@ function AiTurn({ t: turn, question, isLast, busy, bridge, asked, onAsk }: {
         <div className="ai-note">
           <Stop size={14} weight="fill" />
           <p>{turn.end === 'interrupted' ? t('ai.interrupted') : t('ai.stopped')}</p>
-          {!busy && question && <button type="button" className="ai-note-btn" onClick={() => onAsk(question)}><ArrowClockwise size={13} />{t('ai.runAgain')}</button>}
+          {!busy && question && <button type="button" className="ai-note-btn" onClick={() => onAsk(question)} data-tip={t('ai.tip.runAgain')}><ArrowClockwise size={13} />{t('ai.runAgain')}</button>}
         </div>
       )}
       {!turn.live && rows.length > 0 && (
@@ -150,7 +150,7 @@ function AiTurn({ t: turn, question, isLast, busy, bridge, asked, onAsk }: {
       {!turn.live && !turn.end && isLast && !busy && rows.length > 0 && next.length > 0 && (
         <div className="ai-related">
           <span>{t('ai.askNext')}</span>
-          {next.map(q => <button type="button" key={q} onClick={() => onAsk(q)}>{q}<ArrowRight size={13} /></button>)}
+          {next.map(q => <button type="button" key={q} onClick={() => onAsk(q)} data-tip={t('ai.tip.ask')}>{q}<ArrowRight size={13} /></button>)}
         </div>
       )}
     </div>
@@ -163,7 +163,7 @@ function History({ chats, activeId, onOpen, onDelete, onNew }: { chats: Chat[]; 
   const groups: [string, Chat[]][] = [[t('ai.today'), chats.filter(c => c.updated >= +today)], [t('ai.earlier'), chats.filter(c => c.updated < +today)]];
   return (
     <div className="ai-history">
-      <button type="button" className="ai-hist-new" onClick={onNew}><NotePencil size={16} />{t('ai.newChat')}</button>
+      <button type="button" className="ai-hist-new" onClick={onNew} data-tip={t('ai.tip.newChat')}><NotePencil size={16} />{t('ai.newChat')}</button>
       {!chats.length && <div className="ai-hist-empty"><ChatsCircle size={28} /><p>{t('ai.noChats')}</p></div>}
       {groups.map(([name, list]) => list.length > 0 && (
         <Fragment key={name}>
@@ -171,10 +171,10 @@ function History({ chats, activeId, onOpen, onDelete, onNew }: { chats: Chat[]; 
           {list.map(c => {
             const asks = c.turns.filter(x => x.role === 'user').length;
             return (
-              <div key={c.id} className={`ai-hist-item${c.id === activeId ? ' on' : ''}`} role="button" tabIndex={0}
+              <div key={c.id} className={`ai-hist-item${c.id === activeId ? ' on' : ''}`} role="button" tabIndex={0} data-tip={t('ai.tip.openChat', { name: c.title })}
                 onClick={() => onOpen(c)} onKeyDown={e => { if (e.key === 'Enter') onOpen(c); }}>
                 <div className="ai-hist-text"><b>{c.title}</b><small>{tn('ai.questions', asks)} · {ago(c.updated)}</small></div>
-                <button type="button" className="ai-icon-btn ai-hist-del" aria-label={t('ai.deleteChat')} onClick={e => { e.stopPropagation(); onDelete(c.id); }}><Trash size={15} /></button>
+                <button type="button" className="ai-icon-btn ai-hist-del" aria-label={t('ai.deleteChat')} data-tip={t('ai.tip.deleteChat')} onClick={e => { e.stopPropagation(); onDelete(c.id); }}><Trash size={15} /></button>
               </div>
             );
           })}
@@ -350,9 +350,9 @@ export function AiPanel({ bridge, hidden, onClose, onBusy }: { bridge: AppBridge
         <p>{t('ai.emptyBody')}</p>
         <div className="ai-suggest">
           <span>{t('ai.try')}</span>
-          {SUGGESTIONS.map((s, i) => { const q = tMaybe(`aitool.try.${i + 1}`, s); return <button type="button" key={s} onClick={() => void send(q)}>{q}<ArrowRight size={13} /></button>; })}
+          {SUGGESTIONS.map((s, i) => { const q = tMaybe(`aitool.try.${i + 1}`, s); return <button type="button" key={s} onClick={() => void send(q)} data-tip={t('ai.tip.ask')}>{q}<ArrowRight size={13} /></button>; })}
         </div>
-        {chats.length > 0 && <button type="button" className="ai-link" onClick={() => setView('history')}><ClockCounterClockwise size={14} />{tn('ai.savedChats', chats.length)}</button>}
+        {chats.length > 0 && <button type="button" className="ai-link" onClick={() => setView('history')} data-tip={t('ai.tip.history')}><ClockCounterClockwise size={14} />{tn('ai.savedChats', chats.length)}</button>}
       </div>
     );
   } else {
@@ -372,9 +372,9 @@ export function AiPanel({ bridge, hidden, onClose, onBusy }: { bridge: AppBridge
           <span>{view === 'history' ? t('ai.chatsNote') : turns.length ? chatTitle(turns) : t('ai.subtitle')}</span>
         </div>
         <button type="button" className={`ai-icon-btn${view === 'history' ? ' on' : ''}`} onClick={() => setView(v => (v === 'history' ? 'chat' : 'history'))}
-          data-tip={t('ai.history')} aria-label={t('ai.history')} aria-pressed={view === 'history'}><ClockCounterClockwise size={18} /></button>
-        <button type="button" className="ai-icon-btn" onClick={startFresh} data-tip={t('ai.newChat')} aria-label={t('ai.newChat')} disabled={!turns.length && view === 'chat'}><NotePencil size={18} /></button>
-        <button type="button" className="ai-icon-btn" onClick={onClose} aria-label={t('ai.close')}><X size={18} /></button>
+          data-tip={t(view === 'history' ? 'ai.tip.backToChat' : 'ai.tip.history')} aria-label={t('ai.history')} aria-pressed={view === 'history'}><ClockCounterClockwise size={18} /></button>
+        <button type="button" className="ai-icon-btn" onClick={startFresh} data-tip={t('ai.tip.newChat')} aria-label={t('ai.newChat')} disabled={!turns.length && view === 'chat'}><NotePencil size={18} /></button>
+        <button type="button" className="ai-icon-btn" onClick={onClose} aria-label={t('ai.close')} data-tip={t('ai.tip.close')}><X size={18} /></button>
       </header>
       <div ref={scroller} className="ai-body" onScroll={e => { const el = e.currentTarget; stick.current = el.scrollHeight - el.scrollTop - el.clientHeight < 40; }}>
         {content}
@@ -385,8 +385,8 @@ export function AiPanel({ bridge, hidden, onClose, onBusy }: { bridge: AppBridge
             <textarea ref={field} value={input} rows={1} aria-label={t('ai.placeholder')} placeholder={busy ? t('ai.placeholderBusy') : turns.length ? t('ai.placeholderFollow') : t('ai.placeholder')} onChange={e => setInput(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void send(input); } }} />
             {busy
-              ? <button type="button" className="ai-send stop" onClick={() => agent.current.stop()} aria-label={t('ai.stop')}><Stop size={12} weight="fill" /><span>{t('ai.stop')}</span></button>
-              : <button type="submit" className="ai-send" disabled={!input.trim()} aria-label={t('ai.send')}><ArrowUp size={16} weight="bold" /></button>}
+              ? <button type="button" className="ai-send stop" onClick={() => agent.current.stop()} aria-label={t('ai.stop')} data-tip={t('ai.tip.stop')}><Stop size={12} weight="fill" /><span>{t('ai.stop')}</span></button>
+              : <button type="submit" className="ai-send" disabled={!input.trim()} aria-label={t('ai.send')} data-tip={t('ai.tip.send')}><ArrowUp size={16} weight="bold" /></button>}
           </form>
           <div className="ai-foot">{t('ai.fine')}</div>
         </div>

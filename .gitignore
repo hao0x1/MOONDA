@@ -15,3 +15,10 @@ exports/demo-video/node_modules/
 __pycache__/
 *.pyc
 app/.netlify/
+
+# Codex's working files for the data layers (the scripts and notes are copied to data-prep/features and data-prep/sites)
+assets-codex/features/out/
+assets-codex/features/downloads/
+assets-codex/quickmap-input/
+shots/
+chrome-profile/

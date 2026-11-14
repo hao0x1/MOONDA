@@ -48,6 +48,9 @@ export function Search({ names, selected, onPickName, onPickPlace }: Props) {
     if (h.kind === 'name') return `${tMaybe(`kind.${h.name.kind}`, h.name.kind)}${h.name.diameterKm ? ` · ${Math.round(h.name.diameterKm)} km` : ''}`;
     if (h.place.kind === 'artemis') return t('search.sub.artemis');
     if (h.place.kind === 'spot') return t('place.kind.spot');
+    if (h.place.kind === 'ice') return t('search.sub.ice');
+    if (h.place.kind === 'planned') return t('search.sub.planned', { date: h.place.date ?? '' });
+    if (h.place.what === 'impact') return t('search.sub.impact', { date: h.place.date ?? '' });
     return t('search.sub.landing', { date: h.place.date ?? '' });
   };
 
@@ -56,7 +59,7 @@ export function Search({ names, selected, onPickName, onPickPlace }: Props) {
       <div className="searchbar panel">
         <div className="brand"><Wordmark /></div>
         <MagnifyingGlass size={16} className="search-icon" aria-hidden="true" />
-        <input ref={input} value={q} placeholder={t('search.placeholder')} aria-label={t('search.placeholder')}
+        <input ref={input} value={q} placeholder={t('search.placeholder')} aria-label={t('search.placeholder')} data-tip={showList ? undefined : t('search.tip')}
           role="combobox" aria-expanded={showList && hits.length > 0} aria-controls="search-results" aria-autocomplete="list"
           onChange={e => { picked.current = null; setQ(e.target.value); setOpen(true); setActive(0); }} onFocus={() => setOpen(true)}
           onBlur={() => setTimeout(() => setOpen(false), 150)}
@@ -73,6 +76,7 @@ export function Search({ names, selected, onPickName, onPickPlace }: Props) {
           {hits.length === 0 && <div className="search-none">{t('search.none', { q: q.trim() })}</div>}
           {hits.map((h, i) => (
             <button key={h.kind === 'place' ? h.place.id : h.name.idx} type="button" role="option" aria-selected={i === active} className="result"
+              data-tip={t('search.result.tip', { name: h.kind === 'place' ? h.place.name : h.name.name })}
               onMouseDown={e => e.preventDefault()} onClick={() => choose(h)} onMouseEnter={() => setActive(i)}>
               <span className="result-icon">{h.kind === 'place' ? (h.place.kind === 'artemis' ? <MapPin weight="fill" color="var(--artemis)" /> : h.place.kind === 'spot' ? <MapPin weight="fill" color="var(--sun)" /> : <Rocket />) : <Mountains />}</span>
               <span className="result-text">

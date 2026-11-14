@@ -1,0 +1,183 @@
+[
+ {
+  "do": "ready",
+  "timeout": 280000
+ },
+ {
+  "do": "click",
+  "text": "Just enter"
+ },
+ {
+  "do": "wait",
+  "ms": 800
+ },
+ {
+  "do": "click",
+  "text": "Layers"
+ },
+ {
+  "do": "eval",
+  "js": "window.__setLayer=(id,on)=>{const e=document.getElementById('layer-'+id);if(e&&e.checked!==on)e.click()};window.__view=async(lat,lon,range)=>{const {poseLookingAt}=await import('/src/moon/navigation.ts');const p=poseLookingAt(lat,lon,0,range,0,-90);window.__viewer.camera.setView({destination:p.destination,orientation:{direction:p.direction,up:p.up}});window.__viewer.scene.requestRender()};if(document.querySelector('.ctl-sun')?.getAttribute('aria-checked')==='true')document.querySelector('.ctl-sun').click();'ready'",
+  "name": "setup"
+ },
+ {
+  "do": "eval",
+  "js": "window.__view(-90,0,820000)"
+ },
+ {
+  "do": "wait",
+  "ms": 3500
+ },
+ {
+  "do": "eval",
+  "js": "(async()=>{const v=window.__viewer;const rows=[];for(const id of ['psr','waterice','danger','slope','craters','height']){const input=document.getElementById('layer-'+id);if(!input){rows.push({id,error:'switch absent'});continue;}const old=new Map(Array.from({length:v.imageryLayers.length},(_,i)=>{const l=v.imageryLayers.get(i);return [l,l.show]}));const start=performance.now();input.click();const result=await new Promise(resolve=>{let off;const timer=setTimeout(()=>{off?.();resolve({ms:null,timeout:true})},60000);off=v.scene.postRender.addEventListener(()=>{const changed=Array.from({length:v.imageryLayers.length},(_,i)=>v.imageryLayers.get(i)).filter(l=>l.show&&!old.get(l));const tiles=v.scene.globe._surface._tilesToRender||[];const vector=id==='craters'&&Number(document.querySelector('.moon-crater-rims')?.dataset.rings)>0;const painted=vector||tiles.some(t=>(t.data?.imagery||[]).some(i=>{const r=i.readyImagery;return r&&changed.includes(r.imageryLayer)&&r.texture}));if(painted){clearTimeout(timer);off();resolve({ms:Math.round((performance.now()-start)*10)/10,tiles:tiles.length,kind:vector?'vector canvas':'imagery texture'});}v.scene.requestRender();});v.scene.requestRender();});rows.push({id,...result});input.click();await new Promise(r=>setTimeout(r,350));}return rows;})()",
+  "name": "timings"
+ },
+ {
+  "do": "eval",
+  "js": "({sunOff:!window.__viewer.scene.globe.enableLighting, switches:[...document.querySelectorAll('.layers input[type=checkbox]')].map(e=>e.id), progress:window.__moonda.progress, imagery:window.__moondaImagery.stats()})",
+  "name": "startup"
+ },
+ {
+  "do": "shot",
+  "name": "layers-en"
+ },
+ {
+  "do": "eval",
+  "js": "window.__moondaTest.setLanguage('km')"
+ },
+ {
+  "do": "wait",
+  "ms": 600
+ },
+ {
+  "do": "shot",
+  "name": "layers-km"
+ },
+ {
+  "do": "eval",
+  "js": "window.__moondaTest.setLanguage('en');window.__setLayer('slope',true);window.__view(0,10,6500000)"
+ },
+ {
+  "do": "wait",
+  "ms": 2800
+ },
+ {
+  "do": "shot",
+  "name": "whole-moon-slope"
+ },
+ {
+  "do": "eval",
+  "js": "window.__setLayer('slope',false);window.__setLayer('danger',true)"
+ },
+ {
+  "do": "wait",
+  "ms": 1600
+ },
+ {
+  "do": "shot",
+  "name": "whole-moon-danger"
+ },
+ {
+  "do": "eval",
+  "js": "window.__setLayer('danger',false);window.__setLayer('waterice',true)"
+ },
+ {
+  "do": "wait",
+  "ms": 1600
+ },
+ {
+  "do": "shot",
+  "name": "whole-moon-water"
+ },
+ {
+  "do": "eval",
+  "js": "window.__setLayer('waterice',false);window.__setLayer('psr',true);window.__view(90,0,820000)"
+ },
+ {
+  "do": "wait",
+  "ms": 2200
+ },
+ {
+  "do": "shot",
+  "name": "north-psr"
+ },
+ {
+  "do": "eval",
+  "js": "window.__view(-90,0,820000)"
+ },
+ {
+  "do": "wait",
+  "ms": 1800
+ },
+ {
+  "do": "shot",
+  "name": "south-psr"
+ },
+ {
+  "do": "eval",
+  "js": "window.__setLayer('psr',false);window.__setLayer('waterice',true);window.__view(90,0,820000)"
+ },
+ {
+  "do": "wait",
+  "ms": 1800
+ },
+ {
+  "do": "shot",
+  "name": "north-water-markers"
+ },
+ {
+  "do": "eval",
+  "js": "window.__view(-90,0,820000)"
+ },
+ {
+  "do": "wait",
+  "ms": 1800
+ },
+ {
+  "do": "shot",
+  "name": "south-water-markers"
+ },
+ {
+  "do": "eval",
+  "js": "window.__moondaTest.selectPlace('ice-ice-cabeus');window.__view(-84.678,-48.6937,500000)"
+ },
+ {
+  "do": "wait",
+  "ms": 1800
+ },
+ {
+  "do": "eval",
+  "js": "document.querySelector('.place-body').scrollTop=10000"
+ },
+ {
+  "do": "shot",
+  "name": "cabeus-confirmed"
+ },
+ {
+  "do": "eval",
+  "js": "window.__moondaTest.selectPlace('ice-ice-bosch');window.__view(86.8175,133.5429,500000)"
+ },
+ {
+  "do": "wait",
+  "ms": 1800
+ },
+ {
+  "do": "eval",
+  "js": "document.querySelector('.place-body').scrollTop=10000"
+ },
+ {
+  "do": "shot",
+  "name": "bosch-predicted"
+ },
+ {
+  "do": "eval",
+  "js": "(async()=>{const {loadManifest,valueAt}=await import('/src/science/layerValues.ts');const m=await loadManifest();const out={};for(const [name,lat,lon] of [['Apollo11',.674,23.473],['North',89.5,0],['Cabeus',-84.678,-48.6937]])out[name]=Object.fromEntries(await Promise.all(m.filter(e=>['slope','psr','waterice'].includes(e.id)).map(async e=>[e.id,await valueAt(e,lat,lon)])));return out})()",
+  "name": "values"
+ },
+ {
+  "do": "eval",
+  "js": "window.__moondaImagery.stats()",
+  "name": "cache-after"
+ }
+]

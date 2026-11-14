@@ -1,0 +1,68 @@
+/* Plain shared tokens; the overview's route controls have their own prefix. */
+.oroute-slot { display:flex; align-items:center; justify-content:center; }
+.oroute-dock { position:absolute; z-index:10; bottom:calc(var(--dock) + 40px); left:50%; transform:translateX(-50%); display:flex; flex-direction:column; align-items:center; gap:8px; width:max-content; max-width:calc(100% - 32px); pointer-events:none; }
+.oroute-hint { max-width:100%; padding:8px 14px; color:var(--text-2); font-size:var(--fs-13); text-align:center; pointer-events:none; }
+.oroute-bar { display:flex; align-items:center; gap:12px; max-width:100%; min-height:44px; padding:6px 8px 6px 16px; border-radius:var(--r-pill); color:var(--text); font-size:var(--fs-13); pointer-events:auto; }
+.oroute-status { min-width:0; }
+.oroute-stats { display:flex; align-items:center; gap:16px; font-variant-numeric:tabular-nums; white-space:nowrap; }
+.oroute-working,.oroute-unsafe { display:flex; align-items:center; gap:8px; }
+.oroute-working .spinner { flex:none; width:14px; height:14px; border-width:1.5px; }
+.oroute-unsafe { color:var(--sun); }
+.oroute-unsafe svg { flex:none; }
+.oroute-unsafe small { display:block; color:var(--text-2); font-size:var(--fs-11); line-height:1.4; }
+.oroute-choice { flex:none; }
+.oroute-choice select { max-width:170px; height:32px; padding:0 8px; border:1px solid var(--line-2); border-radius:var(--r-8); background:var(--surface-2); color:var(--text); font:inherit; cursor:pointer; }
+.oroute-choice select:focus-visible { outline:2px solid var(--text); outline-offset:2px; }
+.oroute-clear { flex:none; }
+html.lang-km .oroute-bar,html.lang-km .oroute-hint { line-height:1.7; }
+html.lang-km .oroute-choice select { height:40px; line-height:normal; }
+@media(max-width:700px) { .oroute-bar { gap:8px; padding-left:12px; border-radius:var(--r-16); flex-wrap:wrap; justify-content:center; } .oroute-stats { gap:10px; } .oroute-choice select { max-width:150px; } }
+
+/* ---- The route card (ui/RouteCard.tsx): one small boxed card, used beside the place panel on the overview and inside
+   the big surface map. Roomy figures, four kinds of route as a two-by-two of buttons with their pictures, and one
+   plain line about the kind that is chosen. ---- */
+.rcard { box-sizing:border-box; width:288px; padding:14px 14px 12px; border-radius:18px; color:var(--text); font-size:var(--fs-13); pointer-events:auto; }
+.rcard-head { display:flex; align-items:center; gap:8px; height:28px; }
+.rcard-mark { display:grid; place-items:center; width:26px; height:26px; border-radius:8px; background:rgba(138,212,255,.16); color:#8ad4ff; }
+.rcard-head h3 { flex:1; margin:0; font-size:var(--fs-16); font-weight:600; letter-spacing:-.005em; }
+.rcard-clear { display:grid; place-items:center; width:28px; height:28px; padding:0; border:0; border-radius:8px; background:transparent; color:var(--text-3); cursor:pointer; transition:background var(--fast) ease-out,color var(--fast) ease-out; }
+.rcard-clear:hover { background:var(--fill-2); color:var(--text); }
+.rcard-body { margin-top:10px; min-height:52px; display:flex; align-items:center; }
+.rcard-hint { display:flex; align-items:center; gap:10px; margin:0; color:var(--text-2); font-size:var(--fs-14); line-height:20px; }
+.rcard-hint .spinner { flex:none; width:15px; height:15px; border-width:1.5px; }
+.rcard-pulse { flex:none; width:10px; height:10px; border-radius:50%; background:#8ad4ff; box-shadow:0 0 0 0 rgba(138,212,255,.5); animation:rcard-pulse 1.6s ease-out infinite; }
+.rcard-stats { display:grid; grid-template-columns:1.05fr 1.25fr .8fr; gap:8px; width:100%; margin:0; }
+.rcard-stats div { min-width:0; }
+.rcard-stats dd { margin:0; font-size:19px; line-height:26px; font-weight:600; letter-spacing:-.01em; font-variant-numeric:tabular-nums; white-space:nowrap; }
+.rcard-stats dt { margin-top:1px; color:var(--text-3); font-size:var(--fs-11); line-height:15px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.rcard-fail { display:flex; align-items:flex-start; gap:9px; margin:0; color:var(--sun); }
+.rcard-fail svg { flex:none; margin-top:1px; }
+.rcard-fail b { display:block; font-size:var(--fs-14); font-weight:600; }
+.rcard-fail span { color:var(--text-2); font-size:var(--fs-12); line-height:17px; }
+.rcard-kinds { display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-top:12px; }
+.rcard-kinds button { display:flex; align-items:center; justify-content:center; gap:7px; height:40px; padding:0 8px; border:0; border-radius:12px; background:var(--fill-2); color:var(--text-2); font:inherit; font-size:var(--fs-13); font-weight:500; cursor:pointer; white-space:nowrap; transition:background var(--fast) ease-out,color var(--fast) ease-out; }
+.rcard-kinds button:hover { background:var(--fill-3); color:var(--text); }
+.rcard-kinds button.on { background:var(--white); color:var(--ink); font-weight:600; }
+.rcard-about { margin:9px 2px 0; min-height:34px; color:var(--text-3); font-size:var(--fs-12); line-height:17px; }
+.rcard-more { margin-top:6px; border-top:1px solid var(--line); }
+.rcard-more summary { display:flex; align-items:center; justify-content:space-between; height:34px; color:var(--text-2); font-size:var(--fs-12); cursor:pointer; list-style:none; }
+.rcard-more summary::-webkit-details-marker { display:none; }
+.rcard-more[open] summary svg { transform:rotate(180deg); }
+.rcard-more dl { display:grid; grid-template-columns:1fr 1fr; gap:6px 14px; margin:2px 0 8px; }
+.rcard-more dl div { display:flex; justify-content:space-between; gap:8px; }
+.rcard-more dt { color:var(--text-3); font-size:var(--fs-12); }
+.rcard-more dd { display:inline-flex; align-items:center; gap:3px; margin:0; font-size:var(--fs-12); font-weight:600; font-variant-numeric:tabular-nums; }
+.rcard-more p { margin:0 0 6px; color:var(--text-3); font-size:var(--fs-11); line-height:16px; }
+.rcard-more p b { color:var(--text-2); font-weight:600; }
+.rcard-warn { display:flex; gap:6px; color:var(--sun)!important; }
+html.lang-km .rcard-about, html.lang-km .rcard-hint { line-height:24px; }
+@keyframes rcard-pulse { 0% { box-shadow:0 0 0 0 rgba(138,212,255,.55); } 100% { box-shadow:0 0 0 12px rgba(138,212,255,0); } }
+@media (prefers-reduced-motion:reduce) { .rcard-pulse { animation:none; } }
+
+/* On the overview the card stands beside the place panel, joined to it by a small tab, level with its buttons. */
+.oroute-dock { position:absolute; z-index:10; top:calc(var(--top) + 96px); left:calc(var(--m) + var(--panel-w) + 14px); bottom:auto; transform:none; display:block; width:288px; max-width:none; pointer-events:none; animation:oroute-in 220ms var(--ease); }
+.oroute-dock::before { content:''; position:absolute; left:-14px; top:34px; width:14px; height:22px; border-radius:0; background:var(--glass); -webkit-backdrop-filter:blur(24px); backdrop-filter:blur(24px); }
+.oroute-again { margin:8px 4px 0; color:var(--text-2); font-size:var(--fs-12); text-shadow:0 1px 3px rgba(0,0,0,.8); }
+@keyframes oroute-in { from { opacity:0; transform:translateX(-10px); } to { opacity:1; transform:none; } }
+@media (max-width:900px) { .oroute-dock { top:auto; left:50%; bottom:calc(var(--dock) + 60px); transform:translateX(-50%); animation:none; } .oroute-dock::before { display:none; } }
+@media (prefers-reduced-motion:reduce) { .oroute-dock { animation:none; } }

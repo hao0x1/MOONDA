@@ -24,11 +24,13 @@ function show(target: HTMLElement) {
   }
   tipEl.textContent = text;
   const r = target.getBoundingClientRect();
+  const panel = target.closest('.drawer.cmp')?.getBoundingClientRect();
   const side = target.getAttribute('data-tip-side') ?? (r.top < 120 ? 'bottom' : 'top');
   const w = tipEl.offsetWidth, h = tipEl.offsetHeight, gap = 8;
   let x = r.left + r.width / 2 - w / 2, y = side === 'bottom' ? r.bottom + gap : r.top - gap - h;
-  if (side === 'left') { x = r.left - gap - w; y = r.top + r.height / 2 - h / 2; }
-  if (side === 'right') { x = r.right + gap; y = r.top + r.height / 2 - h / 2; }
+  // Compare's help sits beside the drawer so it leaves the label and ruler clear.
+  if (side === 'left') { x = (panel?.left ?? r.left) - gap - w; y = r.top + r.height / 2 - h / 2; }
+  if (side === 'right') { x = (panel?.right ?? r.right) + gap; y = r.top + r.height / 2 - h / 2; }
   x = Math.max(8, Math.min(x, window.innerWidth - w - 8));
   y = Math.max(8, Math.min(y, window.innerHeight - h - 8));
   tipEl.style.transform = `translate(${Math.round(x)}px, ${Math.round(y)}px)`;

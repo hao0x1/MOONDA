@@ -1,0 +1,76 @@
+[
+  {
+    "id": "change-7",
+    "name": "Chang'e-7",
+    "status": "planned",
+    "date": null,
+    "targetRegion": "Lunar south polar region; proposed illuminated rim near Shackleton",
+    "source": {"name": "CNSA news index, announcement dated 23 August 2026", "url": "https://www.cnsa.gov.cn/n6758823/index.html"},
+    "targetSource": {"name": "CNSA Chang'e-7 payload opportunity announcement", "url": "https://www.cnsa.gov.cn/n6758823/n6758838/c6840869/part/6797908.pdf"},
+    "whyExcluded": "CNSA's indexed 23 August 2026 notice withdraws the 2026 launch window. No replacement year was confirmed in an allowed primary source. The required YYYY date cannot be supplied honestly; no invented 2027 date or touchdown point is used. The targetSource defines the broad south-polar region above 85 degrees south, not a final landing point."
+  },
+  {
+    "id": "ispace-apex-1-0-cp12-cancelled",
+    "name": "ispace APEX 1.0 / Draper CP-12",
+    "status": "cancelled",
+    "date": null,
+    "targetRegion": "Former target: Schrodinger Basin, lunar far side",
+    "source": {"name": "ispace-U.S. update on contract with Draper, 15 July 2026", "url": "https://www.ispace-inc.com/2026/07/15/ispace-u-s-update-on-contract-with-draper/"},
+    "confirmation": {"name": "NASA DMEN page: CP-12 ended due to lander redesign delays", "url": "https://www.nasa.gov/stmd-flight-opportunities/transitions-of-flight-tested-technologies/the-dmen-chronicles-flight-testing-vision-aided-navigation/"},
+    "whyExcluded": "Never reached the surface, so it is not a past pin. APEX and Series 3 were merged into ULTRA in March 2026 and the U.S. flight provisionally moved to 2030, but that was superseded by termination of CP-12 in July. Do not keep an active planned APEX/Schrodinger pin."
+  },
+  {
+    "id": "ispace-ultra-mission-3",
+    "name": "ispace ULTRA Mission 3",
+    "status": "planned",
+    "date": "2028",
+    "targetRegion": "Specific surface landing region not confirmed publicly",
+    "source": {"name": "ispace FY2027 Q2 financial results, 13 November 2026", "url": "https://www.ispace-inc.com/2026/11/13/ispace-announces-fy2027-q2-financial-results/"},
+    "whyExcluded": "The current operator confirms 2028 launch and completed preliminary design review, but no specific public target region was confirmed. The cancelled U.S. CP-12 target must not be transferred to this Japanese mission."
+  },
+  {
+    "id": "promise",
+    "name": "PROMISE",
+    "status": "planned",
+    "date": "2028",
+    "targetRegion": "Lunar South Pole region; final site not published",
+    "source": {"name": "NASA Moon Base awards, 7 November 2026", "url": "https://www.nasa.gov/news-release/nasa-awards-moon-base-transportation-technology-science-projects/"},
+    "whyExcluded": "NASA newly targets late 2028 launch on a Blue Origin Mark 1 lander, with an 18-month rover mission. No bounded target region or longitude was published, so a point at the geographic pole would be invented."
+  },
+  {
+    "id": "astrolab-clv-1",
+    "name": "Astrolab CLV-1",
+    "status": "planned",
+    "date": "2028",
+    "targetRegion": "Lunar South Pole region; final site not published",
+    "source": {"name": "NASA rover progress update, 20 October 2026", "url": "https://www.nasa.gov/missions/moon-base/nasa-provides-progress-update-on-moon-base-rovers/"},
+    "whyExcluded": "NASA confirms Blue Origin delivery to the south polar region by 2028, but no specific site or longitude is published. CLV-1 is separate from FLIP on Griffin-1."
+  },
+  {
+    "id": "lunar-outpost-pegasus",
+    "name": "Lunar Outpost Pegasus",
+    "status": "planned",
+    "date": "2028",
+    "targetRegion": "Lunar South Pole region; final site not published",
+    "source": {"name": "NASA rover progress update, 20 October 2026", "url": "https://www.nasa.gov/missions/moon-base/nasa-provides-progress-update-on-moon-base-rovers/"},
+    "whyExcluded": "NASA confirms Blue Origin delivery by 2028, but no specific landing site or longitude is published."
+  },
+  {
+    "id": "moonfall",
+    "name": "MoonFall",
+    "status": "planned",
+    "date": "2028",
+    "targetRegion": "Lunar South Pole region; specific surface destinations not published",
+    "source": {"name": "NASA Moon Base rovers, landers and missions update, 26 May 2026", "url": "https://www.nasa.gov/news-release/nasa-provides-update-on-moon-base-rovers-landers-missions/"},
+    "whyExcluded": "Mobile lunar drones are planned for the south polar region using Firefly's transport system; no honest single surface coordinate is available."
+  },
+  {
+    "id": "chandrayaan-4",
+    "name": "Chandrayaan-4",
+    "status": "planned",
+    "date": "2027",
+    "targetRegion": "Mons Mouton candidate study area, around 84-86 degrees south",
+    "source": {"name": "ISRO annual report 2025-26: approved mission by 2027", "url": "https://www.isro.gov.in/media_isro/pdf/AnnualReport/Annual_Report_2025-26_EN_28042026.pdf"},
+    "whyExcluded": "ISRO's April 2025 science-meet page gives a 2027-2028 launch window. Conflicting later dates and candidate-site claims need reconciliation; a single final touchdown site was not confirmed in the allowed primary pages checked. Keep the mission tracked, without guessing a point."
+  }
+]

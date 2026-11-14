@@ -1,0 +1,227 @@
+[
+  {
+    "url": "https://data.lroc.im-ldi.com/lroc/view_rdr/SHAPEFILE_CX_TARGETS",
+    "checkedDate": "2026-11-14",
+    "status": 200,
+    "responds": true,
+    "contentType": "text/html; charset=utf-8",
+    "redirected": false
+  },
+  {
+    "url": "https://doi.org/10.3847/PSJ/ae4232",
+    "checkedDate": "2026-11-14",
+    "status": 200,
+    "responds": true,
+    "contentType": "text/html; charset=UTF-8",
+    "redirected": true,
+    "note": "Publisher bot challenge; DOI is canonical, exact coordinate supported by indexed primary article."
+  },
+  {
+    "url": "https://fireflyspace.com/missions/blue-ghost-elytra-gruithuisen-domes/",
+    "checkedDate": "2026-11-14",
+    "status": 200,
+    "responds": true,
+    "contentType": "text/html; charset=UTF-8",
+    "redirected": false
+  },
+  {
+    "url": "https://fireflyspace.com/missions/blue-ghost-elytra-lunar-south-pole/",
+    "checkedDate": "2026-11-14",
+    "status": 200,
+    "responds": true,
+    "contentType": "text/html; charset=UTF-8",
+    "redirected": false
+  },
+  {
+    "url": "https://fireflyspace.com/missions/blue-ghost-mission-2/",
+    "checkedDate": "2026-11-14",
+    "status": 200,
+    "responds": true,
+    "contentType": "text/html; charset=UTF-8",
+    "redirected": false
+  },
+  {
+    "url": "https://humans-in-space.jaxa.jp/future/lupex/",
+    "checkedDate": "2026-11-14",
+    "status": 200,
+    "responds": true,
+    "contentType": "text/html",
+    "redirected": false
+  },
+  {
+    "url": "https://planetarynames.wr.usgs.gov/Feature/4159",
+    "checkedDate": "2026-11-14",
+    "status": 200,
+    "responds": true,
+    "contentType": "text/html; charset=utf-8",
+    "redirected": false
+  },
+  {
+    "url": "https://quickmap.im-ldi.com/layers?stack=3489",
+    "checkedDate": "2026-11-14",
+    "status": 200,
+    "responds": true,
+    "contentType": "text/html",
+    "redirected": false
+  },
+  {
+    "url": "https://quickmap.im-ldi.com/layers?stack=3927",
+    "checkedDate": "2026-11-14",
+    "status": 200,
+    "responds": true,
+    "contentType": "text/html",
+    "redirected": false
+  },
+  {
+    "url": "https://www.cnsa.gov.cn/english/n6465652/n6465653/c10670293/content.html",
+    "checkedDate": "2026-11-14",
+    "status": 200,
+    "responds": true,
+    "contentType": "text/html",
+    "redirected": false
+  },
+  {
+    "url": "https://www.cnsa.gov.cn/n6758823/index.html",
+    "checkedDate": "2026-11-14",
+    "status": 200,
+    "responds": true,
+    "contentType": "text/html",
+    "redirected": false
+  },
+  {
+    "url": "https://www.cnsa.gov.cn/n6758823/n6758838/c6840869/part/6797908.pdf",
+    "checkedDate": "2026-11-14",
+    "status": 200,
+    "responds": true,
+    "contentType": "application/pdf",
+    "redirected": false
+  },
+  {
+    "url": "https://www.frontiersin.org/journals/astronomy-and-space-sciences/articles/10.3389/fspas.2022.926018/full",
+    "checkedDate": "2026-11-14",
+    "status": 200,
+    "responds": true,
+    "contentType": "text/html;charset=utf-8",
+    "redirected": false
+  },
+  {
+    "url": "https://www.ispace-inc.com/2026/07/15/ispace-u-s-update-on-contract-with-draper/",
+    "checkedDate": "2026-11-14",
+    "status": 200,
+    "responds": true,
+    "contentType": "text/html; charset=UTF-8",
+    "redirected": false
+  },
+  {
+    "url": "https://www.ispace-inc.com/2026/11/13/ispace-announces-fy2027-q2-financial-results/",
+    "checkedDate": "2026-11-14",
+    "status": 200,
+    "responds": true,
+    "contentType": "text/html; charset=UTF-8",
+    "redirected": false
+  },
+  {
+    "url": "https://www.isro.gov.in/media_isro/pdf/AnnualReport/Annual_Report_2025-26_EN_28042026.pdf",
+    "checkedDate": "2026-11-14",
+    "status": 200,
+    "responds": true,
+    "contentType": "application/pdf",
+    "redirected": false
+  },
+  {
+    "url": "https://www.isro.gov.in/media_isro/pdf/Publications/Space_Research_2022_2023_040625.pdf",
+    "checkedDate": "2026-11-14",
+    "status": 200,
+    "responds": true,
+    "contentType": "application/pdf",
+    "redirected": false
+  },
+  {
+    "url": "https://www.nasa.gov/event/clps-flight-astrobotics-griffin-mission-one/",
+    "checkedDate": "2026-11-14",
+    "status": 200,
+    "responds": true,
+    "contentType": "text/html; charset=UTF-8",
+    "redirected": false
+  },
+  {
+    "url": "https://www.nasa.gov/event/clps-flight-blue-origins-blue-moon-mark-1/",
+    "checkedDate": "2026-11-14",
+    "status": 200,
+    "responds": true,
+    "contentType": "text/html; charset=UTF-8",
+    "redirected": false
+  },
+  {
+    "url": "https://www.nasa.gov/event/clps-flight-intuitive-machines-im-3/",
+    "checkedDate": "2026-11-14",
+    "status": 200,
+    "responds": true,
+    "contentType": "text/html; charset=UTF-8",
+    "redirected": false
+  },
+  {
+    "url": "https://www.nasa.gov/event/clps-flight-intuitive-machines-im-4-2/",
+    "checkedDate": "2026-11-14",
+    "status": 200,
+    "responds": true,
+    "contentType": "text/html; charset=UTF-8",
+    "redirected": false
+  },
+  {
+    "url": "https://www.nasa.gov/mission/artemis-iv/",
+    "checkedDate": "2026-11-14",
+    "status": 200,
+    "responds": true,
+    "contentType": "text/html; charset=UTF-8",
+    "redirected": false
+  },
+  {
+    "url": "https://www.nasa.gov/missions/artemis/nasas-artemis-iii-mission-to-test-future-moon-lander-operations/",
+    "checkedDate": "2026-11-14",
+    "status": 200,
+    "responds": true,
+    "contentType": "text/html; charset=UTF-8",
+    "redirected": false
+  },
+  {
+    "url": "https://www.nasa.gov/missions/moon-base/nasa-provides-progress-update-on-moon-base-rovers/",
+    "checkedDate": "2026-11-14",
+    "status": 200,
+    "responds": true,
+    "contentType": "text/html; charset=UTF-8",
+    "redirected": false
+  },
+  {
+    "url": "https://www.nasa.gov/news-release/nasa-awards-moon-base-transportation-technology-science-projects/",
+    "checkedDate": "2026-11-14",
+    "status": 200,
+    "responds": true,
+    "contentType": "text/html; charset=UTF-8",
+    "redirected": false
+  },
+  {
+    "url": "https://www.nasa.gov/news-release/nasa-provides-update-on-moon-base-rovers-landers-missions/",
+    "checkedDate": "2026-11-14",
+    "status": 200,
+    "responds": true,
+    "contentType": "text/html; charset=UTF-8",
+    "redirected": false
+  },
+  {
+    "url": "https://www.nasa.gov/news-release/nasa-selects-blue-origin-to-deliver-viper-rover-to-moons-south-pole/",
+    "checkedDate": "2026-11-14",
+    "status": 200,
+    "responds": true,
+    "contentType": "text/html; charset=UTF-8",
+    "redirected": false
+  },
+  {
+    "url": "https://www.nasa.gov/stmd-flight-opportunities/transitions-of-flight-tested-technologies/the-dmen-chronicles-flight-testing-vision-aided-navigation/",
+    "checkedDate": "2026-11-14",
+    "status": 200,
+    "responds": true,
+    "contentType": "text/html; charset=UTF-8",
+    "redirected": false
+  }
+]

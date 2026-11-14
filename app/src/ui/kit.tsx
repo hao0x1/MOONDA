@@ -2,7 +2,7 @@
 // so everything lines up and behaves the same way (styles: the "kit" part of styles.css).
 
 import { CaretDown, Check } from '@phosphor-icons/react';
-import { useEffect, useLayoutEffect, useRef, useState, type ButtonHTMLAttributes, type CSSProperties, type KeyboardEvent, type ReactNode } from 'react';
+import { useEffect, useEffectEvent, useLayoutEffect, useRef, useState, type ButtonHTMLAttributes, type CSSProperties, type KeyboardEvent, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { Help } from './Help';
 
@@ -21,16 +21,27 @@ export function MoonMark({ size = 24 }: { size?: number }) {
   );
 }
 
-/** The MOONDA logo: the mark is the word's first letter ("M" + "OONDA"). Size it with font-size.
- *  Google Sans Flex 720, tracking .16em, mark 1.3 × cap height on the text baseline (styles.css, .wordmark). */
+/** The moon that is the logo's first "O": a white O with the yellow full Moon over it, leaving a thin
+ *  crescent low on the left. Measured from the logo artwork (brand/logo/moonda-wordmark.jpeg): an 88 x 77 box
+ *  whose height is 1.03 x the cap height, standing on the text baseline. index.html repeats it for the boot screen. */
+export function MoonO({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 88 77" aria-hidden="true">
+      <ellipse cx="44" cy="38.5" rx="44" ry="38.5" fill="currentColor" />
+      <ellipse cx="50.5" cy="34.75" rx="37.5" ry="34.75" fill="var(--brand-moon, #fabc05)" />
+    </svg>
+  );
+}
+
+/** The MOONDA logo, "MOONDA." with the first O as the Moon. Size it with font-size.
+ *  Google Sans Flex 860, tracking .05em (styles.css, .wordmark). In tight spots .wordmark-text can be hidden,
+ *  leaving the moon alone as the mark. */
 export function Wordmark({ className }: { className?: string }) {
   return (
     <span className={`wordmark${className ? ` ${className}` : ''}`} role="img" aria-label="MOONDA">
-      <svg className="wordmark-m" viewBox="0 -1 100 101" aria-hidden="true">
-        <circle cx="53.8" cy="27" r="11.5" fill="var(--sun)" />
-        <path d={MARK_RIDGE} fill="currentColor" />
-      </svg>
-      <span className="wordmark-rest" aria-hidden="true">OONDA</span>
+      <span className="wordmark-text" aria-hidden="true">M</span>
+      <MoonO className="wordmark-moon" />
+      <span className="wordmark-text wordmark-rest" aria-hidden="true">ONDA.</span>
     </span>
   );
 }
@@ -50,7 +61,7 @@ export function Section({ title, hint, help, tip, right, children, className }: 
   );
 }
 
-export interface SegOption<T> { value: T; label: string }
+export interface SegOption<T> { value: T; label: string; tip?: string }
 
 /** Pick one of a few choices (a radio group with a sliding highlight and arrow-key support). */
 export function Segmented<T extends string | number>({ label, options, value, onChange, size, full }: {
@@ -75,7 +86,7 @@ export function Segmented<T extends string | number>({ label, options, value, on
       <span className="seg-thumb" aria-hidden="true" />
       {options.map((o, i) => (
         <button key={String(o.value)} ref={el => { btns.current[i] = el; }} type="button" role="radio" aria-checked={i === idx}
-          tabIndex={i === idx || (idx < 0 && i === 0) ? 0 : -1} onClick={() => onChange(o.value)} onKeyDown={onKey}>{o.label}</button>
+          tabIndex={i === idx || (idx < 0 && i === 0) ? 0 : -1} data-tip={o.tip} onClick={() => onChange(o.value)} onKeyDown={onKey}>{o.label}</button>
       ))}
     </div>
   );
@@ -117,23 +128,23 @@ export function Chip({ tone, children }: { tone?: 'good' | 'bad' | 'muted' | 'su
  * For the boxes on the right (Compare, Layers): tells the app whether the box reaches down to the
  * map controls, so the controls only move aside when they would really be covered.
  */
+// oxlint-disable-next-line react/only-export-components -- The shared kit also owns this panel layout hook.
 export function useReachesControls(onReach: (reaches: boolean) => void) {
   const ref = useRef<HTMLElement>(null);
-  const cb = useRef(onReach);
-  cb.current = onReach;
+  const reach = useEffectEvent(onReach);
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
     const check = () => {
       const controls = document.querySelector('.map-controls');
       const top = controls ? controls.getBoundingClientRect().top : window.innerHeight;
-      cb.current(el.getBoundingClientRect().bottom + 8 > top);
+      reach(el.getBoundingClientRect().bottom + 8 > top);
     };
     check();
     const ro = new ResizeObserver(check);
     ro.observe(el);
     window.addEventListener('resize', check);
-    return () => { ro.disconnect(); window.removeEventListener('resize', check); cb.current(false); };
+    return () => { ro.disconnect(); window.removeEventListener('resize', check); reach(false); };
   }, []);
   return ref;
 }
@@ -146,8 +157,7 @@ export function Popover({ anchor, onClose, placement = 'bottom-start', label, cl
 }) {
   const box = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState<{ left: number; top: number } | null>(null);
-  const close = useRef(onClose);
-  close.current = onClose;
+  const close = useEffectEvent(onClose);
 
   useLayoutEffect(() => {
     const place = () => {
@@ -168,8 +178,8 @@ export function Popover({ anchor, onClose, placement = 'bottom-start', label, cl
   }, [anchor, placement, gap]);
 
   useEffect(() => {
-    const onKey = (e: globalThis.KeyboardEvent) => { if (e.key === 'Escape') { e.stopPropagation(); close.current(); anchor.focus(); } };
-    const onDown = (e: PointerEvent) => { if (!box.current?.contains(e.target as Node) && !anchor.contains(e.target as Node)) close.current(); };
+    const onKey = (e: globalThis.KeyboardEvent) => { if (e.key === 'Escape') { e.stopPropagation(); close(); anchor.focus(); } };
+    const onDown = (e: PointerEvent) => { if (!box.current?.contains(e.target as Node) && !anchor.contains(e.target as Node)) close(); };
     window.addEventListener('keydown', onKey, true);
     window.addEventListener('pointerdown', onDown, true);
     const q = (sel: string) => box.current?.querySelector<HTMLElement>(sel);
@@ -186,14 +196,14 @@ export function Popover({ anchor, onClose, placement = 'bottom-start', label, cl
   );
 }
 
-export interface MenuOption<T> { value: T; label: string; note?: string }
+export interface MenuOption<T> { value: T; label: string; note?: string; tip?: string }
 
 /** A compact two-line button ("Mission length / 14 days") that opens a short list of choices. */
-export function MenuButton<T extends string | number>({ caption, text, options, value, onChange, placement = 'top-end', help }: {
-  caption: string; text: string; options: MenuOption<T>[]; value: T; onChange(v: T): void; placement?: Placement; help?: string;
+export function MenuButton<T extends string | number>({ caption, text, options, value, onChange, placement = 'top-end', help, tip }: {
+  caption: string; text: string; options: MenuOption<T>[]; value: T; onChange(v: T): void; placement?: Placement; help?: string; tip?: string;
 }) {
   const [open, setOpen] = useState(false);
-  const btn = useRef<HTMLButtonElement>(null);
+  const [anchor, setAnchor] = useState<HTMLButtonElement | null>(null);
   const onKey = (e: KeyboardEvent<HTMLDivElement>) => {
     if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
     e.preventDefault();
@@ -204,18 +214,18 @@ export function MenuButton<T extends string | number>({ caption, text, options, 
   };
   return (
     <>
-      <button ref={btn} type="button" className="mbtn" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen(o => !o)}>
+      <button ref={setAnchor} type="button" className="mbtn" aria-haspopup="menu" aria-expanded={open} data-tip={open ? undefined : tip} onClick={() => setOpen(o => !o)}>
         <span className="mbtn-cap">{caption}</span>
         <span className="mbtn-val">{text}</span>
         <CaretDown className="mbtn-caret" size={12} weight="bold" aria-hidden="true" />
       </button>
-      {open && btn.current && (
-        <Popover anchor={btn.current} onClose={() => setOpen(false)} placement={placement} label={caption} className="menu">
+      {open && anchor && (
+        <Popover anchor={anchor} onClose={() => setOpen(false)} placement={placement} label={caption} className="menu">
           <div role="menu" aria-label={caption} onKeyDown={onKey}>
             <div className="menu-title">{caption}</div>
             {options.map(o => (
-              <button key={String(o.value)} type="button" role="menuitemradio" aria-checked={o.value === value} className="menu-item"
-                onClick={() => { onChange(o.value); setOpen(false); btn.current?.focus(); }}>
+              <button key={String(o.value)} type="button" role="menuitemradio" aria-checked={o.value === value} className="menu-item" data-tip={o.tip}
+                onClick={() => { onChange(o.value); setOpen(false); anchor.focus(); }}>
                 <span className="menu-check" aria-hidden="true">{o.value === value && <Check size={14} weight="bold" />}</span>
                 <span className="menu-label">{o.label}</span>
                 {o.note && <span className="menu-note">{o.note}</span>}

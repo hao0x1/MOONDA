@@ -1,0 +1,41 @@
+{
+  "checked": "2026-11-14",
+  "checks": [
+    {
+      "url": "https://global.jaxa.jp/press/2024/08/20240826-1_e.html",
+      "status": 200,
+      "finalUrl": "https://global.jaxa.jp/press/2024/08/20240826-1_e.html",
+      "type": "text/html; charset=UTF-8"
+    },
+    {
+      "url": "https://lroc.im-ldi.com/images/1101",
+      "status": 200,
+      "finalUrl": "https://lroc.im-ldi.com/images/1101",
+      "type": "text/html; charset=utf-8"
+    },
+    {
+      "url": "https://lroc.im-ldi.com/images/1311",
+      "status": 200,
+      "finalUrl": "https://lroc.im-ldi.com/images/1311",
+      "type": "text/html; charset=utf-8"
+    },
+    {
+      "url": "https://lroc.im-ldi.com/images/1358",
+      "status": 200,
+      "finalUrl": "https://lroc.im-ldi.com/images/1358",
+      "type": "text/html; charset=utf-8"
+    },
+    {
+      "url": "https://www.lroc.im-ldi.com/images/1499",
+      "status": 200,
+      "finalUrl": "https://www.lroc.im-ldi.com/images/1499",
+      "type": "text/html; charset=utf-8"
+    },
+    {
+      "url": "https://www.nasa.gov/humans-in-space/nasas-lro-observes-crater-likely-from-luna-25-impact/",
+      "status": 200,
+      "finalUrl": "https://www.nasa.gov/humans-in-space/nasas-lro-observes-crater-likely-from-luna-25-impact/",
+      "type": "text/html; charset=UTF-8"
+    }
+  ]
+}

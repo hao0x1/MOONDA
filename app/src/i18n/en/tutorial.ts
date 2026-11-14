@@ -1,0 +1,28 @@
+// The tour's words: six objectives, each a title of two or three words and ONE very short sentence
+// that says exactly what to do. (Some have a second sentence for when the visitor is somewhere else.)
+export const tutorial = {
+  'tutorial.aria': 'First steps in MOONDA',
+  'tutorial.count': 'Step {n} of {total}',
+  'tutorial.done': 'Done',
+  'tutorial.move.title': 'Move the Moon',
+  'tutorial.move.body': 'Drag to turn it. Scroll to zoom.',
+  'tutorial.pick.title': 'Pick a spot',
+  'tutorial.pick.body': 'Click anywhere on the Moon.',
+  'tutorial.land.title': 'Land on it',
+  'tutorial.land.body': 'Press Land here in the panel on the left.',
+  'tutorial.drive.title': 'Drive the rover',
+  'tutorial.drive.body': 'Hold W to roll forward. A and D turn.',
+  'tutorial.drive.land': 'Press Land here, then hold W to drive.',
+  'tutorial.compare.title': 'Compare spots',
+  'tutorial.compare.body': 'Press Compare in the panel to add this spot to your list.',
+  'tutorial.compare.back': 'Press Back to map, then Compare.',
+  'tutorial.layers.title': 'Switch on a map',
+  'tutorial.layers.body': 'Open Layers at the top right.',
+  'tutorial.layers.open': 'Now switch one on, like PSR or Water ice.',
+  'tutorial.layers.back': 'Press Back to map, then open Layers.',
+  'tutorial.finish.title': 'You are ready',
+  'tutorial.finish.body': 'Have fun exploring the Moon.',
+  'tutorial.skipStep': 'Skip',
+  'tutorial.skipStep.tip': 'Skip this step',
+  'tutorial.skip': 'Close the tutorial',
+} as const;

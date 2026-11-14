@@ -11,6 +11,7 @@ import { Cartesian3, type Viewer } from 'cesium';
 import { MOON_R, toTrueLatLon } from './frame';
 import { FlatMap, tween, ease, easeOut } from './flatMap';
 import { poseGlobe, poseLookingAt, type CameraPose, type Navigation } from './navigation';
+import { landerLink } from './lander';
 
 export type MapMode = 'globe' | 'flat';
 
@@ -54,8 +55,18 @@ export class MapModes {
     const { viewer, nav } = this.g, flat = this.flat, scene = viewer.scene;
     this.moving = true; flat.busy = true; flat.frameLog = [];
     nav.enabled = false;
+    let surfaceInterrupted = false;
+    const offLanding = landerLink.subscribe(() => {
+      if (landerLink.phase === 'off') return;
+      // Landing during the unroll must never leave its ground hidden behind a stopped globe.
+      surfaceInterrupted = true;
+      nav.cancel(); flat.stop(); flat.active = false; flat.setShown(false);
+      scene.globe.show = true; viewer.useDefaultRenderLoop = true;
+      this.g.setGlobeExtras(true); scene.requestRender();
+    });
     try {
       await flat.prepare(false);
+      if (surfaceInterrupted) return;
       flat.resize();
       const c = this.globeCentre();
       const D = this.wholeD();
@@ -67,40 +78,46 @@ export class MapModes {
         flat.morphA = 1; flat.morphB = 1; flat.backdrop = 1; flat.overlayAlpha = 1;
         flat.request();
         flat.setShown(true, 0);
-        await tween(260, e => flat.setShown(true, e));
+        await tween(260, e => { if (!surfaceInterrupted) flat.setShown(true, e); });
       } else {
         // 1. the camera eases back to the whole Moon, north up, over the centre's longitude (names fade meanwhile)
         const whole = poseGlobe(0, c.lon, (D - 1) * MOON_R);
         await nav.flyTo(whole, { duration: c.hKm > 4000 ? 0.75 : 0.95 });
+        if (surfaceInterrupted) return;
         // 2. our sphere takes over (it is drawn exactly where Cesium's is)
         flat.morphA = 0; flat.morphB = 0; flat.backdrop = 0; flat.overlayAlpha = 0;
         flat.draw();
         flat.setShown(true, 0);
-        await tween(140, e => flat.setShown(true, e), t => t);
+        await tween(140, e => { if (!surfaceInterrupted) flat.setShown(true, e); }, t => t);
+        if (surfaceInterrupted) return;
         scene.globe.show = false;
         scene.requestRender();
         // 3. swell, unroll, settle; the sky fades to the backdrop
         flat.request();
         await tween(1350, (_e, t) => {
+          if (surfaceInterrupted) return;
           flat.morphA = ease(Math.min(1, t / 0.55));
           flat.morphB = ease(Math.max(0, (t - 0.3) / 0.7));
           flat.backdrop = easeOut(Math.min(1, t / 0.8));
           flat.request();
         }, t => t);
+        if (surfaceInterrupted) return;
         flat.morphA = 1; flat.morphB = 1; flat.backdrop = 1;
         // 4. names and markers fade in
-        await tween(220, e => { flat.overlayAlpha = e; flat.request(); });
+        await tween(220, e => { if (!surfaceInterrupted) { flat.overlayAlpha = e; flat.request(); } });
       }
+      if (surfaceInterrupted) return;
       flat.overlayAlpha = 1;
       viewer.useDefaultRenderLoop = false; // the globe is fully covered: stop drawing it
       this.mode = 'flat';
       flat.active = true;
       flat.refreshLabels();
     } finally {
+      offLanding();
       flat.busy = false;
       flat.setShown(this.mode === 'flat');
       this.moving = false;
-      if (this.mode !== 'flat') { scene.globe.show = true; this.g.setGlobeExtras(true); nav.enabled = true; }
+      if (this.mode !== 'flat') { scene.globe.show = true; this.g.setGlobeExtras(true); nav.enabled = !surfaceInterrupted; }
       this.onChange(this.mode);
     }
   }
@@ -110,14 +127,21 @@ export class MapModes {
    * map was centred on). `fast`: a shortened move (Stand here). `pose`: fly the globe to this instead.
    */
   async toGlobe(o: { at?: { lat: number; lon: number; km: number }; fast?: boolean; pose?: CameraPose; handOff?: () => void } = {}): Promise<void> {
-    if (this.mode === 'globe' || this.moving) return;
+    // A Land here click during a previous transition still owns its hand-off afterwards.
+    if (this.moving && !o.handOff) return;
+    while (this.moving) await nextFrames();
+    if (this.mode === 'globe') { o.handOff?.(); return; }
     const { viewer, nav } = this.g, flat = this.flat, scene = viewer.scene;
     this.moving = true; flat.busy = true; flat.frameLog = [];
     flat.stop();
     try {
       const fr = flat.free();
       const v = flat.view;
-      const at = o.at ?? { lat: v.latC, lon: v.lonC, km: (fr.w / v.s) * 30.32 };
+      const flatKm = (fr.w / v.s) * 30.32;
+      const requested = o.at ?? { lat: v.latC, lon: v.lonC, km: flatKm };
+      // An explicit point without a landing hand-off or camera pose comes from the
+      // "Go closer" note. Its old 140 km target must not zoom OUT from the new 5 km map.
+      const at = o.at && !o.handOff && !o.pose ? { ...requested, km: Math.min(requested.km, flatKm * 0.65) } : requested;
       const D = this.wholeD();
       flat.camD = D;
       flat.fovy = (viewer.camera.frustum as unknown as { fovy: number }).fovy;

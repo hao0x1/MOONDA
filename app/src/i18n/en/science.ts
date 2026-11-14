@@ -70,7 +70,7 @@ export const science = {
   'aitool.battery': 'Battery',
   'aitool.radio': 'Radio',
   'aitool.slope': 'Slope {deg}°',
-  'aitool.permShadow': 'Permanent shadow',
+  'aitool.permShadow': 'PSR (permanently shadowed region)',
   'aitool.max': 'Max {c}°C',
   'aitool.where': 'Where',
   'aitool.near': 'near {name}',

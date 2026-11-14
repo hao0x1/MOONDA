@@ -1,0 +1,92 @@
+[
+  {
+    "name": "Nobile Rim 2",
+    "oldLat": -84.05,
+    "oldLon": 56.48,
+    "newLat": -83.954051,
+    "newLon": 58.821546,
+    "deltaKm": 7.97,
+    "oldInside": true,
+    "radiusKm": 14.11
+  },
+  {
+    "name": "Mons Mouton",
+    "oldLat": -85.42,
+    "oldLon": 31.85,
+    "newLat": -85.426577,
+    "newLon": 31.742761,
+    "deltaKm": 0.33,
+    "oldInside": true,
+    "radiusKm": 11.3
+  },
+  {
+    "name": "Malapert Massif",
+    "oldLat": -85.94,
+    "oldLon": -0.94,
+    "newLat": -85.994785,
+    "newLon": -0.235784,
+    "deltaKm": 2.24,
+    "oldInside": true,
+    "radiusKm": 14.83
+  },
+  {
+    "name": "de Gerlache Rim 2",
+    "oldLat": -88.39,
+    "oldLon": -68.87,
+    "newLat": -88.229978,
+    "newLon": -64.628438,
+    "deltaKm": 6.16,
+    "oldInside": true,
+    "radiusKm": 14.14
+  },
+  {
+    "name": "Mons Mouton Plateau",
+    "oldLat": -85.11,
+    "oldLon": 26.71,
+    "newLat": -84.334701,
+    "newLon": 30.592268,
+    "deltaKm": 25.87,
+    "oldInside": true,
+    "radiusKm": 48.04
+  },
+  {
+    "name": "Slater Plain",
+    "oldLat": -87.48,
+    "oldLon": 124.52,
+    "newLat": -87.163714,
+    "newLon": 125.537678,
+    "deltaKm": 9.7,
+    "oldInside": true,
+    "radiusKm": 14.13
+  },
+  {
+    "name": "Peak Near Cabeus B",
+    "oldLat": -83.76,
+    "oldLon": -69.98,
+    "newLat": -83.637459,
+    "newLon": -68.749495,
+    "deltaKm": 5.53,
+    "oldInside": true,
+    "radiusKm": 14.1
+  },
+  {
+    "name": "Nobile Rim 1",
+    "oldLat": -85.3,
+    "oldLon": 36.92,
+    "newLat": -85.436397,
+    "newLon": 37.347042,
+    "deltaKm": 4.27,
+    "oldInside": true,
+    "radiusKm": 14.12
+  },
+  {
+    "name": "Haworth",
+    "oldLat": -86.77,
+    "oldLon": -20.51,
+    "newLat": -86.763942,
+    "newLon": -22.777024,
+    "deltaKm": 3.88,
+    "oldInside": true,
+    "radiusKm": 21.06
+  }
+]

@@ -6,6 +6,9 @@ export const common = {
   'common.earth': 'Earth',
   'common.none': 'None',
 
+  'search.tip': 'Find a named place or landing spot on the Moon',
+  'search.result.tip': 'Show {name} on the map (Enter)',
+
   'unit.min': 'min',
   'unit.h': 'h',
   'unit.day.one': 'day',

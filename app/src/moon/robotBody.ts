@@ -6,7 +6,7 @@
 // low enough for the wheel to climb is climbed by it (see Driver.sampleWheels) instead of stopping it.
 //
 // A rock is a round-topped lump on its own ground: radius r at the ground, height h, its outline shrinking
-// towards the top as r * (1 - (y/h)^3)^(1/3): steep sides like real blocks, a rounded top. Every ball is tested against
+// towards the top as r * (1 - (y/h)^p)^(1/p), p measured from each scanned stone (1.2 = a low mound, 2 = a dome). Every ball is tested against
 // every rock near the robot; the deepest touch per rock becomes one contact (where, which way out, how deep).
 
 import { ROBOT_SHAPE } from './robotShape';
@@ -25,7 +25,8 @@ function build(): BodyCell[] {
     const c = cells.get(key);
     if (c && c.y <= bottom) continue;
     const wheel = WHEEL_AT.findIndex(([wx, wz]) => Math.abs(x - wx) < 0.3 && Math.abs(z - wz) < 0.4 && bottom < 0.7);
-    cells.set(key, { f: z, r: -x, y: Math.max(0, bottom), rad: r, wheel });
+    // (a ball is a little bigger than the square it stands for: its true half-width keeps the outline honest)
+    cells.set(key, { f: z, r: -x, y: Math.max(0, bottom), rad: Math.min(r, 0.11), wheel });
   }
   return [...cells.values()];
 }
@@ -35,17 +36,15 @@ export const BODY_CELLS: readonly BodyCell[] = build();
 /** The farthest any cell reaches from the middle (model m): rocks further than this plus their radius cannot touch. */
 export const BODY_REACH = BODY_CELLS.reduce((a, c) => Math.max(a, Math.hypot(c.f, c.r) + c.rad), 0);
 
-/** The rock's radius at height y over its ground (m). */
-export function rockRadiusAt(r: number, h: number, y: number): number {
+/** The rock's radius at height y over its ground (m). `pow` is how rounded it is (measured per stone, rockOutline.ts). */
+export function rockRadiusAt(r: number, h: number, y: number, pow = 3): number {
   if (y <= 0) return r;
   if (y >= h) return 0;
-  const t = y / h;
-  return r * Math.cbrt(1 - t * t * t);
+  return r * Math.pow(1 - Math.pow(y / h, pow), 1 / pow);
 }
 
 /** The rock's top (m over its ground) at distance d from its middle (m). */
-export function rockTopAt(r: number, h: number, d: number): number {
+export function rockTopAt(r: number, h: number, d: number, pow = 3): number {
   if (d >= r) return 0;
-  const t = d / r;
-  return h * Math.cbrt(1 - t * t * t);
+  return h * Math.pow(1 - Math.pow(d / r, pow), 1 / pow);
 }

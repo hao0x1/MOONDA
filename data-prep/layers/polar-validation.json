@@ -1,0 +1,62 @@
+{
+  "psr-north.png": {
+    "bytes": 198616,
+    "colouredCells": 106008
+  },
+  "psr-north-sharp.png": {
+    "bytes": 1187840,
+    "colouredCells": 1097956
+  },
+  "psr-south-wide.png": {
+    "bytes": 208063,
+    "colouredCells": 110998
+  },
+  "psr-south-sharp.png": {
+    "bytes": 1996420,
+    "colouredCells": 1656757
+  },
+  "nativeNorthShadowLocationsChecked": 9,
+  "northOrientationSamples": [
+    {
+      "lat": 88.5,
+      "lon": 30,
+      "sourceDN": -20000,
+      "appPsrPercent": 0
+    },
+    {
+      "lat": 87.2,
+      "lon": -40,
+      "sourceDN": -20000,
+      "appPsrPercent": 0
+    },
+    {
+      "lat": 86.5,
+      "lon": 120,
+      "sourceDN": -20000,
+      "appPsrPercent": 0
+    },
+    {
+      "lat": 89.1,
+      "lon": -170,
+      "sourceDN": -20000,
+      "appPsrPercent": 0
+    }
+  ],
+  "hydrogen": {
+    "maxPositiveQuantisationErrorPpm": 1.0,
+    "negativeFitsClipped": 4149,
+    "southPoleFirstCellPpm": 147.4
+  },
+  "watericeNorth": {
+    "0": 1938582,
+    "1": 1337492,
+    "2": 18318,
+    "255": 899912
+  },
+  "watericeSouth": {
+    "0": 1929876,
+    "1": 1212884,
+    "2": 151368,
+    "255": 900176
+  }
+}

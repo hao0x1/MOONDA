@@ -1,0 +1,36 @@
+{
+  "en": {
+    "ice.detected": "Seen from orbit",
+    "pl.ice-ice-peary.short": "Radar signs seen from orbit; ice is possible, not measured here",
+    "pl.ice-ice-rozhdestvenskiy.short": "Radar signs seen from orbit; ice is possible, not measured here",
+    "pl.ice-ice-hermite.short": "Radar signs seen from orbit; ice is possible, not measured here",
+    "pl.ice-ice-erlanger.short": "Radar signs seen from orbit; ice is possible, not measured here",
+    "pl.ice-ice-bosch.short": "Cold ground could keep ice; this marker is a prediction",
+    "pl.ice-ice-peary.evidence.0.finding": "Radar found unusual signals in small craters inside Peary that may come from buried ice. Rough ground also changes radar signals; no water was measured on the spot, and this is not a claim about the whole crater.",
+    "pl.ice-ice-peary.evidence.1.finding": "The Mini-RF team described radar signals consistent with possible ice in permanently shaded small craters inside Peary. These are orbital signs with more than one possible cause.",
+    "pl.ice-ice-rozhdestvenskiy.evidence.0.finding": "Radar found unusual signals in small craters inside Rozhdestvenskiy that may come from buried ice. Rough ground can give similar signals; no water was measured on the spot, and this is not a claim about the whole crater.",
+    "pl.ice-ice-rozhdestvenskiy.evidence.1.finding": "A high radar polarisation ratio can come from rough rock or from ice. The instrument does not directly measure water in the ground.",
+    "pl.ice-ice-hermite.evidence.0.finding": "Mini-RF reported unusual radar signals in small craters on Hermite’s floor. A scattering model favours possible buried ice, but roughness can affect the signal; no water was measured on the spot.",
+    "pl.ice-ice-hermite.evidence.1.finding": "Diviner measured very cold ground in Hermite, and LOLA models show lasting shadow in part of its south-western floor. Cold and shadow allow possible ice storage; they do not measure water.",
+    "pl.ice-ice-erlanger.evidence.0.finding": "Mini-RF reported unusual radar signals inside Erlanger. A scattering model favours possible buried ice, but roughness can affect the signal; no water was measured on the spot.",
+    "pl.ice-ice-erlanger.evidence.1.finding": "LROC shows that much of Erlanger’s floor stays in permanent shadow. Shadow can help ice last in suitable cold patches; the photograph alone is not an ice detection.",
+    "pl.ice-ice-bosch.evidence.0.finding": "NASA lists Bosch among the very cold northern craters that could trap water ice. This is a prediction from cold conditions, not a measurement of water at this crater."
+  },
+  "km": {
+    "ice.detected": "ឃើញពីគន្លង",
+    "pl.ice-ice-peary.short": "ឃើញសញ្ញារ៉ាដាពីគន្លង៖ អាចមានទឹកកក ប៉ុន្តែមិនទាន់វាស់ទឹកនៅទីនេះទេ",
+    "pl.ice-ice-rozhdestvenskiy.short": "ឃើញសញ្ញារ៉ាដាពីគន្លង៖ អាចមានទឹកកក ប៉ុន្តែមិនទាន់វាស់ទឹកនៅទីនេះទេ",
+    "pl.ice-ice-hermite.short": "ឃើញសញ្ញារ៉ាដាពីគន្លង៖ អាចមានទឹកកក ប៉ុន្តែមិនទាន់វាស់ទឹកនៅទីនេះទេ",
+    "pl.ice-ice-erlanger.short": "ឃើញសញ្ញារ៉ាដាពីគន្លង៖ អាចមានទឹកកក ប៉ុន្តែមិនទាន់វាស់ទឹកនៅទីនេះទេ",
+    "pl.ice-ice-bosch.short": "ដីត្រជាក់អាចរក្សាទឹកកកបាន៖ សញ្ញានេះជាការទស្សន៍ទាយ",
+    "pl.ice-ice-peary.evidence.0.finding": "រ៉ាដាបានរកឃើញសញ្ញាខុសធម្មតាក្នុងរណ្ដៅតូចៗខាងក្នុង Peary ដែលអាចមកពីទឹកកកកប់ក្រោមដី។ ដីរដិបរដុបក៏អាចប្ដូរសញ្ញារ៉ាដាបានដែរ។ មិនមានការវាស់ទឹកផ្ទាល់នៅទីនោះទេ ហើយនេះមិនមែនជាការអះអាងអំពីរណ្ដៅទាំងមូលទេ។",
+    "pl.ice-ice-peary.evidence.1.finding": "ក្រុម Mini-RF បានរាយការណ៍សញ្ញារ៉ាដាដែលស្របនឹងលទ្ធភាពមានទឹកកក ក្នុងរណ្ដៅតូចៗដែលមានស្រមោលជានិច្ចនៅខាងក្នុង Peary។ ទាំងនេះជាសញ្ញាពីគន្លង ដែលអាចមានមូលហេតុលើសពីមួយ។",
+    "pl.ice-ice-rozhdestvenskiy.evidence.0.finding": "រ៉ាដាបានរកឃើញសញ្ញាខុសធម្មតាក្នុងរណ្ដៅតូចៗខាងក្នុង Rozhdestvenskiy ដែលអាចមកពីទឹកកកកប់ក្រោមដី។ ដីរដិបរដុបអាចផ្ដល់សញ្ញាស្រដៀងគ្នា។ មិនមានការវាស់ទឹកផ្ទាល់នៅទីនោះទេ ហើយនេះមិនមែនជាការអះអាងអំពីរណ្ដៅទាំងមូលទេ។",
+    "pl.ice-ice-rozhdestvenskiy.evidence.1.finding": "អនុបាតប៉ូលារីសាស្យុងរ៉ាដាខ្ពស់អាចមកពីថ្មរដិបរដុប ឬពីទឹកកក។ ឧបករណ៍នេះមិនវាស់ទឹកក្នុងដីដោយផ្ទាល់ទេ។",
+    "pl.ice-ice-hermite.evidence.0.finding": "Mini-RF បានរាយការណ៍សញ្ញារ៉ាដាខុសធម្មតាក្នុងរណ្ដៅតូចៗលើបាត Hermite។ គំរូការបែកខ្ចាត់ខ្ចាយនៃរលកគាំទ្រលទ្ធភាពមានទឹកកកកប់ក្រោមដី ប៉ុន្តែភាពរដិបរដុបអាចប៉ះពាល់សញ្ញាបាន។ មិនមានការវាស់ទឹកផ្ទាល់នៅទីនោះទេ។",
+    "pl.ice-ice-hermite.evidence.1.finding": "Diviner បានវាស់ដីត្រជាក់ខ្លាំងនៅ Hermite ហើយគំរូ LOLA បង្ហាញស្រមោលយូរអង្វែងនៅផ្នែកមួយនៃបាតខាងនិរតី។ ភាពត្រជាក់និងស្រមោលអាចឱ្យទឹកកកនៅគង់បាន ប៉ុន្តែមិនមែនជាការវាស់ទឹកទេ។",
+    "pl.ice-ice-erlanger.evidence.0.finding": "Mini-RF បានរាយការណ៍សញ្ញារ៉ាដាខុសធម្មតាខាងក្នុង Erlanger។ គំរូការបែកខ្ចាត់ខ្ចាយនៃរលកគាំទ្រលទ្ធភាពមានទឹកកកកប់ក្រោមដី ប៉ុន្តែភាពរដិបរដុបអាចប៉ះពាល់សញ្ញាបាន។ មិនមានការវាស់ទឹកផ្ទាល់នៅទីនោះទេ។",
+    "pl.ice-ice-erlanger.evidence.1.finding": "LROC បង្ហាញថាបាត Erlanger ភាគច្រើនស្ថិតក្នុងស្រមោលជានិច្ច។ ស្រមោលអាចជួយឱ្យទឹកកកនៅគង់ក្នុងកន្លែងត្រជាក់សមស្រប ប៉ុន្តែរូបថតតែមួយនេះមិនមែនជាការរកឃើញទឹកកកទេ។",
+    "pl.ice-ice-bosch.evidence.0.finding": "NASA រាប់ Bosch ក្នុងចំណោមរណ្ដៅខាងជើងដែលត្រជាក់ខ្លាំង និងអាចទប់ទឹកកកបាន។ នេះជាការទស្សន៍ទាយពីលក្ខខណ្ឌត្រជាក់ មិនមែនជាការវាស់ទឹកនៅរណ្ដៅនេះទេ។"
+  }
+}

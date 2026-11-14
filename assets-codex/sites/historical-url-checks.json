@@ -1,0 +1,246 @@
+{
+  "checked": "2026-11-14",
+  "method": "HTTP GET, redirects followed, first byte read only; no downloaded file executed or opened",
+  "results": [
+    {
+      "url": "https://darts.isas.jaxa.jp/en/missions/hiten",
+      "status": 200,
+      "finalUrl": "https://darts.isas.jaxa.jp/en/missions/hiten",
+      "seconds": 0.99
+    },
+    {
+      "url": "https://data.lroc.im-ldi.com/lroc/view_rdr/SHAPEFILE_ANTHROPOGENIC_OBJECTS",
+      "status": 200,
+      "finalUrl": "https://data.lroc.im-ldi.com/lroc/view_rdr/SHAPEFILE_ANTHROPOGENIC_OBJECTS",
+      "seconds": 0.93
+    },
+    {
+      "url": "https://lroc.im-ldi.com/featured_sites/luna-20/flip-book",
+      "status": 200,
+      "finalUrl": "https://lroc.im-ldi.com/featured_sites/luna-20/flip-book",
+      "seconds": 0.99
+    },
+    {
+      "url": "https://lroc.im-ldi.com/featured_sites/luna-23/flip-book",
+      "status": 200,
+      "finalUrl": "https://lroc.im-ldi.com/featured_sites/luna-23/flip-book",
+      "seconds": 0.9
+    },
+    {
+      "url": "https://lroc.im-ldi.com/featured_sites/luna-24/flip-book",
+      "status": 200,
+      "finalUrl": "https://lroc.im-ldi.com/featured_sites/luna-24/flip-book",
+      "seconds": 0.91
+    },
+    {
+      "url": "https://lroc.im-ldi.com/featured_sites/lunokhod-1/flip-book",
+      "status": 200,
+      "finalUrl": "https://lroc.im-ldi.com/featured_sites/lunokhod-1/flip-book",
+      "seconds": 1.22
+    },
+    {
+      "url": "https://lroc.im-ldi.com/images/1132",
+      "status": 200,
+      "finalUrl": "https://lroc.im-ldi.com/images/1132",
+      "seconds": 0.95
+    },
+    {
+      "url": "https://lroc.im-ldi.com/images/1261",
+      "status": 200,
+      "finalUrl": "https://lroc.im-ldi.com/images/1261",
+      "seconds": 0.96
+    },
+    {
+      "url": "https://lroc.im-ldi.com/images/15",
+      "status": 200,
+      "finalUrl": "https://lroc.im-ldi.com/images/15",
+      "seconds": 0.94
+    },
+    {
+      "url": "https://lroc.im-ldi.com/images/402",
+      "status": 200,
+      "finalUrl": "https://lroc.im-ldi.com/images/402",
+      "seconds": 1.0
+    },
+    {
+      "url": "https://lroc.im-ldi.com/images/774",
+      "status": 200,
+      "finalUrl": "https://lroc.im-ldi.com/images/774",
+      "seconds": 0.99
+    },
+    {
+      "url": "https://nssdc.gsfc.nasa.gov/planetary/lunar/lunar_artifact_impacts.html",
+      "status": 200,
+      "finalUrl": "https://nssdc.gsfc.nasa.gov/planetary/lunar/lunar_artifact_impacts.html",
+      "seconds": 16.46
+    },
+    {
+      "url": "https://science.nasa.gov/image-article/apod-1997-september-07-luna-9-first-soft-lander/",
+      "status": 200,
+      "finalUrl": "https://science.nasa.gov/image-article/apod-1997-september-07-luna-9-first-soft-lander/",
+      "seconds": 1.23
+    },
+    {
+      "url": "https://science.nasa.gov/mission/grail/",
+      "status": 200,
+      "finalUrl": "https://science.nasa.gov/mission/grail/",
+      "seconds": 0.28
+    },
+    {
+      "url": "https://science.nasa.gov/mission/ladee/",
+      "status": 200,
+      "finalUrl": "https://science.nasa.gov/mission/ladee/",
+      "seconds": 1.06
+    },
+    {
+      "url": "https://science.nasa.gov/mission/lcross/",
+      "status": 200,
+      "finalUrl": "https://science.nasa.gov/mission/lcross/",
+      "seconds": 1.04
+    },
+    {
+      "url": "https://science.nasa.gov/mission/lunar-prospector/",
+      "status": 200,
+      "finalUrl": "https://science.nasa.gov/mission/lunar-prospector/",
+      "seconds": 0.49
+    },
+    {
+      "url": "https://science.nasa.gov/mission/ranger-4/",
+      "status": 200,
+      "finalUrl": "https://science.nasa.gov/mission/ranger-4/",
+      "seconds": 1.06
+    },
+    {
+      "url": "https://science.nasa.gov/mission/ranger-6/",
+      "status": 200,
+      "finalUrl": "https://science.nasa.gov/mission/ranger-6/",
+      "seconds": 0.95
+    },
+    {
+      "url": "https://science.nasa.gov/mission/ranger-7/",
+      "status": 200,
+      "finalUrl": "https://science.nasa.gov/mission/ranger-7/",
+      "seconds": 0.27
+    },
+    {
+      "url": "https://science.nasa.gov/mission/ranger-8/",
+      "status": 200,
+      "finalUrl": "https://science.nasa.gov/mission/ranger-8/",
+      "seconds": 1.18
+    },
+    {
+      "url": "https://science.nasa.gov/mission/ranger-9/",
+      "status": 200,
+      "finalUrl": "https://science.nasa.gov/mission/ranger-9/",
+      "seconds": 1.01
+    },
+    {
+      "url": "https://science.nasa.gov/mission/surveyor-1/",
+      "status": 200,
+      "finalUrl": "https://science.nasa.gov/mission/surveyor-1/",
+      "seconds": 1.01
+    },
+    {
+      "url": "https://science.nasa.gov/mission/surveyor-3/",
+      "status": 200,
+      "finalUrl": "https://science.nasa.gov/mission/surveyor-3/",
+      "seconds": 0.25
+    },
+    {
+      "url": "https://science.nasa.gov/mission/surveyor-5/",
+      "status": 200,
+      "finalUrl": "https://science.nasa.gov/mission/surveyor-5/",
+      "seconds": 1.17
+    },
+    {
+      "url": "https://science.nasa.gov/mission/surveyor-6/",
+      "status": 200,
+      "finalUrl": "https://science.nasa.gov/mission/surveyor-6/",
+      "seconds": 0.99
+    },
+    {
+      "url": "https://science.nasa.gov/mission/surveyor-7/",
+      "status": 200,
+      "finalUrl": "https://science.nasa.gov/mission/surveyor-7/",
+      "seconds": 1.31
+    },
+    {
+      "url": "https://science.nasa.gov/photojournal/luna-16/",
+      "status": 200,
+      "finalUrl": "https://science.nasa.gov/photojournal/luna-16/",
+      "seconds": 1.04
+    },
+    {
+      "url": "https://www.esa.int/Newsroom/Press_Releases/Impact_landing_ends_SMART-1_mission_to_the_Moon",
+      "status": 200,
+      "finalUrl": "https://www.esa.int/media-advisories/news-media/media/media-advisories/n-31-2006-impact-landing-ends-smart-1-mission-to-the-moon",
+      "seconds": 2.6
+    },
+    {
+      "url": "https://www.esa.int/media/smart-1-s-crash-site",
+      "status": 200,
+      "finalUrl": "https://www.esa.int/media/smart-1-s-crash-site",
+      "seconds": 3.74
+    },
+    {
+      "url": "https://www.kaguya.jaxa.jp/en/communication/KAGUYA_Lunar_Impact_e.htm",
+      "status": 200,
+      "finalUrl": "https://www.kaguya.jaxa.jp/en/communication/KAGUYA_Lunar_Impact_e.htm",
+      "seconds": 1.24
+    },
+    {
+      "url": "https://www.lpi.usra.edu/lunar/missions/luna/",
+      "status": 200,
+      "finalUrl": "https://www.lpi.usra.edu/lunar/missions/luna/",
+      "seconds": 1.1
+    },
+    {
+      "url": "https://www.nasa.gov/mission/apollo-11/",
+      "status": 200,
+      "finalUrl": "https://www.nasa.gov/mission/apollo-11/",
+      "seconds": 0.62
+    },
+    {
+      "url": "https://www.nasa.gov/mission/apollo-12/",
+      "status": 200,
+      "finalUrl": "https://www.nasa.gov/mission/apollo-12/",
+      "seconds": 0.25
+    },
+    {
+      "url": "https://www.nasa.gov/mission/apollo-13/",
+      "status": 200,
+      "finalUrl": "https://www.nasa.gov/mission/apollo-13/",
+      "seconds": 0.95
+    },
+    {
+      "url": "https://www.nasa.gov/mission/apollo-14/",
+      "status": 200,
+      "finalUrl": "https://www.nasa.gov/mission/apollo-14/",
+      "seconds": 1.23
+    },
+    {
+      "url": "https://www.nasa.gov/mission/apollo-15/",
+      "status": 200,
+      "finalUrl": "https://www.nasa.gov/mission/apollo-15/",
+      "seconds": 1.34
+    },
+    {
+      "url": "https://www.nasa.gov/mission/apollo-16/",
+      "status": 200,
+      "finalUrl": "https://www.nasa.gov/mission/apollo-16/",
+      "seconds": 1.08
+    },
+    {
+      "url": "https://www.nasa.gov/mission/apollo-17/",
+      "status": 200,
+      "finalUrl": "https://www.nasa.gov/mission/apollo-17/",
+      "seconds": 0.24
+    },
+    {
+      "url": "https://www.nasa.gov/wp-content/uploads/2023/03/sp4035.pdf",
+      "status": 200,
+      "finalUrl": "https://www.nasa.gov/wp-content/uploads/2023/03/sp4035.pdf",
+      "seconds": 0.25
+    }
+  ]
+}

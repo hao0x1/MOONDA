@@ -1,0 +1,1225 @@
+[
+  {
+    "id": "apollo-11",
+    "name": "Apollo 11",
+    "status": "past",
+    "kind": "crewed",
+    "operator": "NASA",
+    "country": "United States",
+    "date": "1969-07-20",
+    "lat": 0.67416,
+    "lon": 23.47314,
+    "precisionKm": 0.01,
+    "outcome": "success",
+    "short": "The first place people walked on the Moon",
+    "detail": "Neil Armstrong and Buzz Aldrin landed Eagle in the Sea of Tranquility. Their descent stage and footprints remain here.",
+    "source": {
+      "name": "NASA Apollo 11",
+      "url": "https://www.nasa.gov/mission/apollo-11/"
+    },
+    "coordSource": {
+      "name": "LROC anthropogenic objects catalogue (Wagner et al.; updated 2026-08-14)",
+      "url": "https://data.lroc.im-ldi.com/lroc/view_rdr/SHAPEFILE_ANTHROPOGENIC_OBJECTS"
+    },
+    "inQuickMap": true,
+    "verify": false
+  },
+  {
+    "id": "apollo-12",
+    "name": "Apollo 12",
+    "status": "past",
+    "kind": "crewed",
+    "operator": "NASA",
+    "country": "United States",
+    "date": "1969-11-19",
+    "lat": -3.0128,
+    "lon": -23.4219,
+    "precisionKm": 0.01,
+    "outcome": "success",
+    "short": "Astronauts landed beside an older robot",
+    "detail": "Pete Conrad and Alan Bean made a precise landing in the Ocean of Storms. They walked to Surveyor 3 and brought parts of it home.",
+    "source": {
+      "name": "NASA Apollo 12",
+      "url": "https://www.nasa.gov/mission/apollo-12/"
+    },
+    "coordSource": {
+      "name": "LROC anthropogenic objects catalogue (Wagner et al.; updated 2026-08-14)",
+      "url": "https://data.lroc.im-ldi.com/lroc/view_rdr/SHAPEFILE_ANTHROPOGENIC_OBJECTS"
+    },
+    "inQuickMap": true,
+    "verify": false
+  },
+  {
+    "id": "apollo-14",
+    "name": "Apollo 14",
+    "status": "past",
+    "kind": "crewed",
+    "operator": "NASA",
+    "country": "United States",
+    "date": "1971-02-05",
+    "lat": -3.64589,
+    "lon": -17.47194,
+    "precisionKm": 0.01,
+    "outcome": "success",
+    "short": "Astronauts explored the rocky Fra Mauro hills",
+    "detail": "Alan Shepard and Edgar Mitchell landed in the Fra Mauro highlands. They collected rocks thrown out by an ancient giant impact.",
+    "source": {
+      "name": "NASA Apollo 14",
+      "url": "https://www.nasa.gov/mission/apollo-14/"
+    },
+    "coordSource": {
+      "name": "LROC anthropogenic objects catalogue (Wagner et al.; updated 2026-08-14)",
+      "url": "https://data.lroc.im-ldi.com/lroc/view_rdr/SHAPEFILE_ANTHROPOGENIC_OBJECTS"
+    },
+    "inQuickMap": true,
+    "verify": false
+  },
+  {
+    "id": "apollo-15",
+    "name": "Apollo 15",
+    "status": "past",
+    "kind": "crewed",
+    "operator": "NASA",
+    "country": "United States",
+    "date": "1971-07-30",
+    "lat": 26.13239,
+    "lon": 3.6333,
+    "precisionKm": 0.01,
+    "outcome": "success",
+    "short": "The first astronauts to drive a Moon rover",
+    "detail": "David Scott and James Irwin explored beside the Apennine mountains and Hadley Rille. A rover let them travel much farther than earlier crews.",
+    "source": {
+      "name": "NASA Apollo 15",
+      "url": "https://www.nasa.gov/mission/apollo-15/"
+    },
+    "coordSource": {
+      "name": "LROC anthropogenic objects catalogue (Wagner et al.; updated 2026-08-14)",
+      "url": "https://data.lroc.im-ldi.com/lroc/view_rdr/SHAPEFILE_ANTHROPOGENIC_OBJECTS"
+    },
+    "inQuickMap": true,
+    "verify": false
+  },
+  {
+    "id": "apollo-16",
+    "name": "Apollo 16",
+    "status": "past",
+    "kind": "crewed",
+    "operator": "NASA",
+    "country": "United States",
+    "date": "1972-04-21",
+    "lat": -8.9734,
+    "lon": 15.5011,
+    "precisionKm": 0.01,
+    "outcome": "success",
+    "short": "A rover trip through the Moon's bright highlands",
+    "detail": "John Young and Charles Duke explored the Descartes highlands. Their rocks showed that impacts shaped much of this bright, rough ground.",
+    "source": {
+      "name": "NASA Apollo 16",
+      "url": "https://www.nasa.gov/mission/apollo-16/"
+    },
+    "coordSource": {
+      "name": "LROC anthropogenic objects catalogue (Wagner et al.; updated 2026-08-14)",
+      "url": "https://data.lroc.im-ldi.com/lroc/view_rdr/SHAPEFILE_ANTHROPOGENIC_OBJECTS"
+    },
+    "inQuickMap": true,
+    "verify": false
+  },
+  {
+    "id": "apollo-17",
+    "name": "Apollo 17",
+    "status": "past",
+    "kind": "crewed",
+    "operator": "NASA",
+    "country": "United States",
+    "date": "1972-12-11",
+    "lat": 20.1911,
+    "lon": 30.7723,
+    "precisionKm": 0.01,
+    "outcome": "success",
+    "short": "The final Apollo landing, in a mountain valley",
+    "detail": "Gene Cernan and geologist Harrison Schmitt explored Taurus-Littrow valley. They drove a rover and collected orange volcanic soil.",
+    "source": {
+      "name": "NASA Apollo 17",
+      "url": "https://www.nasa.gov/mission/apollo-17/"
+    },
+    "coordSource": {
+      "name": "LROC anthropogenic objects catalogue (Wagner et al.; updated 2026-08-14)",
+      "url": "https://data.lroc.im-ldi.com/lroc/view_rdr/SHAPEFILE_ANTHROPOGENIC_OBJECTS"
+    },
+    "inQuickMap": true,
+    "verify": false
+  },
+  {
+    "id": "apollo-15-rover",
+    "name": "Apollo 15 rover",
+    "status": "past",
+    "kind": "rover",
+    "operator": "NASA",
+    "country": "United States",
+    "date": "1971-07-30",
+    "lat": 26.13174,
+    "lon": 3.63803,
+    "precisionKm": 0.01,
+    "outcome": "success",
+    "short": "An astronaut-driven Moon rover, parked for good",
+    "detail": "This is the parked rover from Apollo 15. LROC images show its location separately from the nearby lunar module.",
+    "source": {
+      "name": "NASA Apollo 15",
+      "url": "https://www.nasa.gov/mission/apollo-15/"
+    },
+    "coordSource": {
+      "name": "LROC anthropogenic objects catalogue (Wagner et al.; updated 2026-08-14)",
+      "url": "https://data.lroc.im-ldi.com/lroc/view_rdr/SHAPEFILE_ANTHROPOGENIC_OBJECTS"
+    },
+    "inQuickMap": true,
+    "verify": false,
+    "note": "Date is arrival aboard the lunar module; coordinates mark the final parked rover, not the touchdown point."
+  },
+  {
+    "id": "apollo-16-rover",
+    "name": "Apollo 16 rover",
+    "status": "past",
+    "kind": "rover",
+    "operator": "NASA",
+    "country": "United States",
+    "date": "1972-04-21",
+    "lat": -8.9729,
+    "lon": 15.5037,
+    "precisionKm": 0.01,
+    "outcome": "success",
+    "short": "An astronaut-driven Moon rover, parked for good",
+    "detail": "This is the parked rover from Apollo 16. LROC images show its location separately from the nearby lunar module.",
+    "source": {
+      "name": "NASA Apollo 16",
+      "url": "https://www.nasa.gov/mission/apollo-16/"
+    },
+    "coordSource": {
+      "name": "LROC anthropogenic objects catalogue (Wagner et al.; updated 2026-08-14)",
+      "url": "https://data.lroc.im-ldi.com/lroc/view_rdr/SHAPEFILE_ANTHROPOGENIC_OBJECTS"
+    },
+    "inQuickMap": true,
+    "verify": false,
+    "note": "Date is arrival aboard the lunar module; coordinates mark the final parked rover, not the touchdown point."
+  },
+  {
+    "id": "apollo-17-rover",
+    "name": "Apollo 17 rover",
+    "status": "past",
+    "kind": "rover",
+    "operator": "NASA",
+    "country": "United States",
+    "date": "1972-12-11",
+    "lat": 20.1896,
+    "lon": 30.7769,
+    "precisionKm": 0.01,
+    "outcome": "success",
+    "short": "An astronaut-driven Moon rover, parked for good",
+    "detail": "This is the parked rover from Apollo 17. LROC images show its location separately from the nearby lunar module.",
+    "source": {
+      "name": "NASA Apollo 17",
+      "url": "https://www.nasa.gov/mission/apollo-17/"
+    },
+    "coordSource": {
+      "name": "LROC anthropogenic objects catalogue (Wagner et al.; updated 2026-08-14)",
+      "url": "https://data.lroc.im-ldi.com/lroc/view_rdr/SHAPEFILE_ANTHROPOGENIC_OBJECTS"
+    },
+    "inQuickMap": true,
+    "verify": false,
+    "note": "Date is arrival aboard the lunar module; coordinates mark the final parked rover, not the touchdown point."
+  },
+  {
+    "id": "surveyor-1",
+    "name": "Surveyor 1",
+    "status": "past",
+    "kind": "lander",
+    "operator": "NASA",
+    "country": "United States",
+    "date": "1966-06-02",
+    "lat": -2.4745,
+    "lon": -43.3398,
+    "precisionKm": 0.01,
+    "outcome": "success",
+    "short": "The first US robot to land gently on the Moon",
+    "detail": "Surveyor 1 returned thousands of pictures from the Ocean of Storms. It showed engineers that the ground could support a lunar lander.",
+    "source": {
+      "name": "NASA Surveyor 1",
+      "url": "https://science.nasa.gov/mission/surveyor-1/"
+    },
+    "coordSource": {
+      "name": "LROC anthropogenic objects catalogue (Wagner et al.; updated 2026-08-14)",
+      "url": "https://data.lroc.im-ldi.com/lroc/view_rdr/SHAPEFILE_ANTHROPOGENIC_OBJECTS"
+    },
+    "inQuickMap": true,
+    "verify": false
+  },
+  {
+    "id": "surveyor-3",
+    "name": "Surveyor 3",
+    "status": "past",
+    "kind": "lander",
+    "operator": "NASA",
+    "country": "United States",
+    "date": "1967-04-20",
+    "lat": -3.0162,
+    "lon": -23.418,
+    "precisionKm": 0.01,
+    "outcome": "success",
+    "short": "A robot later visited by Apollo 12 astronauts",
+    "detail": "Surveyor 3 photographed the ground and dug small trenches. Apollo 12 astronauts later visited it and returned some parts to Earth.",
+    "source": {
+      "name": "NASA Surveyor 3",
+      "url": "https://science.nasa.gov/mission/surveyor-3/"
+    },
+    "coordSource": {
+      "name": "LROC anthropogenic objects catalogue (Wagner et al.; updated 2026-08-14)",
+      "url": "https://data.lroc.im-ldi.com/lroc/view_rdr/SHAPEFILE_ANTHROPOGENIC_OBJECTS"
+    },
+    "inQuickMap": true,
+    "verify": false
+  },
+  {
+    "id": "surveyor-5",
+    "name": "Surveyor 5",
+    "status": "past",
+    "kind": "lander",
+    "operator": "NASA",
+    "country": "United States",
+    "date": "1967-09-11",
+    "lat": 1.4551,
+    "lon": 23.1942,
+    "precisionKm": 0.01,
+    "outcome": "success",
+    "short": "A robot that tested what Moon soil is made of",
+    "detail": "Surveyor 5 landed in the Sea of Tranquility after surviving a helium leak. It measured the soil and sent back more than 20,000 pictures.",
+    "source": {
+      "name": "NASA Surveyor 5",
+      "url": "https://science.nasa.gov/mission/surveyor-5/"
+    },
+    "coordSource": {
+      "name": "LROC anthropogenic objects catalogue (Wagner et al.; updated 2026-08-14)",
+      "url": "https://data.lroc.im-ldi.com/lroc/view_rdr/SHAPEFILE_ANTHROPOGENIC_OBJECTS"
+    },
+    "inQuickMap": true,
+    "verify": false
+  },
+  {
+    "id": "surveyor-6",
+    "name": "Surveyor 6",
+    "status": "past",
+    "kind": "lander",
+    "operator": "NASA",
+    "country": "United States",
+    "date": "1967-11-10",
+    "lat": 0.4743,
+    "lon": -1.4275,
+    "precisionKm": 0.01,
+    "outcome": "success",
+    "short": "A Moon robot that made a small rocket-powered hop",
+    "detail": "Surveyor 6 landed in the Central Bay and studied the soil. It later fired its engines and hopped to a nearby spot.",
+    "source": {
+      "name": "NASA Surveyor 6",
+      "url": "https://science.nasa.gov/mission/surveyor-6/"
+    },
+    "coordSource": {
+      "name": "LROC anthropogenic objects catalogue (Wagner et al.; updated 2026-08-14)",
+      "url": "https://data.lroc.im-ldi.com/lroc/view_rdr/SHAPEFILE_ANTHROPOGENIC_OBJECTS"
+    },
+    "inQuickMap": true,
+    "verify": false
+  },
+  {
+    "id": "surveyor-7",
+    "name": "Surveyor 7",
+    "status": "past",
+    "kind": "lander",
+    "operator": "NASA",
+    "country": "United States",
+    "date": "1968-01-10",
+    "lat": -40.9811,
+    "lon": -11.5127,
+    "precisionKm": 0.01,
+    "outcome": "success",
+    "short": "The last Surveyor, beside the bright Tycho crater",
+    "detail": "Surveyor 7 landed on rough ground north of Tycho. Its pictures and soil tests let scientists compare the highlands with earlier flat landing sites.",
+    "source": {
+      "name": "NASA Surveyor 7",
+      "url": "https://science.nasa.gov/mission/surveyor-7/"
+    },
+    "coordSource": {
+      "name": "LROC anthropogenic objects catalogue (Wagner et al.; updated 2026-08-14)",
+      "url": "https://data.lroc.im-ldi.com/lroc/view_rdr/SHAPEFILE_ANTHROPOGENIC_OBJECTS"
+    },
+    "inQuickMap": true,
+    "verify": false
+  },
+  {
+    "id": "luna-2",
+    "name": "Luna 2",
+    "status": "past",
+    "kind": "impact",
+    "operator": "Soviet space program",
+    "country": "Soviet Union",
+    "date": "1959-09-13",
+    "lat": 30,
+    "lon": 0,
+    "precisionKm": 50,
+    "outcome": "success",
+    "short": "The first human-made object to reach the Moon",
+    "detail": "Luna 2 deliberately struck the Moon near the Sea of Rains. This pin shows its broad reported impact area, not a located crater.",
+    "source": {
+      "name": "Lunar and Planetary Institute: Luna missions",
+      "url": "https://www.lpi.usra.edu/lunar/missions/luna/"
+    },
+    "coordSource": {
+      "name": "NASA NSSDCA: lunar surface hardware and impact table",
+      "url": "https://nssdc.gsfc.nasa.gov/planetary/lunar/lunar_artifact_impacts.html"
+    },
+    "inQuickMap": false,
+    "verify": true,
+    "note": "Exact crater not identified. NASA gives a reported area 29–31 N and 1 W–1 E; 30 N, 0 E is its centre. LPI gives another nominal latitude, 29.1 N."
+  },
+  {
+    "id": "luna-9",
+    "name": "Luna 9",
+    "status": "past",
+    "kind": "lander",
+    "operator": "Soviet space program",
+    "country": "Soviet Union",
+    "date": "1966-02-03",
+    "lat": 7.13,
+    "lon": -64.37,
+    "precisionKm": 50,
+    "outcome": "success",
+    "short": "The first robot to survive a landing on the Moon",
+    "detail": "Luna 9 bounced safely to rest and sent the first pictures from the lunar surface. Its exact position has still not been confirmed here.",
+    "source": {
+      "name": "NASA: Luna 9, first soft lander",
+      "url": "https://science.nasa.gov/image-article/apod-1997-september-07-luna-9-first-soft-lander/"
+    },
+    "coordSource": {
+      "name": "NASA NSSDCA: lunar surface hardware and impact table",
+      "url": "https://nssdc.gsfc.nasa.gov/planetary/lunar/lunar_artifact_impacts.html"
+    },
+    "inQuickMap": false,
+    "verify": true,
+    "note": "Historical reported coordinate only. NASA warns LROC images do not match Luna 9 panoramas here and the real site is probably at least 10 km away. Unconfirmed 2026 candidate identifications are not used."
+  },
+  {
+    "id": "luna-13",
+    "name": "Luna 13",
+    "status": "past",
+    "kind": "lander",
+    "operator": "Soviet space program",
+    "country": "Soviet Union",
+    "date": "1966-12-24",
+    "lat": 18.87,
+    "lon": -62.05,
+    "precisionKm": 30,
+    "outcome": "success",
+    "short": "An early robot that tested the Moon's soil",
+    "detail": "Luna 13 landed in the Ocean of Storms and returned surface pictures. It also tested how the soil behaves under pressure.",
+    "source": {
+      "name": "Lunar and Planetary Institute: Luna missions",
+      "url": "https://www.lpi.usra.edu/lunar/missions/luna/"
+    },
+    "coordSource": {
+      "name": "NASA NSSDCA: lunar surface hardware and impact table",
+      "url": "https://nssdc.gsfc.nasa.gov/planetary/lunar/lunar_artifact_impacts.html"
+    },
+    "inQuickMap": false,
+    "verify": true,
+    "note": "Reported landing coordinate, not a confirmed LROC hardware location; 30 km is a conservative display uncertainty, not a published statistical error."
+  },
+  {
+    "id": "luna-16",
+    "name": "Luna 16",
+    "status": "past",
+    "kind": "sample-return",
+    "operator": "Soviet space program",
+    "country": "Soviet Union",
+    "date": "1970-09-20",
+    "lat": -0.5137,
+    "lon": 56.3638,
+    "precisionKm": 0.01,
+    "outcome": "success",
+    "short": "The first robot to bring Moon soil back to Earth",
+    "detail": "Luna 16 landed in the Sea of Fertility and drilled into the dark ground. Its small return rocket carried about 101 grams of soil to Earth.",
+    "source": {
+      "name": "NASA: Luna 16 sample-return landing",
+      "url": "https://science.nasa.gov/photojournal/luna-16/"
+    },
+    "coordSource": {
+      "name": "LROC anthropogenic objects catalogue (Wagner et al.; updated 2026-08-14)",
+      "url": "https://data.lroc.im-ldi.com/lroc/view_rdr/SHAPEFILE_ANTHROPOGENIC_OBJECTS"
+    },
+    "inQuickMap": true,
+    "verify": false
+  },
+  {
+    "id": "luna-17",
+    "name": "Luna 17",
+    "status": "past",
+    "kind": "lander",
+    "operator": "Soviet space program",
+    "country": "Soviet Union",
+    "date": "1970-11-17",
+    "lat": 38.23764,
+    "lon": -35.00163,
+    "precisionKm": 0.01,
+    "outcome": "success",
+    "short": "The lander that carried the first Moon rover",
+    "detail": "Luna 17 landed in the Sea of Rains and lowered ramps. Lunokhod 1 drove off and began the first long rover trip on another world.",
+    "source": {
+      "name": "LROC: Lunokhod 1 Revisited",
+      "url": "https://lroc.im-ldi.com/images/402"
+    },
+    "coordSource": {
+      "name": "LROC anthropogenic objects catalogue (Wagner et al.; updated 2026-08-14)",
+      "url": "https://data.lroc.im-ldi.com/lroc/view_rdr/SHAPEFILE_ANTHROPOGENIC_OBJECTS"
+    },
+    "inQuickMap": true,
+    "verify": false
+  },
+  {
+    "id": "lunokhod-1",
+    "name": "Lunokhod 1",
+    "status": "past",
+    "kind": "rover",
+    "operator": "Soviet space program",
+    "country": "Soviet Union",
+    "date": "1970-11-17",
+    "lat": 38.3151705,
+    "lon": -35.0079815,
+    "precisionKm": 0.01,
+    "outcome": "success",
+    "short": "The first remote-controlled rover on another world",
+    "detail": "Lunokhod 1 drove more than 10 kilometres across the Sea of Rains. This pin marks where the rover finally stopped.",
+    "source": {
+      "name": "LROC: Lunokhod 1 mission and site",
+      "url": "https://lroc.im-ldi.com/featured_sites/lunokhod-1/flip-book"
+    },
+    "coordSource": {
+      "name": "LROC anthropogenic objects catalogue (Wagner et al.; updated 2026-08-14)",
+      "url": "https://data.lroc.im-ldi.com/lroc/view_rdr/SHAPEFILE_ANTHROPOGENIC_OBJECTS"
+    },
+    "inQuickMap": true,
+    "verify": false,
+    "note": "Date is arrival aboard Luna 17; coordinates are the final rover position from laser ranging. A passive reflector does not make the rover an active powered mission."
+  },
+  {
+    "id": "luna-20",
+    "name": "Luna 20",
+    "status": "past",
+    "kind": "sample-return",
+    "operator": "Soviet space program",
+    "country": "Soviet Union",
+    "date": "1972-02-21",
+    "lat": 3.7863,
+    "lon": 56.6242,
+    "precisionKm": 0.01,
+    "outcome": "success",
+    "short": "A robot that brought highland soil back to Earth",
+    "detail": "Luna 20 landed in rugged hills between two dark lava plains. It returned about 55 grams of soil for scientists to study.",
+    "source": {
+      "name": "LROC: Luna 20 mission and site",
+      "url": "https://lroc.im-ldi.com/featured_sites/luna-20/flip-book"
+    },
+    "coordSource": {
+      "name": "LROC anthropogenic objects catalogue (Wagner et al.; updated 2026-08-14)",
+      "url": "https://data.lroc.im-ldi.com/lroc/view_rdr/SHAPEFILE_ANTHROPOGENIC_OBJECTS"
+    },
+    "inQuickMap": true,
+    "verify": false
+  },
+  {
+    "id": "luna-21",
+    "name": "Luna 21",
+    "status": "past",
+    "kind": "lander",
+    "operator": "Soviet space program",
+    "country": "Soviet Union",
+    "date": "1973-01-15",
+    "lat": 25.9994,
+    "lon": 30.4076,
+    "precisionKm": 0.0134,
+    "outcome": "success",
+    "short": "The lander that carried Lunokhod 2",
+    "detail": "Luna 21 landed on the floor of Le Monnier crater. Its ramps let Lunokhod 2 roll down to explore the nearby plain and hills.",
+    "source": {
+      "name": "LROC: Luna 21 Lander",
+      "url": "https://lroc.im-ldi.com/images/15"
+    },
+    "coordSource": {
+      "name": "LROC anthropogenic objects catalogue (Wagner et al.; updated 2026-08-14)",
+      "url": "https://data.lroc.im-ldi.com/lroc/view_rdr/SHAPEFILE_ANTHROPOGENIC_OBJECTS"
+    },
+    "inQuickMap": true,
+    "verify": false
+  },
+  {
+    "id": "lunokhod-2",
+    "name": "Lunokhod 2",
+    "status": "past",
+    "kind": "rover",
+    "operator": "Soviet space program",
+    "country": "Soviet Union",
+    "date": "1973-01-15",
+    "lat": 25.8323185,
+    "lon": 30.9221468,
+    "precisionKm": 0.01,
+    "outcome": "success",
+    "short": "A rover that drove about 39 kilometres",
+    "detail": "Lunokhod 2 explored Le Monnier crater for several months. This pin marks the rover's final resting place after it stopped working.",
+    "source": {
+      "name": "LROC: Trundling Across the Moon",
+      "url": "https://lroc.im-ldi.com/images/774"
+    },
+    "coordSource": {
+      "name": "LROC anthropogenic objects catalogue (Wagner et al.; updated 2026-08-14)",
+      "url": "https://data.lroc.im-ldi.com/lroc/view_rdr/SHAPEFILE_ANTHROPOGENIC_OBJECTS"
+    },
+    "inQuickMap": true,
+    "verify": false,
+    "note": "Date is arrival aboard Luna 21; rover deployment was 1973-01-16 UTC. Coordinates are the final rover position from laser ranging; passive reflector use is not powered operation."
+  },
+  {
+    "id": "luna-23",
+    "name": "Luna 23",
+    "status": "past",
+    "kind": "sample-return",
+    "operator": "Soviet space program",
+    "country": "Soviet Union",
+    "date": "1974-11-06",
+    "lat": 12.6667,
+    "lon": 62.1511,
+    "precisionKm": 0.01,
+    "outcome": "partial",
+    "short": "A sample-return robot that could not collect soil",
+    "detail": "Luna 23 reached the Sea of Crises but could not collect a sample. The whole spacecraft remains on the surface near Luna 24.",
+    "source": {
+      "name": "LROC: Luna 23 mission and site",
+      "url": "https://lroc.im-ldi.com/featured_sites/luna-23/flip-book"
+    },
+    "coordSource": {
+      "name": "LROC anthropogenic objects catalogue (Wagner et al.; updated 2026-08-14)",
+      "url": "https://data.lroc.im-ldi.com/lroc/view_rdr/SHAPEFILE_ANTHROPOGENIC_OBJECTS"
+    },
+    "inQuickMap": true,
+    "verify": false
+  },
+  {
+    "id": "luna-24",
+    "name": "Luna 24",
+    "status": "past",
+    "kind": "sample-return",
+    "operator": "Soviet space program",
+    "country": "Soviet Union",
+    "date": "1976-08-18",
+    "lat": 12.7142,
+    "lon": 62.2129,
+    "precisionKm": 0.01,
+    "outcome": "success",
+    "short": "The last Soviet robot to bring Moon soil home",
+    "detail": "Luna 24 drilled into the Sea of Crises and returned about 170 grams of soil. Its landing stage remains near the earlier Luna 23 spacecraft.",
+    "source": {
+      "name": "LROC: Luna 24 mission and site",
+      "url": "https://lroc.im-ldi.com/featured_sites/luna-24/flip-book"
+    },
+    "coordSource": {
+      "name": "LROC anthropogenic objects catalogue (Wagner et al.; updated 2026-08-14)",
+      "url": "https://data.lroc.im-ldi.com/lroc/view_rdr/SHAPEFILE_ANTHROPOGENIC_OBJECTS"
+    },
+    "inQuickMap": true,
+    "verify": false
+  },
+  {
+    "id": "ranger-6",
+    "name": "Ranger 6",
+    "status": "past",
+    "kind": "impact",
+    "operator": "NASA",
+    "country": "United States",
+    "date": "1964-02-02",
+    "lat": 9.3864,
+    "lon": 21.4806,
+    "precisionKm": 0.01,
+    "outcome": "failed",
+    "short": "A camera probe that hit the Moon without sending pictures",
+    "detail": "Ranger 6 struck the Sea of Tranquility as planned, but its cameras failed. Its small impact crater is visible in LROC images.",
+    "source": {
+      "name": "NASA Ranger 6",
+      "url": "https://science.nasa.gov/mission/ranger-6/"
+    },
+    "coordSource": {
+      "name": "LROC anthropogenic objects catalogue (Wagner et al.; updated 2026-08-14)",
+      "url": "https://data.lroc.im-ldi.com/lroc/view_rdr/SHAPEFILE_ANTHROPOGENIC_OBJECTS"
+    },
+    "inQuickMap": true,
+    "verify": false
+  },
+  {
+    "id": "ranger-7",
+    "name": "Ranger 7",
+    "status": "past",
+    "kind": "impact",
+    "operator": "NASA",
+    "country": "United States",
+    "date": "1964-07-31",
+    "lat": -10.634,
+    "lon": -20.677,
+    "precisionKm": 0.01,
+    "outcome": "success",
+    "short": "The first successful US close-up pictures of the Moon",
+    "detail": "Ranger 7 sent thousands of close-up pictures before its planned impact. The images helped scientists judge the ground for future landings.",
+    "source": {
+      "name": "NASA Ranger 7",
+      "url": "https://science.nasa.gov/mission/ranger-7/"
+    },
+    "coordSource": {
+      "name": "LROC anthropogenic objects catalogue (Wagner et al.; updated 2026-08-14)",
+      "url": "https://data.lroc.im-ldi.com/lroc/view_rdr/SHAPEFILE_ANTHROPOGENIC_OBJECTS"
+    },
+    "inQuickMap": true,
+    "verify": false
+  },
+  {
+    "id": "ranger-8",
+    "name": "Ranger 8",
+    "status": "past",
+    "kind": "impact",
+    "operator": "NASA",
+    "country": "United States",
+    "date": "1965-02-20",
+    "lat": 2.6377,
+    "lon": 24.788,
+    "precisionKm": 0.01,
+    "outcome": "success",
+    "short": "A camera probe that photographed the Sea of Tranquility",
+    "detail": "Ranger 8 returned close-up pictures before hitting the Moon as planned. This area later helped planners prepare for Apollo landings.",
+    "source": {
+      "name": "NASA Ranger 8",
+      "url": "https://science.nasa.gov/mission/ranger-8/"
+    },
+    "coordSource": {
+      "name": "LROC anthropogenic objects catalogue (Wagner et al.; updated 2026-08-14)",
+      "url": "https://data.lroc.im-ldi.com/lroc/view_rdr/SHAPEFILE_ANTHROPOGENIC_OBJECTS"
+    },
+    "inQuickMap": true,
+    "verify": false
+  },
+  {
+    "id": "ranger-9",
+    "name": "Ranger 9",
+    "status": "past",
+    "kind": "impact",
+    "operator": "NASA",
+    "country": "United States",
+    "date": "1965-03-24",
+    "lat": -12.8281,
+    "lon": -2.3884,
+    "precisionKm": 0.01,
+    "outcome": "success",
+    "short": "A Moon impact broadcast live on television",
+    "detail": "Ranger 9 sent pictures of Alphonsus crater as it fell toward the surface. Its planned impact ended the Ranger camera missions.",
+    "source": {
+      "name": "NASA Ranger 9",
+      "url": "https://science.nasa.gov/mission/ranger-9/"
+    },
+    "coordSource": {
+      "name": "LROC anthropogenic objects catalogue (Wagner et al.; updated 2026-08-14)",
+      "url": "https://data.lroc.im-ldi.com/lroc/view_rdr/SHAPEFILE_ANTHROPOGENIC_OBJECTS"
+    },
+    "inQuickMap": true,
+    "verify": false
+  },
+  {
+    "id": "ranger-4",
+    "name": "Ranger 4",
+    "status": "past",
+    "kind": "impact",
+    "operator": "NASA",
+    "country": "United States",
+    "date": "1962-04-26",
+    "lat": -15.5,
+    "lon": -130.7,
+    "precisionKm": 50,
+    "outcome": "failed",
+    "short": "The first US spacecraft to reach the Moon",
+    "detail": "Ranger 4 failed on the way to the Moon and hit the far side without sending science data. Its exact crater has not been located.",
+    "source": {
+      "name": "NASA Ranger 4",
+      "url": "https://science.nasa.gov/mission/ranger-4/"
+    },
+    "coordSource": {
+      "name": "NASA NSSDCA: lunar surface hardware and impact table",
+      "url": "https://nssdc.gsfc.nasa.gov/planetary/lunar/lunar_artifact_impacts.html"
+    },
+    "inQuickMap": false,
+    "verify": true,
+    "note": "Approximate tracking-based coordinate only; not in the supplied LROC hardware list."
+  },
+  {
+    "id": "lcross-centaur",
+    "name": "LCROSS Centaur impact",
+    "status": "past",
+    "kind": "impact",
+    "operator": "NASA",
+    "country": "United States",
+    "date": "2009-10-09",
+    "lat": -84.678,
+    "lon": -48.6937,
+    "precisionKm": 0.01,
+    "outcome": "success",
+    "short": "A rocket impact that revealed water ice",
+    "detail": "NASA drove a spent rocket stage into the dark floor of Cabeus crater. The cloud it raised contained water ice.",
+    "source": {
+      "name": "NASA Lcross",
+      "url": "https://science.nasa.gov/mission/lcross/"
+    },
+    "coordSource": {
+      "name": "LROC anthropogenic objects catalogue (Wagner et al.; updated 2026-08-14)",
+      "url": "https://data.lroc.im-ldi.com/lroc/view_rdr/SHAPEFILE_ANTHROPOGENIC_OBJECTS"
+    },
+    "inQuickMap": true,
+    "verify": false,
+    "note": "The QuickMap object named LCROSS is the Centaur impact crater, identified with ShadowCam. It is distinct from the shepherding spacecraft impact; newer catalogue longitude -48.6937 differs slightly from the 2024 paper -48.6926."
+  },
+  {
+    "id": "lcross-spacecraft",
+    "name": "LCROSS spacecraft impact",
+    "status": "past",
+    "kind": "impact",
+    "operator": "NASA",
+    "country": "United States",
+    "date": "2009-10-09",
+    "lat": -84.719,
+    "lon": -49.61,
+    "precisionKm": 1,
+    "outcome": "success",
+    "short": "The probe that flew through the water-rich dust cloud",
+    "detail": "The LCROSS spacecraft measured the cloud raised by the Centaur stage, then hit the Moon about four minutes later. This pin is its estimated impact point.",
+    "source": {
+      "name": "NASA Lcross",
+      "url": "https://science.nasa.gov/mission/lcross/"
+    },
+    "coordSource": {
+      "name": "NASA NSSDCA: lunar surface hardware and impact table",
+      "url": "https://nssdc.gsfc.nasa.gov/planetary/lunar/lunar_artifact_impacts.html"
+    },
+    "inQuickMap": false,
+    "verify": true,
+    "note": "Estimated spacecraft impact coordinate from NASA NSSDCA, not a confirmed crater in the supplied LROC list. Do not confuse it with the accurately mapped Centaur crater."
+  },
+  {
+    "id": "grail-a-impact",
+    "name": "GRAIL-A / Ebb impact",
+    "status": "past",
+    "kind": "impact",
+    "operator": "NASA",
+    "country": "United States",
+    "date": "2012-12-17",
+    "lat": 75.6088,
+    "lon": -26.594,
+    "precisionKm": 0.0107,
+    "outcome": "success",
+    "short": "One of two gravity-mapping probes' final impact sites",
+    "detail": "Ebb helped map the Moon's gravity from orbit, then hit a mountain near the north pole as planned. Its small crater is one of the two GRAIL impact sites.",
+    "source": {
+      "name": "NASA Grail",
+      "url": "https://science.nasa.gov/mission/grail/"
+    },
+    "coordSource": {
+      "name": "LROC anthropogenic objects catalogue (Wagner et al.; updated 2026-08-14)",
+      "url": "https://data.lroc.im-ldi.com/lroc/view_rdr/SHAPEFILE_ANTHROPOGENIC_OBJECTS"
+    },
+    "inQuickMap": true,
+    "verify": false
+  },
+  {
+    "id": "grail-b-impact",
+    "name": "GRAIL-B / Flow impact",
+    "status": "past",
+    "kind": "impact",
+    "operator": "NASA",
+    "country": "United States",
+    "date": "2012-12-17",
+    "lat": 75.6508,
+    "lon": -26.8341,
+    "precisionKm": 0.012199999999999999,
+    "outcome": "success",
+    "short": "One of two gravity-mapping probes' final impact sites",
+    "detail": "Flow helped map the Moon's gravity from orbit, then hit a mountain near the north pole as planned. Its small crater is one of the two GRAIL impact sites.",
+    "source": {
+      "name": "NASA Grail",
+      "url": "https://science.nasa.gov/mission/grail/"
+    },
+    "coordSource": {
+      "name": "LROC anthropogenic objects catalogue (Wagner et al.; updated 2026-08-14)",
+      "url": "https://data.lroc.im-ldi.com/lroc/view_rdr/SHAPEFILE_ANTHROPOGENIC_OBJECTS"
+    },
+    "inQuickMap": true,
+    "verify": false
+  },
+  {
+    "id": "ladee-impact",
+    "name": "LADEE impact",
+    "status": "past",
+    "kind": "impact",
+    "operator": "NASA",
+    "country": "United States",
+    "date": "2014-04-18",
+    "lat": 11.8493,
+    "lon": -93.2493,
+    "precisionKm": 0.01,
+    "outcome": "success",
+    "short": "A Moon atmosphere probe's final crater",
+    "detail": "LADEE studied the Moon's thin atmosphere and dust from orbit. It ended its mission with a planned impact on the far side.",
+    "source": {
+      "name": "NASA Ladee",
+      "url": "https://science.nasa.gov/mission/ladee/"
+    },
+    "coordSource": {
+      "name": "LROC anthropogenic objects catalogue (Wagner et al.; updated 2026-08-14)",
+      "url": "https://data.lroc.im-ldi.com/lroc/view_rdr/SHAPEFILE_ANTHROPOGENIC_OBJECTS"
+    },
+    "inQuickMap": true,
+    "verify": false
+  },
+  {
+    "id": "lunar-prospector-impact",
+    "name": "Lunar Prospector impact",
+    "status": "past",
+    "kind": "impact",
+    "operator": "NASA",
+    "country": "United States",
+    "date": "1999-07-31",
+    "lat": -87.7,
+    "lon": 42,
+    "precisionKm": 5,
+    "outcome": "success",
+    "short": "A deliberate impact in a dark south-pole crater",
+    "detail": "Lunar Prospector mapped the Moon before hitting Shoemaker crater. Scientists looked for water in the impact cloud but did not detect it.",
+    "source": {
+      "name": "NASA Lunar Prospector",
+      "url": "https://science.nasa.gov/mission/lunar-prospector/"
+    },
+    "coordSource": {
+      "name": "NASA NSSDCA: lunar surface hardware and impact table",
+      "url": "https://nssdc.gsfc.nasa.gov/planetary/lunar/lunar_artifact_impacts.html"
+    },
+    "inQuickMap": false,
+    "verify": true,
+    "note": "NASA NSSDCA approximate impact coordinate, not a located crater. Planetocentric ME registration of the old estimate is not established."
+  },
+  {
+    "id": "smart-1-impact",
+    "name": "SMART-1 impact",
+    "status": "past",
+    "kind": "impact",
+    "operator": "NASA",
+    "country": "United States",
+    "date": "2006-09-03",
+    "lat": -34.262,
+    "lon": -46.193,
+    "precisionKm": 0.1,
+    "outcome": "success",
+    "short": "Europe's first Moon probe left a long scrape",
+    "detail": "SMART-1 tested electric propulsion and studied the Moon from orbit. Its planned shallow impact left a gouge about 20 metres long.",
+    "source": {
+      "name": "ESA: impact ends SMART-1 mission",
+      "url": "https://www.esa.int/Newsroom/Press_Releases/Impact_landing_ends_SMART-1_mission_to_the_Moon"
+    },
+    "coordSource": {
+      "name": "ESA: SMART-1's crash site",
+      "url": "https://www.esa.int/media/smart-1-s-crash-site"
+    },
+    "inQuickMap": false,
+    "verify": false,
+    "note": "ESA reports an LROC-located gouge. Not present in supplied QuickMap anthropogenic file; 0.1 km is conservative because the ESA article does not publish formal coordinate error."
+  },
+  {
+    "id": "hiten-impact",
+    "name": "Hiten impact",
+    "status": "past",
+    "kind": "impact",
+    "operator": "ISAS (now JAXA)",
+    "country": "Japan",
+    "date": "1993-04-10",
+    "lat": -34.3,
+    "lon": 55.6,
+    "precisionKm": 10,
+    "outcome": "success",
+    "short": "Japan's first Moon probe ended here",
+    "detail": "Hiten tested ways to reach and orbit the Moon. It finished its mission with a planned impact near Furnerius crater.",
+    "source": {
+      "name": "JAXA DARTS: Hiten",
+      "url": "https://darts.isas.jaxa.jp/en/missions/hiten"
+    },
+    "coordSource": {
+      "name": "JAXA DARTS: Hiten impact estimate",
+      "url": "https://darts.isas.jaxa.jp/en/missions/hiten"
+    },
+    "inQuickMap": false,
+    "verify": true,
+    "note": "JAXA gives an estimated position; no identified crater or documented ME registration. UTC impact date is April 10, while Japan-local histories say April 11."
+  },
+  {
+    "id": "kaguya-impact",
+    "name": "Kaguya impact",
+    "status": "past",
+    "kind": "impact",
+    "operator": "JAXA",
+    "country": "Japan",
+    "date": "2009-06-10",
+    "lat": -65.5,
+    "lon": 80.4,
+    "precisionKm": 5,
+    "outcome": "success",
+    "short": "Japan's large Moon mapper ended with an impact",
+    "detail": "Kaguya mapped the Moon's shape and composition from orbit. It ended with a controlled impact near Gill crater.",
+    "source": {
+      "name": "JAXA: Kaguya lunar impact",
+      "url": "https://www.kaguya.jaxa.jp/en/communication/KAGUYA_Lunar_Impact_e.htm"
+    },
+    "coordSource": {
+      "name": "JAXA: Kaguya impact point",
+      "url": "https://www.kaguya.jaxa.jp/en/communication/KAGUYA_Lunar_Impact_e.htm"
+    },
+    "inQuickMap": false,
+    "verify": true,
+    "note": "Agency tracking estimate, rounded to 0.1 degree; no precise crater or coordinate-frame tie confirmed in this research."
+  },
+  {
+    "id": "change-1-impact",
+    "name": "Chang'e-1 impact",
+    "status": "past",
+    "kind": "impact",
+    "operator": "CNSA",
+    "country": "China",
+    "date": "2009-03-01",
+    "lat": -1.5,
+    "lon": 52.36,
+    "precisionKm": 5,
+    "outcome": "success",
+    "short": "China's first Moon mapper ended with a planned impact",
+    "detail": "Chang'e-1 mapped the Moon from orbit for about 16 months. Its controlled impact helped prepare China for later landings.",
+    "source": {
+      "name": "NASA: 2009 chronology, March 1",
+      "url": "https://www.nasa.gov/wp-content/uploads/2023/03/sp4035.pdf"
+    },
+    "coordSource": {
+      "name": "NASA NSSDCA: lunar surface hardware and impact table",
+      "url": "https://nssdc.gsfc.nasa.gov/planetary/lunar/lunar_artifact_impacts.html"
+    },
+    "inQuickMap": false,
+    "verify": true,
+    "note": "Reported impact point from NASA NSSDCA; not identified as hardware/crater in the supplied QuickMap list and no ME frame tie confirmed."
+  },
+  {
+    "id": "longjiang-2-impact",
+    "name": "Longjiang-2 impact",
+    "status": "past",
+    "kind": "impact",
+    "operator": "CNSA / Harbin Institute of Technology",
+    "country": "China",
+    "date": "2019-07-31",
+    "lat": 16.6956,
+    "lon": 159.517,
+    "precisionKm": 0.01,
+    "outcome": "success",
+    "short": "A tiny lunar radio satellite's far-side crater",
+    "detail": "Longjiang-2 tested radio astronomy technology in lunar orbit. A small new crater near Van Gent closely matches its predicted impact point.",
+    "source": {
+      "name": "LROC: Longjiang-2 Impact Site Found",
+      "url": "https://lroc.im-ldi.com/images/1132"
+    },
+    "coordSource": {
+      "name": "LROC anthropogenic objects catalogue (Wagner et al.; updated 2026-08-14)",
+      "url": "https://data.lroc.im-ldi.com/lroc/view_rdr/SHAPEFILE_ANTHROPOGENIC_OBJECTS"
+    },
+    "inQuickMap": true,
+    "verify": false,
+    "note": "LROC describes the crater attribution as very likely based on its position and size. Coordinates copied from supplied catalogue."
+  },
+  {
+    "id": "change-5-t1-rocket-impact",
+    "name": "Chang'e-5 T1 rocket-stage impact",
+    "status": "past",
+    "kind": "impact",
+    "operator": "CNSA (catalogue attribution)",
+    "country": "China",
+    "date": "2022-03-04",
+    "lat": 5.2269,
+    "lon": -125.5152,
+    "precisionKm": 0.01,
+    "outcome": "success",
+    "short": "A stray rocket stage made an unusual double crater",
+    "detail": "A spent rocket stage struck the far side near Hertzsprung crater. The impact made two overlapping craters instead of one.",
+    "source": {
+      "name": "LROC: Mystery Rocket Body Found",
+      "url": "https://lroc.im-ldi.com/images/1261"
+    },
+    "coordSource": {
+      "name": "LROC anthropogenic objects catalogue (Wagner et al.; updated 2026-08-14)",
+      "url": "https://data.lroc.im-ldi.com/lroc/view_rdr/SHAPEFILE_ANTHROPOGENIC_OBJECTS"
+    },
+    "inQuickMap": true,
+    "verify": false,
+    "note": "The supplied LROC catalogue attributes this to Chang'e-5 T1; its linked LROC story calls it a mystery rocket. The site and date are confirmed; the operator label follows the catalogue rather than a CNSA confirmation."
+  },
+  {
+    "id": "apollo-13-rocket-impact",
+    "name": "Apollo 13 rocket impact",
+    "status": "past",
+    "kind": "impact",
+    "operator": "NASA",
+    "country": "United States",
+    "date": "1970-04-15",
+    "lat": -2.555,
+    "lon": -27.8875,
+    "precisionKm": 0.01,
+    "outcome": "success",
+    "short": "A rocket stage crashed here to shake the Moon",
+    "detail": "Apollo 13's spent Saturn V third stage hit the Moon on purpose. Instruments left by astronauts measured the shaking to learn about the lunar interior.",
+    "source": {
+      "name": "NASA Apollo 13",
+      "url": "https://www.nasa.gov/mission/apollo-13/"
+    },
+    "coordSource": {
+      "name": "LROC anthropogenic objects catalogue (Wagner et al.; updated 2026-08-14)",
+      "url": "https://data.lroc.im-ldi.com/lroc/view_rdr/SHAPEFILE_ANTHROPOGENIC_OBJECTS"
+    },
+    "inQuickMap": true,
+    "verify": false,
+    "note": "Date uses UTC (NASA NSSDCA impact table); some US-local descriptions give the previous calendar day."
+  },
+  {
+    "id": "apollo-14-rocket-impact",
+    "name": "Apollo 14 rocket impact",
+    "status": "past",
+    "kind": "impact",
+    "operator": "NASA",
+    "country": "United States",
+    "date": "1971-02-04",
+    "lat": -8.181,
+    "lon": -26.0305,
+    "precisionKm": 0.01,
+    "outcome": "success",
+    "short": "A rocket stage crashed here to shake the Moon",
+    "detail": "Apollo 14's spent Saturn V third stage hit the Moon on purpose. Instruments left by astronauts measured the shaking to learn about the lunar interior.",
+    "source": {
+      "name": "NASA Apollo 14",
+      "url": "https://www.nasa.gov/mission/apollo-14/"
+    },
+    "coordSource": {
+      "name": "LROC anthropogenic objects catalogue (Wagner et al.; updated 2026-08-14)",
+      "url": "https://data.lroc.im-ldi.com/lroc/view_rdr/SHAPEFILE_ANTHROPOGENIC_OBJECTS"
+    },
+    "inQuickMap": true,
+    "verify": false,
+    "note": "Date uses UTC (NASA NSSDCA impact table); some US-local descriptions give the previous calendar day."
+  },
+  {
+    "id": "apollo-15-rocket-impact",
+    "name": "Apollo 15 rocket impact",
+    "status": "past",
+    "kind": "impact",
+    "operator": "NASA",
+    "country": "United States",
+    "date": "1971-07-29",
+    "lat": -1.2897,
+    "lon": -11.8245,
+    "precisionKm": 0.01,
+    "outcome": "success",
+    "short": "A rocket stage crashed here to shake the Moon",
+    "detail": "Apollo 15's spent Saturn V third stage hit the Moon on purpose. Instruments left by astronauts measured the shaking to learn about the lunar interior.",
+    "source": {
+      "name": "NASA Apollo 15",
+      "url": "https://www.nasa.gov/mission/apollo-15/"
+    },
+    "coordSource": {
+      "name": "LROC anthropogenic objects catalogue (Wagner et al.; updated 2026-08-14)",
+      "url": "https://data.lroc.im-ldi.com/lroc/view_rdr/SHAPEFILE_ANTHROPOGENIC_OBJECTS"
+    },
+    "inQuickMap": true,
+    "verify": false,
+    "note": "Date uses UTC (NASA NSSDCA impact table); some US-local descriptions give the previous calendar day."
+  },
+  {
+    "id": "apollo-16-rocket-impact",
+    "name": "Apollo 16 rocket impact",
+    "status": "past",
+    "kind": "impact",
+    "operator": "NASA",
+    "country": "United States",
+    "date": "1972-04-19",
+    "lat": 1.9213,
+    "lon": -24.6231,
+    "precisionKm": 0.0112,
+    "outcome": "success",
+    "short": "A rocket stage crashed here to shake the Moon",
+    "detail": "Apollo 16's spent Saturn V third stage hit the Moon on purpose. Instruments left by astronauts measured the shaking to learn about the lunar interior.",
+    "source": {
+      "name": "NASA Apollo 16",
+      "url": "https://www.nasa.gov/mission/apollo-16/"
+    },
+    "coordSource": {
+      "name": "LROC anthropogenic objects catalogue (Wagner et al.; updated 2026-08-14)",
+      "url": "https://data.lroc.im-ldi.com/lroc/view_rdr/SHAPEFILE_ANTHROPOGENIC_OBJECTS"
+    },
+    "inQuickMap": true,
+    "verify": false,
+    "note": "Date uses UTC (NASA NSSDCA impact table); some US-local descriptions give the previous calendar day."
+  },
+  {
+    "id": "apollo-17-rocket-impact",
+    "name": "Apollo 17 rocket impact",
+    "status": "past",
+    "kind": "impact",
+    "operator": "NASA",
+    "country": "United States",
+    "date": "1972-12-10",
+    "lat": -4.1681,
+    "lon": -12.3307,
+    "precisionKm": 0.01,
+    "outcome": "success",
+    "short": "A rocket stage crashed here to shake the Moon",
+    "detail": "Apollo 17's spent Saturn V third stage hit the Moon on purpose. Instruments left by astronauts measured the shaking to learn about the lunar interior.",
+    "source": {
+      "name": "NASA Apollo 17",
+      "url": "https://www.nasa.gov/mission/apollo-17/"
+    },
+    "coordSource": {
+      "name": "LROC anthropogenic objects catalogue (Wagner et al.; updated 2026-08-14)",
+      "url": "https://data.lroc.im-ldi.com/lroc/view_rdr/SHAPEFILE_ANTHROPOGENIC_OBJECTS"
+    },
+    "inQuickMap": true,
+    "verify": false,
+    "note": "Date uses UTC (NASA NSSDCA impact table); some US-local descriptions give the previous calendar day."
+  },
+  {
+    "id": "apollo-12-ascent-impact",
+    "name": "Apollo 12 ascent-stage impact",
+    "status": "past",
+    "kind": "impact",
+    "operator": "NASA",
+    "country": "United States",
+    "date": "1969-11-20",
+    "lat": -3.9195,
+    "lon": -21.1721,
+    "precisionKm": 0.01,
+    "outcome": "success",
+    "short": "An empty Moon cabin crashed here for a science test",
+    "detail": "After its astronauts returned to lunar orbit, Apollo 12's empty ascent stage hit the Moon. The shaking was recorded by surface instruments.",
+    "source": {
+      "name": "NASA Apollo 12",
+      "url": "https://www.nasa.gov/mission/apollo-12/"
+    },
+    "coordSource": {
+      "name": "LROC anthropogenic objects catalogue (Wagner et al.; updated 2026-08-14)",
+      "url": "https://data.lroc.im-ldi.com/lroc/view_rdr/SHAPEFILE_ANTHROPOGENIC_OBJECTS"
+    },
+    "inQuickMap": true,
+    "verify": false
+  }
+]

@@ -1,0 +1,13 @@
+# Artemis region provenance — checked 14 November 2026
+
+The nine polygons in `artemis-regions.geojson` are copied from the supplied `../data-raw/quickmap-vectors/A3_9regions-lonlat-simplified.geojson`, QuickMap layer 3927. Each has four corners plus a closing coordinate. Only ring winding was normalized to counterclockwise; no geometry was invented or resampled. The older `A3_Named_regions.geojson` contains thirteen 2022 regions and is not the nine-region deliverable.
+
+The pin coordinates in `artemis-sites.json` are area centroids after projecting the corners into lunar south-polar stereographic coordinates (Moon radius 1737.4 km), then transforming back to latitude/longitude. `precisionKm` is the distance to the farthest corner rounded upward to 10 km. It describes the candidate area, not a statistical measurement error or an actual lander position. These are alternatives for one first landing, not nine announced flights.
+
+For a longitude L and latitude P in radians, r = 2R tan(pi/4 + P/2), x = r sin L, y = r cos L. Compute the usual polygon area centroid in x/y, then L = atan2(x,y), P = 2 atan(hypot(x,y)/(2R)) - pi/2. This avoids treating longitude as a linear distance near the pole.
+
+NASA named the nine regions on 28 October 2024: [original region announcement](https://www.nasa.gov/news-release/nasa-provides-update-on-artemis-iii-moon-landing-regions/). The current [Artemis IV mission page](https://www.nasa.gov/mission/artemis-iv/) still identifies nine candidate regions and targets early 2028. NASA's [23 October 2026 Artemis III update](https://www.nasa.gov/missions/artemis/nasas-artemis-iii-mission-to-test-future-moon-lander-operations/) explicitly describes an Earth-orbit demonstration in 2027. Thus the old QuickMap layer title retains "A3" but the app should label these "Artemis candidate regions" and refer to Artemis IV for the first crewed surface mission. No new final touchdown selection was confirmed in these current primary pages.
+
+All nine hand-made Artemis points in `../app/src/data/places.ts` are inside their corresponding supplied regions when tested in the polar projection. Their difference from our centroids must not be presented as a coordinate error. See `artemis-coordinate-comparison.json`; the largest shift is Mons Mouton Plateau (25.87 km), an unusually large region of about 4452 square km in the supplied attributes.
+
+[QuickMap layer 3927](https://quickmap.im-ldi.com/layers?stack=3927) is the public coordinate-source entry point. The local layer catalogue records its underlying GeoJSON path; use the supplied read-only file to reproduce the geometry.

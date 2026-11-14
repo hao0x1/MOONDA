@@ -4,10 +4,17 @@
 // horizon), and the Drive bar for MOONDA, our rover (W A S D / arrows also start driving).
 // Kept small and at the edges so the rover and the middle of the view stay free.
 
-import { ArrowLeft, HandGrabbing, Headlights, Info, Minus, Plus, SteeringWheel } from '@phosphor-icons/react';
+import { ArrowCounterClockwise, ArrowLeft, HandGrabbing, Headlights, Info, Minus, Plus, SteeringWheel } from '@phosphor-icons/react';
 import { useEffect, useRef, useState } from 'react';
 import { t as tr, tn, useT } from '../i18n';
+import type { MoonName } from '../data/names';
+import { Minimap } from '../explore/Minimap';
+import { fmtDist } from '../explore/format';
 import { landerLink } from '../moon/lander';
+import type { LayerDef } from '../moon/layers';
+import { roverLink, surfaceDistM, type Waypoint } from '../moon/roverLink';
+import type { Vec3 } from '../science/ephemeris';
+import type { RouteResult } from '../science/route';
 import type { SpotTimeline } from '../science/analysis';
 import { compassName, type BodyNow } from './describe';
 import { EarthGlyph, SunGlyph } from './glyphs';
@@ -24,7 +31,22 @@ interface Props {
   cursor?: number;
   onLook(az: number, el: number): void;
   onExit(): void;
+  onOpenMap(): void;
+  /** For the minimap: Sun and Earth at the time on the time bar (and a number naming that moment), the planned route, the official names. */
+  bodies: { sun: Vec3; earth: Vec3 };
+  layers: Record<string, boolean>;
+  opacity: Record<string, number>;
+  layerDefs: LayerDef[];
+  timeKey: number;
+  route: RouteResult | null;
+  names: MoonName[] | null;
 }
+
+/** The little signs of the waypoint marks on the compass tape (as on the markers over the view). */
+const WP_SIGN: Record<string, string> = {
+  start: '<svg viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M7.5 13h7l1.2-3.9a4.9 4.9 0 0 0-9.4 0Z" fill="currentColor" stroke-width="1"/><path d="M8 13 6.2 17M14 13l1.8 4"/></svg>',
+  dest: '<svg viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M7.2 17.5V4.8"/><path d="M7.9 5.3h7.8l-2 2.7 2 2.7H7.9Z" fill="currentColor" stroke-width="0.8"/></svg>',
+};
 
 // The tape: 4 px per degree, drawn one and a half times round so it never runs out while turning.
 const PX = 4, TAPE_FROM = -180, TAPE_TO = 540;
@@ -82,14 +104,22 @@ function earthLine(e: Props['earth'], never: boolean, until: number | null | und
   return { verdict: tidy(tr('hud.earth.below', { howLong: howLong(until) })), note: tr('hud.earth.noLink'), on: false };
 }
 
-export function LanderHud({ name, sun, earth, earthNeverRises, mastM, timeline, cursor, onLook, onExit }: Props) {
+export function LanderHud({ name, sun, earth, earthNeverRises, mastM, timeline, cursor, onLook, onExit, bodies, layers, opacity, layerDefs, timeKey, route, names, onOpenMap }: Props) {
   const t = useT();
   const tape = useRef<HTMLDivElement>(null);
   const degText = useRef<HTMLElement>(null);
   const zoomTip = useRef<HTMLDivElement>(null);
   const [facing, setFacing] = useState(() => compassName(landerLink.az));
-  const read = () => ({ on: landerLink.walking, dist: landerLink.walkDistM, blocked: landerLink.walkBlocked, locked: landerLink.mouseLocked,
-    view: landerLink.view, speed: landerLink.speedMs, lit: landerLink.lightsLit });
+  const read = () => {
+    const home = roverLink.home, p = roverLink.pose;
+    return { on: landerLink.walking, dist: landerLink.walkDistM, blocked: landerLink.walkBlocked, locked: landerLink.mouseLocked,
+      view: landerLink.view, speed: landerLink.speedMs, lit: landerLink.lightsLit,
+      // the rover has left its place by the lander (Reset rover is offered)
+      away: !!home && p.on && surfaceDistM(home.lat, home.lon, p.lat, p.lon) > 3 };
+  };
+  // the pins shown as waypoints: one small mark each on the compass tape (placed every frame, below)
+  const [wps, setWps] = useState<Waypoint[]>(() => roverLink.waypoints.filter(w => w.kind !== 'next'));
+  useEffect(() => roverLink.onWaypoints(() => setWps(roverLink.waypoints.filter(w => w.kind !== 'next'))), []);
   const [drive, setDrive] = useState(read);
 
   useEffect(() => {
@@ -108,10 +138,11 @@ export function LanderHud({ name, sun, earth, earthNeverRises, mastM, timeline, 
   useEffect(() => {
     const apply = () => setDrive(w => {
       const n = read();
-      return w.on === n.on && Math.round(w.dist) === Math.round(n.dist) && w.blocked === n.blocked && w.locked === n.locked && w.view === n.view && w.speed === n.speed && w.lit === n.lit ? w : n;
+      return w.on === n.on && Math.round(w.dist) === Math.round(n.dist) && w.blocked === n.blocked && w.locked === n.locked && w.view === n.view && w.speed === n.speed && w.lit === n.lit && w.away === n.away ? w : n;
     });
     apply();
-    return landerLink.subscribe(apply);
+    const offs = [landerLink.subscribe(apply), roverLink.subscribe(apply)];
+    return () => offs.forEach(o => o());
   }, []);
   const onRover = drive.view !== 'spot';
 
@@ -124,6 +155,15 @@ export function LanderHud({ name, sun, earth, earthNeverRises, mastM, timeline, 
       const deg = Math.round(az) % 360;
       if (deg !== lastDeg && degText.current) { lastDeg = deg; degText.current.textContent = `${String(deg).padStart(3, '0')}°`; }
       setFacing(compassName(az));
+      // the waypoint marks: each at its compass bearing from where you are (three copies, as the tape runs round)
+      for (const el of tape.current?.querySelectorAll<HTMLElement>('.lv-wp') ?? []) {
+        const seen = roverLink.seen.get(el.dataset.id ?? '');
+        if (!seen) { el.style.display = 'none'; continue; }
+        el.style.display = '';
+        el.style.left = `${tapeX(seen.az + Number(el.dataset.turn))}px`;
+        const label = `${el.dataset.name}, ${fmtDist(seen.distM)}`;
+        if (el.title !== label) el.title = label;
+      }
       const tip = zoomTip.current;
       if (tip && Math.abs(landerLink.fovDeg - lastFov) > 0.05) {
         lastFov = landerLink.fovDeg;
@@ -134,9 +174,9 @@ export function LanderHud({ name, sun, earth, earthNeverRises, mastM, timeline, 
       }
     };
     apply();
-    const off = landerLink.subscribe(apply);
-    return () => { off(); clearTimeout(hide); };
-  }, []);
+    const offs = [landerLink.subscribe(apply), roverLink.subscribe(apply)];
+    return () => { offs.forEach(o => o()); clearTimeout(hide); };
+  }, [wps]);
 
   const s = sunLine(sun, untilChange(timeline, cursor, i => timeline!.sunPart[i] > 0.001));
   const e = earthLine(earth, earthNeverRises, earthNeverRises ? undefined : untilChange(timeline, cursor, i => timeline!.earthEl[i] > timeline!.earthSky[i]));
@@ -148,7 +188,7 @@ export function LanderHud({ name, sun, earth, earthNeverRises, mastM, timeline, 
     <div className="lv-hud">
       <div className="lv-scrim" aria-hidden="true" />
       <div className="lv-top lv-glass">
-        <button className="lv-back" onClick={onExit}><ArrowLeft size={16} weight="bold" /> {t('hud.back')}</button>
+        <button className="lv-back" onClick={onExit} data-tip={t('ex.back.tip')}><ArrowLeft size={16} weight="bold" /> {t('hud.back')}</button>
         <div className="lv-place">
           <div className="lv-name">{name}</div>
           <div className="lv-sub">{onRover || drive.on
@@ -163,6 +203,10 @@ export function LanderHud({ name, sun, earth, earthNeverRises, mastM, timeline, 
             {MARKS.map(m => <span key={m.deg} className={m.cls} style={{ left: tapeX(m.deg) }}>{m.txt}</span>)}
             {sun && TURNS.map(k => <i key={`s${k}`} style={{ left: tapeX(sun.az + k) }}><SunGlyph size={14} off={!s.on} /></i>)}
             {earth && !earthNeverRises && TURNS.map(k => <i key={`e${k}`} style={{ left: tapeX(earth.az + k) }}><EarthGlyph size={14} off={!e.on} /></i>)}
+            {wps.map(w => TURNS.map(k => (
+              <b key={`${w.id}:${k}`} className={`lv-wp k-${w.kind}`} data-id={w.id} data-turn={k} data-name={w.label} style={{ display: 'none', '--ring': w.color } as React.CSSProperties}
+                >{w.kind === 'pin' ? w.letter : <span aria-hidden="true" dangerouslySetInnerHTML={{ __html: WP_SIGN[w.kind] ?? WP_SIGN.dest }} />}</b>
+            )))}
           </div>
         </div>
         <div className="lv-caret" />
@@ -191,6 +235,7 @@ export function LanderHud({ name, sun, earth, earthNeverRises, mastM, timeline, 
         {drive.on && (
           <div className="lv-keys" aria-hidden="true">
             {drive.blocked === 'slope' ? <em>{t('hud.steep')}</em> : drive.blocked === 'rock' ? <em>{t('hud.rock')}</em>
+              : drive.locked ? <>{t('ex.locked')}<i /><kbd>Esc</kbd> {t('ex.locked.esc')}</>
               : <><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> {t('hud.drive.move')}<i /><kbd>Shift</kbd> {t('hud.drive.fast')}<i /><kbd>V</kbd> {t('hud.drive.camera')}<i /><kbd>L</kbd> {t('hud.drive.lights')}</>}
           </div>
         )}
@@ -205,10 +250,15 @@ export function LanderHud({ name, sun, earth, earthNeverRises, mastM, timeline, 
           </div>
           <button className={`lv-light${drive.lit ? ' on' : ''}`} aria-pressed={drive.lit} aria-label={t('hud.lights')}
             onClick={ev => { blur(ev); landerLink.setLights(drive.lit ? 'off' : 'on'); }} data-tip={t('hud.lights')}><Headlights size={18} weight={drive.lit ? 'fill' : 'regular'} /></button>
+          {drive.away && (
+            <button className="lv-reset" aria-label={t('ex.reset')} onClick={ev => { blur(ev); roverLink.reset(); }} data-tip={t('ex.reset.tip')}><ArrowCounterClockwise size={18} /></button>
+          )}
         </div>
       </div>
 
       {!drive.on && !onRover && <div className="lv-hint lv-glass"><HandGrabbing size={16} /> {t('hud.hint')}</div>}
+
+      <Minimap bodies={bodies} layers={layers} opacity={opacity} layerDefs={layerDefs} timeKey={timeKey} mastM={mastM} route={route} names={names} onOpen={onOpenMap} />
     </div>
   );
 }

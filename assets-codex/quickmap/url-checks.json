@@ -1,0 +1,176 @@
+{
+  "checkedOn": "2026-11-14",
+  "method": "HTTP HEAD with redirects; no linked files downloaded or executed",
+  "checks": [
+    {
+      "url": "https://data.lroc.im-ldi.com/lroc/view_rdr/NAC_POLE_PSR_NORTH",
+      "status": 200,
+      "contentType": "text/html; charset=utf-8"
+    },
+    {
+      "url": "https://data.lroc.im-ldi.com/lroc/view_rdr/NAC_POLE_PSR_SOUTH",
+      "status": 200,
+      "contentType": "text/html; charset=utf-8"
+    },
+    {
+      "url": "https://data.lroc.im-ldi.com/lroc/view_rdr/SHAPEFILE_ANTHROPOGENIC_OBJECTS",
+      "status": 200,
+      "contentType": "text/html; charset=utf-8"
+    },
+    {
+      "url": "https://data.lroc.im-ldi.com/lroc/view_rdr/SHAPEFILE_COPERNICAN_CRATERS",
+      "status": 200,
+      "contentType": "text/html; charset=utf-8"
+    },
+    {
+      "url": "https://data.lroc.im-ldi.com/lroc/view_rdr/SHAPEFILE_CX_TARGETS",
+      "status": 200,
+      "contentType": "text/html; charset=utf-8"
+    },
+    {
+      "url": "https://data.lroc.im-ldi.com/lroc/view_rdr/SHAPEFILE_HIESINGER2011_MARE_CRATER_COUNT_AREAS",
+      "status": 200,
+      "contentType": "text/html; charset=utf-8"
+    },
+    {
+      "url": "https://data.lroc.im-ldi.com/lroc/view_rdr/SHAPEFILE_LROC_5TO20KM_CRATERS_0TO90E",
+      "status": 200,
+      "contentType": "text/html; charset=utf-8"
+    },
+    {
+      "url": "https://data.lroc.im-ldi.com/lroc/view_rdr_product/NAC_DTM_MALAPERTA01_M1435274280_85CM",
+      "status": 200,
+      "contentType": "text/html; charset=utf-8"
+    },
+    {
+      "url": "https://iopscience.iop.org/article/10.3847/PSJ/ac9e5b",
+      "status": 200,
+      "contentType": "text/html; charset=UTF-8"
+    },
+    {
+      "url": "https://lroc.im-ldi.com/about/terms",
+      "status": 200,
+      "contentType": "text/html; charset=utf-8"
+    },
+    {
+      "url": "https://lroc.im-ldi.com/images/1403",
+      "status": 200,
+      "contentType": "text/html; charset=utf-8"
+    },
+    {
+      "url": "https://pgda.gsfc.nasa.gov/products/69",
+      "status": 200,
+      "contentType": "text/html; charset=utf-8"
+    },
+    {
+      "url": "https://pgda.gsfc.nasa.gov/products/90",
+      "status": 200,
+      "contentType": "text/html; charset=utf-8"
+    },
+    {
+      "url": "https://quickmap.im-ldi.com/",
+      "status": 200,
+      "contentType": "text/html"
+    },
+    {
+      "url": "https://quickmap.im-ldi.com/layers?camera=0.00000000%2C0.00000000%2C-1837400.00000000%2C-0.00000000%2C-0.00000000%2C1.00000000%2C1.00000000%2C0.00000000%2C0.00000000%2C60.00000000&proj=22",
+      "status": 200,
+      "contentType": "text/html"
+    },
+    {
+      "url": "https://quickmap.im-ldi.com/layers?camera=1685234.64375629%2C731816.78000440%2C21613.79160621%2C-0.91718441%2C-0.39828931%2C-0.01176325%2C-0.01078981%2C-0.00468550%2C0.99993081%2C60.00000000&proj=22",
+      "status": 200,
+      "contentType": "text/html"
+    },
+    {
+      "url": "https://quickmap.im-ldi.com/layers?stack=3489",
+      "status": 200,
+      "contentType": "text/html"
+    },
+    {
+      "url": "https://quickmap.im-ldi.com/layers?stack=3540",
+      "status": 200,
+      "contentType": "text/html"
+    },
+    {
+      "url": "https://quickmap.im-ldi.com/layers?stack=3541",
+      "status": 200,
+      "contentType": "text/html"
+    },
+    {
+      "url": "https://quickmap.im-ldi.com/layers?stack=3584",
+      "status": 200,
+      "contentType": "text/html"
+    },
+    {
+      "url": "https://quickmap.im-ldi.com/layers?stack=3780",
+      "status": 200,
+      "contentType": "text/html"
+    },
+    {
+      "url": "https://quickmap.im-ldi.com/layers?stack=3781",
+      "status": 200,
+      "contentType": "text/html"
+    },
+    {
+      "url": "https://quickmap.im-ldi.com/layers?stack=3784",
+      "status": 200,
+      "contentType": "text/html"
+    },
+    {
+      "url": "https://quickmap.im-ldi.com/layers?stack=3787",
+      "status": 200,
+      "contentType": "text/html"
+    },
+    {
+      "url": "https://quickmap.im-ldi.com/layers?stack=3788",
+      "status": 200,
+      "contentType": "text/html"
+    },
+    {
+      "url": "https://quickmap.im-ldi.com/layers?stack=3789",
+      "status": 200,
+      "contentType": "text/html"
+    },
+    {
+      "url": "https://quickmap.im-ldi.com/layers?stack=3790",
+      "status": 200,
+      "contentType": "text/html"
+    },
+    {
+      "url": "https://quickmap.im-ldi.com/layers?stack=3791",
+      "status": 200,
+      "contentType": "text/html"
+    },
+    {
+      "url": "https://quickmap.im-ldi.com/layers?stack=3792",
+      "status": 200,
+      "contentType": "text/html"
+    },
+    {
+      "url": "https://quickmap.im-ldi.com/layers?stack=3928",
+      "status": 200,
+      "contentType": "text/html"
+    },
+    {
+      "url": "https://quickmap.im-ldi.com/layers?stack=4127",
+      "status": 200,
+      "contentType": "text/html"
+    },
+    {
+      "url": "https://www.nasa.gov/news-release/nasa-provides-update-on-artemis-iii-moon-landing-regions/",
+      "status": 200,
+      "contentType": "text/html; charset=UTF-8"
+    },
+    {
+      "url": "https://www.usgs.gov/data/lunar-grid-reference-system-lgrs-artemis-iii-candidate-landing-site-navigational-grids-artemis",
+      "status": 200,
+      "contentType": "text/html; charset=utf-8"
+    },
+    {
+      "url": "https://lroc.im-ldi.com/images/988",
+      "status": 200,
+      "contentType": "text/html"
+    }
+  ]
+}

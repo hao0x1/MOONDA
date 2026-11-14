@@ -3,6 +3,7 @@ import './styles.css';
 import './styles-km.css';
 import { createRoot } from 'react-dom/client';
 import App from './App';
+import { Tutorial } from './ui/Tutorial';
 import { installMusic } from './audio/music';
 
 // The start screen's space video (index.html) goes first: wait until it can play (at most 2.5 s) before
@@ -21,5 +22,5 @@ function introReady(): Promise<void> {
 // Then the music (it plays on the start screen), then the app.
 void introReady().then(() => {
   installMusic();
-  createRoot(document.getElementById('root')!).render(<App />);
+  createRoot(document.getElementById('root')!).render(<><App /><Tutorial /></>);
 });

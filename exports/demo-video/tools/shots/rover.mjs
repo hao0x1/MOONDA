@@ -4,7 +4,7 @@ export async function setup(ctx) {
   await ctx.page.mouse.click(291, 36); await ctx.sleep(300);
   await ctx.page.keyboard.type('Malapert', { delay: 20 }); await ctx.sleep(800); await ctx.page.keyboard.press('Enter');
   await ctx.sleep(5000); await ctx.settle(3000, true);
-  await ctx.setupClick('Stand here'); await ctx.sleep(7000);
+  await ctx.setupClick('Land here'); await ctx.sleep(7000);
   await ctx.setupClick('Behind'); await ctx.sleep(2500);
   ctx.setMouse(1300, 300); await ctx.page.mouse.move(1300, 300);
 }

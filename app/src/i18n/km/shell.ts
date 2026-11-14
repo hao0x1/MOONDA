@@ -1,5 +1,4 @@
 // Khmer text for: shell (same keys as ../en/shell.ts; a missing key shows the English).
-// 'status.credits' is left out on purpose: credit lines stay in Latin letters.
 import type { shell as en } from '../en/shell';
 
 export const shell: Partial<Record<keyof typeof en, string>> = {
@@ -10,6 +9,8 @@ export const shell: Partial<Record<keyof typeof en, string>> = {
   'top.compare': 'ប្រៀបធៀប',
   'top.plans': 'ផែនការ {n}',
   'top.help': 'របៀបប្រើ MOONDA',
+  'top.tutorial': 'ការណែនាំ',
+  'top.tutorial.tip': 'បង្ហាញការណែនាំខ្លីម្ដងទៀត',
   'top.langTip': 'ប្ដូរភាសា៖ English / ខ្មែរ',
   'top.soundOn': 'តន្ត្រីកំពុងបើក។ ចុចដើម្បីបិទ',
   'top.soundOff': 'តន្ត្រីបិទហើយ។ ចុចដើម្បីបើក',
@@ -36,8 +37,8 @@ export const shell: Partial<Record<keyof typeof en, string>> = {
   'place.copied': 'បានចម្លង',
   'place.show': 'បង្ហាញលម្អិត',
   'place.hide': 'លាក់លម្អិត',
-  'place.stand': 'ឈរនៅទីនេះ',
-  'place.standTip': 'ឈរនៅកន្លែងនេះ ហើយមើលជុំវិញ ដូច Street View',
+  'place.stand': 'ចុះចតនៅទីនេះ',
+  'place.standTip': 'ចុះចតនៅកន្លែងនេះ ហើយបើកបរជុំវិញលើដី',
   'place.standWait': 'កំពុងគណនាទេសភាពពីកន្លែងនេះ…',
   'place.compare': 'ប្រៀបធៀប',
   'place.comparing': 'កំពុងប្រៀបធៀប',
@@ -63,14 +64,12 @@ export const shell: Partial<Record<keyof typeof en, string>> = {
   'stat.noEarth': 'មិនឃើញផែនដីយូរបំផុត',
   'stat.noEarth.tip': 'រយៈពេលយូរបំផុតជាប់ៗគ្នាដែលមើលមិនឃើញផែនដី។ ពេលនោះ យានចុះចតបញ្ជូនទិន្នន័យមកផែនដីមិនបានទេ លុះត្រាតែមានផ្កាយរណបបញ្ជូនបន្តជួយ។',
 
-  'place.skyline': 'ក្រាបខ្សែជើងមេឃ និងរបៀបដែលយើងគណនា',
-  'place.skyline.text': 'រូបលាតស្មើនៃភ្នំជុំវិញកន្លែងនេះ (N = ខាងជើង)។ ខ្សែពណ៌លឿងទុំជាផ្លូវដើររបស់ព្រះអាទិត្យ ហើយខ្សែពណ៌ខៀវជាផ្លូវដើររបស់ផែនដី ក្នុងពេលបេសកកម្ម។ ត្រង់ណាដែលខ្សែចុះក្រោមភ្នំពណ៌ប្រផេះ ត្រង់នោះវាត្រូវបាំង។ កម្ពស់ត្រូវបានទាញឱ្យខ្ពស់ជាងពិត ដើម្បីឱ្យឃើញភ្នំទាបៗ។',
-  'place.skyline.fine80': 'ភ្នំ៖ កម្ពស់វាស់ដោយឡាស៊ែរ NASA LOLA លម្អិត 80 m ជិតកន្លែងនេះ (ផែនទីប៉ូលខាងត្បូង) រហូតដល់ចម្ងាយ 300 km។',
-  'place.skyline.fineGlobal': 'ភ្នំ៖ កម្ពស់វាស់ដោយឡាស៊ែរ NASA LOLA លម្អិតប្រហែល 1.9 km (ផែនទីព្រះច័ន្ទទាំងមូល) ដូច្នេះភ្នំតូចៗមិនបានរាប់បញ្ចូលនៅទីនេះទេ។ នៅជិតប៉ូលខាងត្បូង យើងប្រើលម្អិត 80 m។ រហូតដល់ចម្ងាយ 300 km។',
-  'place.skyline.fineEph': 'ព្រះអាទិត្យ និងផែនដី៖ Astronomy Engine ផ្ទៀងជាមួយ NASA/JPL Horizons (ខុសគ្នាមិនលើស 0.002°)។ គណនាខ្សែជើងមេឃក្នុង {ms} ms។',
   'place.panelHeight': 'កម្ពស់ផ្ទាំងសូឡា / អង់តែន',
   'place.panelHeight.tip': 'បើលើកផ្ទាំងសូឡា ឬអង់តែនឱ្យខ្ពស់ វាអាចមើលរំលងទួលនៅក្បែរៗបាន។ យានចុះចតភាគច្រើនមានផ្ទាំងសូឡាខ្ពស់ 2 ទៅ 3 m ហើយបង្គោលខ្ពស់អាចដល់ 10 m។ ប្ដូរកម្ពស់ នោះលេខខាងលើនឹងប្ដូរតាម។',
   'place.ground.tip': 'ជាតម្លៃមធ្យមពីផែនទីដែល NASA បានផ្សាយ (ទិន្នន័យច្រើនឆ្នាំ) មិនមែនជាការព្យាករសម្រាប់ថ្ងៃដែលអ្នកជ្រើសទេ។ បេសកកម្មរបស់អ្នកអាចល្អជាង ឬអន់ជាងមធ្យម ព្រោះកម្ពស់ព្រះអាទិត្យនៅជិតប៉ូលប្រែប្រួលតាមរដូវរបស់ព្រះច័ន្ទ។',
+  'ground.psr.short': 'ស្រមោលជានិច្ច',
+  'ground.psr.yes': 'មែន',
+  'ground.psr.part': 'មួយផ្នែក',
   'ground.height': 'កម្ពស់ដី',
   'ground.height.tip': 'កម្ពស់ដីធៀបនឹងទំហំមធ្យមរបស់ព្រះច័ន្ទ (បាល់មួយដែលមានកាំ 1,737.4 km)។ សញ្ញាដកមានន័យថាទាបជាងមធ្យម ដូចជាបាតរណ្ដៅ។',
   'ground.sunlight': 'ពន្លឺថ្ងៃជាមធ្យម',
@@ -88,8 +87,8 @@ export const shell: Partial<Record<keyof typeof en, string>> = {
   'place.namedAfter': 'ដាក់ឈ្មោះតាម {who}។',
   'place.officialName': 'ជាឈ្មោះទីកន្លែងផ្លូវការនៅលើព្រះច័ន្ទ។',
   'place.officialRecord': 'កំណត់ត្រាផ្លូវការ (IAU / USGS)',
+  'place.sourceLink': 'ប្រភព',
   'place.source': 'ប្រភព៖ {name}',
-  'place.nearby': 'នៅក្បែរនេះ',
 
   'map.controls': 'ប៊ូតុងបញ្ជាផែនទី',
   'map.aiTip': 'MOONDA AI៖ សុំឱ្យវារក និងប្រៀបធៀបកន្លែងចុះចត',
@@ -103,9 +102,10 @@ export const shell: Partial<Record<keyof typeof en, string>> = {
   'map.zoomOut': 'បង្រួម',
   'map.colours': 'ពណ៌លើផែនទី',
 
-  'status.standing': 'កំពុងឈរនៅ {name}',
+  'status.standing': 'បានចុះចតនៅ {name}',
   'status.move': 'រំកិលព្រួញកណ្ដុរលើព្រះច័ន្ទ ដើម្បីដឹងថាវានៅត្រង់ណា',
   'status.eye': 'កម្ពស់មើល',
+  'status.credits': 'រូបថត NASA / GSFC / ASU, JAXA / SELENE តាម Lunar QuickMap · កម្ពស់ NASA LOLA · ឈ្មោះ IAU / USGS',
   'status.creditsTip': 'ប្រភពទិន្នន័យ',
   'where.crater': 'រណ្ដៅ {name}',
   'where.southPolar': 'តំបន់ប៉ូលខាងត្បូង',

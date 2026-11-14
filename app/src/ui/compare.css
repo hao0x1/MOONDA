@@ -1,99 +1,122 @@
-/* Compare plans: the parts inside the right-hand drawer (the drawer itself is in styles.css, section 6).
-   Reads top to bottom: the question, the answer, the two needs, then one table with a row per plan. */
+/* Compare plans: the two day rulers and the quiet three-column table from the team's mock. */
+.app.drawer-open { --drawer-w: 390px; }
+.cmp { max-width: calc(100vw - 24px); }
+.cmp .drawer-head { height: 48px; padding-left: 16px; }
+.cmp .drawer-head h2 { font-size: var(--fs-14); }
+.cmp .drawer-body { display: flex; flex-direction: column; flex: 0 1 auto; min-height: 0; overflow: hidden; padding: 0 16px 16px; }
 
-/* a little wider than Layers, so four plans fit as a table; the colour key moves along with it */
-.app.drawer-open { --drawer-w: 472px; }
+/* Robot information: exact days at the right; thin two-hour marks between each day. */
+.cmp-section-title { flex: none; display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 6px; margin: 0; font-size: var(--fs-14); font-weight: 400; color: var(--text); }
+.cmp-section-hint { font-size: var(--fs-11); font-weight: 400; color: var(--text-3); }
+.cmp-needs { flex: none; padding: 16px 0 16px; }
+.cmp-need { margin-top: 12px; }
+.cmp-need + .cmp-need { margin-top: 12px; }
+.cmp-need-label { margin: 0 0 1px; font-size: var(--fs-13); line-height: 18px; color: var(--text); }
+.cmp-need-label span, .cmp-need-label small { font-size: var(--fs-11); color: var(--text-3); }
+.cmp-need-controls { display: grid; grid-template-columns: minmax(0, 1fr) 44px; gap: 10px; align-items: start; }
+.cmp-days-scale { position: relative; min-width: 0; height: 42px; touch-action: none; cursor: ew-resize; border-radius: var(--r-4); }
+.cmp-days-scale:focus-visible { outline: 1.5px solid var(--good); outline-offset: 3px; }
+.cmp-days-tape { position: absolute; inset: 0 6px 12px; mask-image: linear-gradient(90deg, transparent, #000 3%, #000 97%, transparent); }
+.cmp-days-tape svg { display: block; width: 100%; height: 30px; overflow: hidden; }
+.cmp-days-comb { transform-origin: 0 0; transition: transform 200ms var(--ease); }
+.cmp-days-tick-hidden { opacity: 0 !important; }
+.cmp-days-tick { stroke: var(--text-3); opacity: .42; stroke-linecap: round; vector-effect: non-scaling-stroke; transition: opacity 200ms var(--ease), y1 var(--fast) var(--ease), y2 var(--fast) var(--ease), stroke-width var(--fast) var(--ease), filter var(--fast) var(--ease); }
+.cmp-days-tick.major { opacity: .75; }
+.cmp-days-tick.filled { stroke: var(--good); opacity: .85; }
+.cmp-days-tick.major.filled { opacity: 1; }
+.cmp-days-labels { position: absolute; right: 6px; bottom: 0; left: 6px; height: 15px; overflow: hidden; color: var(--text-2); font-family: var(--mono); font-size: var(--fs-11); pointer-events: none; }
+.cmp-days-labels span { position: absolute; transform: translateX(-50%); transition: left 200ms var(--ease), opacity 200ms var(--ease); }
+.cmp-days-labels .cmp-days-label-hidden { opacity: 0; }
+.cmp-days-labels span:first-child { transform: none; }
+.cmp-days-labels span.last { transform: translateX(-100%); }
+.cmp-days-input { width: 44px; height: 24px; margin-top: 9px; padding: 0 4px; border: 0; border-radius: var(--r-4); background: var(--fill-3); box-shadow: inset 0 0 0 1px var(--line-2); color: var(--good); font-family: var(--mono); font-size: var(--fs-12); text-align: center; }
+.cmp-days-input.set { background: var(--good-soft); box-shadow: inset 0 0 0 1px var(--good); }
+.cmp-days-input:focus { outline: none; box-shadow: inset 0 0 0 1.5px var(--good); }
+.cmp-days-input::placeholder { color: var(--text-3); opacity: 1; }
+.cmp-need-controls.held .cmp-days-tick { transition: none; }
+.cmp-need-controls.held .cmp-days-scale:focus-visible { outline: none; }
+/* The shared tooltip lives under body; keep a drag clear even before focus settles. */
+body:has(.cmp-scrubbing) > .tip { display: none; }
+.cmp-answer-secondary { margin-top: 6px; font-size: var(--fs-12); line-height: 18px; color: var(--text-2); text-wrap: pretty; }
 
-/* the question (one line), then the answer as one sentence */
-.cmp-q { margin: 16px 0 6px; font-size: var(--fs-13); line-height: 18px; color: var(--text-3); text-wrap: balance; }
-.cmp-answer { animation: fade var(--slow) ease-out; }
-.cmp-answer-text { display: flex; align-items: baseline; gap: 8px; font-size: var(--fs-16); line-height: 22px; font-weight: 500; color: var(--text); text-wrap: pretty; }
-.cmp-answer-text .spinner { align-self: center; }
-.cmp-answer-note { margin-top: 4px; font-size: var(--fs-13); line-height: 18px; color: var(--text-2); text-wrap: pretty; }
+/* Hairlines divide all three columns; their widths stay the same in every row. */
+.cmp-table { display: flex; flex-direction: column; flex: 0 1 auto; min-height: 0; margin: 0 -16px; padding: 16px 16px 0; border-top: 1px solid var(--line-2); }
+.cmp-thead, .cmp-row { display: grid; grid-template-columns: minmax(0, 42fr) minmax(0, 28fr) minmax(0, 30fr); }
+.cmp-thead { flex: none; align-items: stretch; margin-top: 12px; }
+.cmp-th { display: flex; align-items: center; justify-content: center; min-width: 0; padding: 0 6px 7px; font-size: var(--fs-11); line-height: 16px; color: var(--text-3); text-align: center; }
+.cmp-th:first-child { justify-content: flex-start; padding-left: 0; text-align: left; }
+.cmp-th + .cmp-th { border-left: 1px solid var(--line-2); }
+.cmp-th[data-tip] { cursor: help; }
+.cmp-rows { display: flex; flex-direction: column; flex: 0 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: var(--line-2) transparent; }
+.cmp-row { flex: none; position: relative; align-items: stretch; border-top: 1px solid var(--line-2); transition: background var(--fast) ease-out; }
+.cmp-row:hover, .cmp-row.open { background: var(--fill-1); }
 
-/* what the lander can handle: one sentence each, the blank is a small menu */
-.cmp-needs { margin-top: 14px; padding: 8px 0; border-top: 1px solid var(--line); }
-.need { display: flex; align-items: center; flex-wrap: wrap; gap: 0 6px; min-height: 32px; font-size: var(--fs-13); color: var(--text-2); }
-.need-lead { cursor: help; text-decoration: underline dotted rgba(255, 255, 255, .22); text-underline-offset: 4px; border-radius: 4px; }
-.need-pick { display: inline-flex; align-items: center; gap: 4px; height: 26px; padding: 0 7px 0 9px; border: 0; border-radius: var(--r-8); background: var(--surface-2); color: var(--text); font: inherit; font-weight: 500; cursor: pointer; white-space: nowrap; transition: background var(--fast) ease-out; }
-.need-pick:hover, .need-pick[aria-expanded='true'] { background: var(--surface-3); }
-.need-pick svg { color: var(--text-3); }
-.need-pick.off { color: var(--text-2); }
-.need-menu { min-width: 210px; }
-
-/* the table: plan | longest dark | longest without Earth | … */
-.cmp-table { border-top: 1px solid var(--line); }
-.cmp-thead, .cmp-row { display: grid; grid-template-columns: minmax(0, 1fr) 100px 100px 28px; column-gap: 10px; }
-.cmp-thead { align-items: end; padding: 12px 8px 8px; }
-.cmp-th { display: flex; align-items: flex-start; gap: 6px; min-width: 0; font-size: var(--fs-12); line-height: 16px; color: var(--text-3); }
-.cmp-th[data-tip] { cursor: help; color: var(--text-2); }
-.cmp-th[data-tip] span { text-decoration: underline dotted rgba(255, 255, 255, .22); text-underline-offset: 3px; }
-.cmp-th .glyph { margin-top: 0; }
-
-.cmp-rows { display: flex; flex-direction: column; margin: 0 -8px; }
-.cmp-row { align-items: center; padding: 8px; border-top: 1px solid var(--line); border-radius: var(--r-12); transition: background var(--fast) ease-out; }
-.cmp-row:hover { background: var(--fill-1); }
-.cmp-row.best { background: var(--fill-2); border-top-color: transparent; }
-.cmp-row.best + .cmp-row { border-top-color: transparent; }
-.cmp-row.open { background: var(--fill-1); }
-.cmp-row.best.open { background: var(--fill-2); }
-
-/* who and when: the letter (like the map pin: light body, coloured ring), the name, the landing */
-.cmp-who { display: flex; align-items: center; gap: 10px; min-width: 0; padding: 2px 0; border: 0; border-radius: var(--r-8); background: none; color: inherit; text-align: left; cursor: pointer; }
-.cmp-badge { display: grid; place-items: center; flex: none; width: 24px; height: 24px; border-radius: 50%; background: var(--white); color: var(--ink); font-size: var(--fs-13); font-weight: 600; box-shadow: 0 0 0 2px var(--ring, var(--line-2)); }
+/* The letter uses the same filled colour as its map pin, with dark text for contrast. */
+.cmp-who { display: flex; align-items: center; gap: 9px; min-width: 0; min-height: 48px; padding: 8px 8px 8px 0; border: 0; border-radius: 0; background: none; color: inherit; text-align: left; }
+.cmp-who-toggle { padding: 0; border: 0; background: none; color: inherit; text-align: left; cursor: pointer; }
+.cmp-badge { display: grid; place-items: center; flex: none; width: 23px; height: 23px; border-radius: 50%; background: var(--plan-colour, var(--white)); color: var(--ink); font-size: var(--fs-12); font-weight: 600; }
 .cmp-text { display: flex; flex-direction: column; min-width: 0; }
-.cmp-name { font-size: var(--fs-14); line-height: 18px; font-weight: 500; overflow-wrap: normal; word-break: normal; }
-.cmp-best { margin-left: 6px; font-size: var(--fs-12); font-weight: 600; color: var(--good); white-space: nowrap; }
-.cmp-when { font-size: var(--fs-12); line-height: 16px; color: var(--text-3); }
+.cmp-name { font-size: var(--fs-13); line-height: 18px; font-weight: 400; overflow-wrap: anywhere; }
+.cmp-best { display: block; width: fit-content; font-size: var(--fs-11); font-weight: 500; color: var(--good); white-space: nowrap; }
+.cmp-when { align-self: flex-start; padding: 0; border: 0; background: none; text-align: left; cursor: pointer; margin-top: 2px; font-size: var(--fs-11); line-height: 16px; color: var(--text-3); }
 
-/* one measure: number + small unit, a check or a cross, then a slim bar with a tick at the limit */
-.cmp-cell-hit { min-width: 0; cursor: pointer; }
+.cmp-when:hover { color: var(--text); text-decoration: underline; text-underline-offset: 3px; }
+.cmp-row.cmp-flash { background: var(--good-soft); box-shadow: inset 0 0 0 1px var(--good); }
+
+/* Plain calendar controls use the existing picker and buttons. The lead can restyle this wrapper. */
+.cmp-date-anchor { position: absolute; top: 0; left: -28px; width: 0; height: 0; outline: none; }
+.cmp-date-picker { max-width: calc(100vw - 16px); max-height: calc(100dvh - 16px); overflow-y: auto; }
+.cmp-date-title { margin: 0 0 10px; font-size: var(--fs-14); font-weight: 500; line-height: 20px; }
+.cmp-date-quick { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 12px; }
+.cmp-date-quick .btn { padding: 0 8px; font-size: var(--fs-12); }
+.cmp-date-value { margin: 12px 0 0; font-size: var(--fs-12); line-height: 18px; color: var(--text-2); }
+.cmp-date-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px; }
+html.lang-km .cmp-date-title, html.lang-km .cmp-date-quick .btn { line-height: 1.65; }
+
+/* One measure: number, small unit and a coloured check or cross. */
+.cmp-cell-hit { display: grid; place-items: center; min-width: 0; padding: 8px 4px; border-left: 1px solid var(--line-2); cursor: pointer; }
 .cmp-cell { min-width: 0; cursor: help; }
-.cmp-val { display: flex; align-items: baseline; height: 24px; font-size: var(--fs-20); line-height: 24px; font-weight: 500; letter-spacing: -.01em; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.cmp-val small { margin-left: 3px; font-size: var(--fs-12); font-weight: 400; letter-spacing: 0; color: var(--text-2); }
-.cmp-none { font-size: var(--fs-16); color: var(--text-2); }
+.cmp-val { display: flex; justify-content: center; align-items: baseline; font-size: var(--fs-14); line-height: 22px; font-weight: 400; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.cmp-val small { margin-left: 3px; font-size: var(--fs-11); font-weight: 400; color: var(--text-2); }
+.cmp-none { color: var(--text-2); }
 .cmp-mark { flex: none; align-self: center; margin-left: 6px; }
 .cmp-cell.pass .cmp-mark { color: var(--good); }
-.cmp-cell.fail .cmp-mark, .cmp-cell.fail .cmp-val { color: var(--bad); }
-.cmp-cell.fail .cmp-val small { color: var(--bad); opacity: .85; }
-.cmp-track { position: relative; display: block; height: 4px; margin-top: 6px; border-radius: 2px; background: var(--fill-2); }
-.cmp-bar { position: absolute; top: 0; bottom: 0; left: 0; border-radius: 2px; background: rgba(255, 255, 255, .42); transition: width var(--slow) var(--ease); }
-.cmp-cell.fail .cmp-bar { background: var(--bad); opacity: .75; }
-.cmp-tick { position: absolute; top: -3px; bottom: -3px; width: 2px; margin-left: -1px; border-radius: 1px; background: var(--text); box-shadow: 0 0 0 1px rgba(9, 9, 11, .8); transition: left var(--slow) var(--ease); }
-
-.cmp-msg { grid-column: span 2; display: flex; align-items: center; gap: 8px; min-height: 34px; font-size: var(--fs-13); color: var(--text-2); }
+.cmp-cell.fail .cmp-mark { color: var(--bad); }
+.cmp-msg { grid-column: span 2; display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; padding: 8px; border-left: 1px solid var(--line-2); font-size: var(--fs-12); color: var(--text-2); }
 .cmp-msg.bad { color: var(--bad); }
-.cmp-more { justify-self: end; color: var(--text-3); }
+.cmp-more { position: absolute; right: 0; top: 1px; width: 24px; height: 24px; color: var(--text-3); opacity: 0; pointer-events: none; transition: opacity var(--fast) ease-out; }
+.cmp-row:hover .cmp-more, .cmp-row:focus-within .cmp-more, .cmp-more[aria-expanded="true"] { opacity: 1; pointer-events: auto; }
 .cmp-menu { min-width: 0; }
 .cmp-menu .menu-item { padding: 0 12px; }
 .cmp-menu .menu-item:disabled { opacity: .45; cursor: default; }
 .cmp-menu .cmp-remove .menu-label { color: var(--bad); }
 
-/* an opened row: the mission timeline, the plain sentence, what you can do */
-.cmp-detail { grid-column: 1 / -1; padding: 10px 0 0; animation: fade var(--fast) ease-out; }
+/* An opened row keeps the mission timeline, sentence and actions available. */
+.cmp-detail { grid-column: 1 / -1; padding: 10px 0; border-top: 1px solid var(--line); animation: fade var(--fast) ease-out; }
 .cmp-tracks { display: grid; grid-template-columns: 24px 1fr; column-gap: 10px; cursor: help; }
 .cmp-tracks .mt-keys .glyph { left: 6px; }
 .cmp-line { margin: 10px 0 0 34px; font-size: var(--fs-13); line-height: 18px; color: var(--text); text-wrap: pretty; }
 .cmp-acts { display: flex; flex-wrap: wrap; gap: 0; margin: 6px -8px 0 26px; }
 .cmp-acts .btn:last-child { margin-left: auto; }
-.cmp-acts .btn { padding: 0 8px; color: var(--text-2); font-weight: 500; }
+.cmp-acts .btn { padding: 0 8px; color: var(--text-2); font-weight: 400; }
 .cmp-acts .btn:hover:not(:disabled) { color: var(--text); }
 .cmp-acts .btn:disabled { opacity: .4; cursor: default; }
 
-/* under the table: add the selected spot, or say how */
-.cmp-add { display: flex; justify-content: flex-start; width: calc(100% + 16px); margin: 6px -8px 0; padding: 0 8px; color: var(--text-2); }
+.cmp-add { flex: none; display: flex; justify-content: flex-start; width: calc(100% + 16px); margin: 8px -8px 0; padding: 0 8px; color: var(--text-2); }
 .cmp-add span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .cmp-add:hover:not(:disabled) { color: var(--text); }
-.cmp-hint { margin-top: 10px; font-size: var(--fs-12); line-height: 16px; color: var(--text-3); }
-
-/* nothing added yet */
+.cmp-hint { margin-top: 14px; font-size: var(--fs-11); line-height: 17px; color: var(--text-3); }
 .cmp-empty { display: flex; flex-direction: column; align-items: flex-start; }
-.cmp-intro { font-size: var(--fs-14); line-height: 20px; color: var(--text); text-wrap: pretty; }
+.cmp-intro { margin-top: 12px; font-size: var(--fs-14); line-height: 20px; color: var(--text); text-wrap: pretty; }
 .cmp-empty .btn { margin-top: 14px; }
 .cmp-empty .btn:disabled { opacity: .45; cursor: default; }
 .cmp-empty .cmp-hint { margin-top: 8px; }
 
+html.lang-km .cmp-section-title, html.lang-km .cmp-need-label, html.lang-km .cmp-th, html.lang-km .cmp-name, html.lang-km .cmp-when, html.lang-km .cmp-line, html.lang-km .cmp-hint, html.lang-km .cmp-intro { line-height: 1.65; }
+html.lang-km .cmp-val { line-height: 1.65; }
+html.lang-km .cmp-days-input { font-family: var(--mono), var(--sans); }
+@media (hover: none) { .cmp-more { opacity: 1; pointer-events: auto; } }
 @media (prefers-reduced-motion: reduce) {
-  .cmp-answer, .cmp-detail { animation: none; }
-  .cmp-bar, .cmp-tick { transition: none; }
+  .cmp-detail { animation: none; }
+  .cmp-row, .cmp-more, .cmp-days-tick, .cmp-days-comb, .cmp-days-labels span { transition: none; }
 }

@@ -22,6 +22,9 @@ export const common: Partial<Record<keyof typeof en, string>> = {
   'common.earth': 'ផែនដី',
   'common.none': 'គ្មាន',
 
+  'search.tip': 'ស្វែងរកកន្លែងមានឈ្មោះ ឬកន្លែងចុះចតនៅលើព្រះច័ន្ទ',
+  'search.result.tip': 'បង្ហាញ {name} លើផែនទី (Enter)',
+
   'unit.day.other': 'ថ្ងៃ',
 
   'time.inCambodia': '{time} នៅកម្ពុជា',

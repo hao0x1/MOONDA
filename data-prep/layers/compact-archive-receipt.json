@@ -1,0 +1,226 @@
+{
+ "archive": {
+  "slope-global-values.png": {
+   "file": "10a42fd7e2b3feaf3001a0e2f08f4c6415790750ac60b33f0bed0014e23f656b-slope-global-values.png",
+   "sha256": "10a42fd7e2b3feaf3001a0e2f08f4c6415790750ac60b33f0bed0014e23f656b",
+   "bytes": 19742964
+  },
+  "danger-global-values.png": {
+   "file": "841e3127f90d5730683914bb561e6edb1b5d5137a35edf502925421b2d7dbdc3-danger-global-values.png",
+   "sha256": "841e3127f90d5730683914bb561e6edb1b5d5137a35edf502925421b2d7dbdc3",
+   "bytes": 4423979
+  }
+ },
+ "legacyImagesStillPresent": [
+  "psr.png",
+  "waterice.png",
+  "danger.png",
+  "slope.png",
+  "height.png"
+ ],
+ "compactHashesUnchanged": 30,
+ "addedShippedDataBytesExcludingManifestDiff": 50114031,
+ "publicManifestBytes": 102320,
+ "assets": [
+  {
+   "path": "app/public/data/layers/compact-sources.json",
+   "bytes": 21669
+  },
+  {
+   "path": "app/public/data/layers/danger-south-codes.png",
+   "bytes": 1154319
+  },
+  {
+   "path": "app/public/data/layers/global-terrain-report.json",
+   "bytes": 5065
+  },
+  {
+   "path": "app/public/data/layers/global-terrain.json",
+   "bytes": 11431
+  },
+  {
+   "path": "app/public/data/layers/hydrogen-global-values.png",
+   "bytes": 105239
+  },
+  {
+   "path": "app/public/data/layers/hydrogen-global.png",
+   "bytes": 105239
+  },
+  {
+   "path": "app/public/data/layers/psr-north-sharp-values.png",
+   "bytes": 547972
+  },
+  {
+   "path": "app/public/data/layers/psr-north-sharp.png",
+   "bytes": 1187840
+  },
+  {
+   "path": "app/public/data/layers/psr-north-values.png",
+   "bytes": 93919
+  },
+  {
+   "path": "app/public/data/layers/psr-north.png",
+   "bytes": 198616
+  },
+  {
+   "path": "app/public/data/layers/psr-south-sharp.png",
+   "bytes": 1996420
+  },
+  {
+   "path": "app/public/data/layers/psr-south-wide-values.png",
+   "bytes": 97321
+  },
+  {
+   "path": "app/public/data/layers/psr-south-wide.png",
+   "bytes": 208063
+  },
+  {
+   "path": "app/public/data/layers/south-terrain.json",
+   "bytes": 795
+  },
+  {
+   "path": "app/public/data/layers/waterice-north-values.png",
+   "bytes": 215016
+  },
+  {
+   "path": "app/public/data/layers/waterice-north.png",
+   "bytes": 297723
+  },
+  {
+   "path": "app/public/data/layers/waterice-south-values.png",
+   "bytes": 172769
+  },
+  {
+   "path": "app/public/data/layers/waterice-south.png",
+   "bytes": 253862
+  },
+  {
+   "path": "app/public/data/layers/compact/waterice-south-preview-f8dd105fda225206.deflate",
+   "bytes": 103883
+  },
+  {
+   "path": "app/public/data/layers/compact/waterice-south-68fbebbbd9ce57b5.deflate",
+   "bytes": 210292
+  },
+  {
+   "path": "app/public/data/layers/compact/danger-south-codes-preview-b3f823fe8ec901be.deflate",
+   "bytes": 362167
+  },
+  {
+   "path": "app/public/data/layers/compact/slope-global-values-preview-0190d39906a484e5.deflate",
+   "bytes": 301539
+  },
+  {
+   "path": "app/public/data/layers/compact/waterice-north-preview-f20e990f9f61fb62.deflate",
+   "bytes": 117467
+  },
+  {
+   "path": "app/public/data/layers/compact/psr-north-sharp-preview-eee89b1696bf7f0c.deflate",
+   "bytes": 126621
+  },
+  {
+   "path": "app/public/data/layers/compact/danger-south-codes-c4315a61a215224c.deflate",
+   "bytes": 1147064
+  },
+  {
+   "path": "app/public/data/layers/compact/hydrogen-global-values-2928b4e5db7e09e6.deflate",
+   "bytes": 116603
+  },
+  {
+   "path": "app/public/data/layers/compact/psr-south-sharp-preview-ad9362fb85e01b58.deflate",
+   "bytes": 144078
+  },
+  {
+   "path": "app/public/data/layers/compact/hydrogen-global-2928b4e5db7e09e6.deflate",
+   "bytes": 116603
+  },
+  {
+   "path": "app/public/data/layers/compact/psr-north-ef50df214bb55c46.deflate",
+   "bytes": 197112
+  },
+  {
+   "path": "app/public/data/layers/compact/danger-global-values-d44b91d6ba4771b3.deflate",
+   "bytes": 4065489
+  },
+  {
+   "path": "app/public/data/layers/compact/height-be231780a30d15be.deflate",
+   "bytes": 6551921
+  },
+  {
+   "path": "app/public/data/layers/compact/waterice-north-9bd4ce960b11e7b4.deflate",
+   "bytes": 245068
+  },
+  {
+   "path": "app/public/data/layers/compact/psr-south-wide-preview-2baeabbd39b71f18.deflate",
+   "bytes": 29688
+  },
+  {
+   "path": "app/public/data/layers/compact/danger-global-values-preview-8060b44d2be4a9d5.deflate",
+   "bytes": 342527
+  },
+  {
+   "path": "app/public/data/layers/compact/psr-north-values-cf1bb43cc240efaf.deflate",
+   "bytes": 93153
+  },
+  {
+   "path": "app/public/data/layers/compact/slope-f4eae5a43b4a7fa4.deflate",
+   "bytes": 2755088
+  },
+  {
+   "path": "app/public/data/layers/compact/hydrogen-global-preview-6d7e5683ae9167ef.deflate",
+   "bytes": 66040
+  },
+  {
+   "path": "app/public/data/layers/compact/slope-global-values-63279c1c506a1d89.deflate",
+   "bytes": 21291824
+  },
+  {
+   "path": "app/public/data/layers/compact/psr-north-sharp-386d213fe451fd41.deflate",
+   "bytes": 936123
+  },
+  {
+   "path": "app/public/data/layers/compact/psr-south-wide-values-46851270ed9cf10b.deflate",
+   "bytes": 96718
+  },
+  {
+   "path": "app/public/data/layers/compact/height-preview-03ecff5112e5c834.deflate",
+   "bytes": 746598
+  },
+  {
+   "path": "app/public/data/layers/compact/slope-preview-68487404e0e1a05f.deflate",
+   "bytes": 585869
+  },
+  {
+   "path": "app/public/data/layers/compact/waterice-north-values-0a4f26e6e8c26629.deflate",
+   "bytes": 232354
+  },
+  {
+   "path": "app/public/data/layers/compact/psr-north-sharp-values-ddb66195207983fe.deflate",
+   "bytes": 421836
+  },
+  {
+   "path": "app/public/data/layers/compact/psr-north-preview-f67f00cb0a55fac6.deflate",
+   "bytes": 28884
+  },
+  {
+   "path": "app/public/data/layers/compact/waterice-south-values-8767351bbbfcbd6c.deflate",
+   "bytes": 191182
+  },
+  {
+   "path": "app/public/data/layers/compact/psr-south-sharp-d9532ad37bc9aba3.deflate",
+   "bytes": 1584065
+  },
+  {
+   "path": "app/public/data/layers/compact/psr-south-wide-1e7aef815e45c5c3.deflate",
+   "bytes": 205050
+  },
+  {
+   "path": "app/public/data/features/ice-sites.json",
+   "bytes": 22058
+  },
+  {
+   "path": "app/public/data/CREDITS-layers.md",
+   "bytes": 5789
+  }
+ ]
+}

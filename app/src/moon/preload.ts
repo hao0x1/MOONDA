@@ -6,7 +6,9 @@
 //   science    the landing-site calculator (background worker) has the heights and has done one real calculation
 //   pole       a quick, invisible visit to the south-pole views people go to first (tiles, 3D ground, shaders)
 //   surface    the "Stand here" view: its ground scans, rock models and shaders (lander.prewarm() when present)
+//   layers     the files behind the Layers switches (south-pole science maps, Height colours), so they show at once
 //   music      the music file, so it can start the moment the person enters
+// (and "app": the app's own code, downloaded by the page before any of this starts; index.html shows it loading)
 // Each stage reports its real state (waiting / loading with a fraction when we can count it / done).
 // Every stage has a time limit, so a slow network delays the start but never blocks it: a stage that runs
 // out of time is shown as "finishes in the background" and keeps loading after the person enters.
@@ -19,19 +21,23 @@ import { t } from '../i18n';
 import { analyseSpotAsync } from '../science/client';
 import { loadManifest } from '../science/layerValues';
 
-export type StageId = 'photo' | 'mountains' | 'sky' | 'science' | 'pole' | 'surface' | 'music';
+export type StageId = 'app' | 'photo' | 'mountains' | 'sky' | 'layers' | 'science' | 'pole' | 'surface' | 'music';
 /** later = ran out of time, keeps loading in the background; off = not needed (music switched off) */
 export type StageState = 'waiting' | 'loading' | 'done' | 'later' | 'off';
 export interface Stage { id: StageId; state: StageState; /** 0…1 while loading, when it can be counted */ frac: number | null; /** how long it took */ ms?: number }
 export interface LoadProgress { pct: number; step: string; done: boolean; stages: Stage[] }
 
-export const STAGES: StageId[] = ['photo', 'mountains', 'sky', 'science', 'pole', 'surface', 'music'];
+export const STAGES: StageId[] = ['app', 'photo', 'mountains', 'sky', 'layers', 'science', 'pole', 'surface', 'music'];
 /** Share of the overall percentage, roughly by how long each stage takes on a first visit. */
-const WEIGHT: Record<StageId, number> = { photo: 12, mountains: 30, sky: 10, science: 8, pole: 18, surface: 17, music: 5 };
+const WEIGHT: Record<StageId, number> = { app: 0, photo: 12, mountains: 30, sky: 10, layers: 12, science: 8, pole: 18, surface: 17, music: 5 };
+
+/** The app's code is in by the time anything here runs: that row starts out done, with the time the page took to get it. */
+const appStage = (): Stage => ({ id: 'app', state: 'done', frac: null, ms: Math.round(performance.now()) });
+const freshStage = (id: StageId): Stage => (id === 'app' ? appStage() : { id, state: 'waiting', frac: null });
 
 /** The state before anything has started (the start screen draws this on its first frame). */
 export function initialProgress(): LoadProgress {
-  return { pct: 0, step: t('start.step.start'), done: false, stages: STAGES.map(id => ({ id, state: 'waiting', frac: null })) };
+  return { pct: 0, step: t('start.step.start'), done: false, stages: STAGES.map(freshStage) };
 }
 
 export interface PreloadDeps {
@@ -42,6 +48,10 @@ export interface PreloadDeps {
   imageryPending?: () => number;
   /** The "Stand here" view; prewarm() (when it exists) loads its textures and models and compiles its shaders. */
   lander?: { prewarm?: () => Promise<unknown> };
+  /** The files behind the Layers switches, downloaded into the browser cache so switching one on is instant. */
+  layerFiles?: () => Promise<string[]>;
+  /** Fetch compact map bytes only. Decode work must not hold up the Enter button. */
+  warmLayers?: (onFrac: (frac: number) => void) => Promise<boolean | void>;
   /** The view the user will see first. */
   startView: CameraPose;
   /** Views to visit invisibly (camera jumps there, tiles load, shaders compile), in order. Called once the height map is loaded. */
@@ -123,6 +133,21 @@ async function fetchSurfaceFiles(onFrac: (f: number) => void, cancelled: () => b
   await Promise.all([lane(), lane(), lane()]);
 }
 
+/** Download files into the browser cache, a couple at a time, reporting how many are in. True when all arrived. */
+async function fetchFiles(files: string[], onFrac: (f: number) => void, cancelled: () => boolean, lanes = 2): Promise<boolean> {
+  let done = 0, ok = true;
+  const queue = [...files];
+  const lane = async () => {
+    for (let f = queue.shift(); f && !cancelled(); f = queue.shift()) {
+      const good = await fetch(f).then(r => r.arrayBuffer().then(() => r.ok)).catch(() => false);
+      ok = ok && good;
+      onFrac(++done / files.length);
+    }
+  };
+  await Promise.all(Array.from({ length: lanes }, lane));
+  return ok && done === files.length;
+}
+
 export async function runPreload(viewer: Viewer, d: PreloadDeps): Promise<void> {
   const stop = () => viewer.isDestroyed() || !!d.cancelled?.();
   const cancelled = () => !!d.cancelled?.();
@@ -130,7 +155,7 @@ export async function runPreload(viewer: Viewer, d: PreloadDeps): Promise<void> 
   const trace: string[] = [];
   const hook = (window as unknown as { __moonda?: Record<string, unknown> }).__moonda;
   if (hook) hook.preloadTrace = trace;
-  const stages = new Map<StageId, Stage>(STAGES.map(id => [id, { id, state: 'waiting', frac: null }]));
+  const stages = new Map<StageId, Stage>(STAGES.map(id => [id, freshStage(id)]));
   const began = new Map<StageId, number>();
   let finished = false, lastPct = -1, lastSent = '';
 
@@ -218,6 +243,21 @@ export async function runPreload(viewer: Viewer, d: PreloadDeps): Promise<void> 
       const hour = 3600_000;
       return withTimeout(analyseSpotAsync({ lat: -89.45, lon: -136.7, mastM: 2, startMs: Math.floor(Date.now() / hour) * hour, days: 14 }, 40000), 40000, cancelled);
     });
+    // Only downloads belong to this row. Maps are decoded off the main thread when used.
+    const layers = d.layerFiles || d.warmLayers
+      ? stage('layers', async () => {
+        const downloads = (async () => {
+        let ok = true;
+        let fetched = d.layerFiles ? 0 : 1, warmed = d.warmLayers ? 0 : 1;
+        const report = () => frac('layers')(d.layerFiles && d.warmLayers ? fetched * 0.45 + warmed * 0.55 : d.layerFiles ? fetched : warmed);
+        const fetchJob = d.layerFiles ? d.layerFiles().then(files => fetchFiles(files, f => { fetched = f; report(); }, cancelled)) : Promise.resolve();
+        const warmJob = d.warmLayers && !stop() ? d.warmLayers(f => { warmed = f; report(); }).then(result => { ok = result !== false; }) : Promise.resolve();
+        await Promise.all([fetchJob, warmJob]);
+        return ok;
+        })();
+        return await withTimeout(downloads, 90000, cancelled) && await downloads;
+      })
+      : Promise.resolve(mark('layers', 'off'));
     const surface = stage('surface', async () => {
       const prewarm = d.lander?.prewarm;
       if (typeof prewarm === 'function') return withTimeout(prewarm.call(d.lander), 60000, cancelled);
@@ -237,7 +277,7 @@ export async function runPreload(viewer: Viewer, d: PreloadDeps): Promise<void> 
       }
       return ok;
     });
-    await Promise.all([science, surface, sky]);
+    await Promise.all([science, surface, sky, layers]);
     if (stop()) return;
 
     // back to the opening view, at the graphics mode chosen now (it may have changed while loading)

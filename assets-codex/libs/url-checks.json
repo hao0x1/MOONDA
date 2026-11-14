@@ -1,0 +1,120 @@
+{
+  "checkedDate": "2026-11-14",
+  "method": "HTTP GET; response body not saved or executed",
+  "checks": [
+    {
+      "url": "https://arxiv.org/abs/1401.3843",
+      "status": 200,
+      "finalUrl": "https://arxiv.org/abs/1401.3843",
+      "contentType": "text/html; charset=utf-8"
+    },
+    {
+      "url": "https://cesium.com/learn/cesiumjs/ref-doc/BillboardGraphics.html",
+      "status": 200,
+      "finalUrl": "https://cesium.com/learn/cesiumjs/ref-doc/BillboardGraphics.html",
+      "contentType": "text/html"
+    },
+    {
+      "url": "https://cesium.com/learn/cesiumjs/ref-doc/SceneTransforms.html",
+      "status": 200,
+      "finalUrl": "https://cesium.com/learn/cesiumjs/ref-doc/SceneTransforms.html",
+      "contentType": "text/html"
+    },
+    {
+      "url": "https://d3js.org/d3-contour/contour",
+      "status": 200,
+      "finalUrl": "https://d3js.org/d3-contour/contour",
+      "contentType": "text/html; charset=utf-8"
+    },
+    {
+      "url": "https://github.com/CesiumGS/cesium",
+      "status": 200,
+      "finalUrl": "https://github.com/CesiumGS/cesium",
+      "contentType": "text/html; charset=utf-8"
+    },
+    {
+      "url": "https://github.com/anvaka/ngraph.graph",
+      "status": 200,
+      "finalUrl": "https://github.com/anvaka/ngraph.graph",
+      "contentType": "text/html; charset=utf-8"
+    },
+    {
+      "url": "https://github.com/anvaka/ngraph.path",
+      "status": 200,
+      "finalUrl": "https://github.com/anvaka/ngraph.path",
+      "contentType": "text/html; charset=utf-8"
+    },
+    {
+      "url": "https://github.com/d3/d3-contour",
+      "status": 200,
+      "finalUrl": "https://github.com/d3/d3-contour",
+      "contentType": "text/html; charset=utf-8"
+    },
+    {
+      "url": "https://github.com/davidjerleke/embla-carousel",
+      "status": 200,
+      "finalUrl": "https://github.com/davidjerleke/embla-carousel",
+      "contentType": "text/html; charset=utf-8"
+    },
+    {
+      "url": "https://github.com/davidjerleke/embla-carousel/blob/v8.6.0/packages/embla-carousel/src/components/DragTracker.ts",
+      "status": 200,
+      "finalUrl": "https://github.com/davidjerleke/embla-carousel/blob/v8.6.0/packages/embla-carousel/src/components/DragTracker.ts",
+      "contentType": "text/html; charset=utf-8"
+    },
+    {
+      "url": "https://github.com/davidjerleke/embla-carousel/blob/v8.6.0/packages/embla-carousel/src/components/ScrollBody.ts",
+      "status": 200,
+      "finalUrl": "https://github.com/davidjerleke/embla-carousel/blob/v8.6.0/packages/embla-carousel/src/components/ScrollBody.ts",
+      "contentType": "text/html; charset=utf-8"
+    },
+    {
+      "url": "https://github.com/mourner/flatqueue",
+      "status": 200,
+      "finalUrl": "https://github.com/mourner/flatqueue",
+      "contentType": "text/html; charset=utf-8"
+    },
+    {
+      "url": "https://github.com/mourner/simplify-js",
+      "status": 200,
+      "finalUrl": "https://github.com/mourner/simplify-js",
+      "contentType": "text/html; charset=utf-8"
+    },
+    {
+      "url": "https://github.com/ncdai/react-wheel-picker",
+      "status": 200,
+      "finalUrl": "https://github.com/ncdai/react-wheel-picker",
+      "contentType": "text/html; charset=utf-8"
+    },
+    {
+      "url": "https://github.com/prettymuchbryce/easystarjs",
+      "status": 200,
+      "finalUrl": "https://github.com/prettymuchbryce/easystarjs",
+      "contentType": "text/html; charset=utf-8"
+    },
+    {
+      "url": "https://mourner.github.io/simplify-js/",
+      "status": 200,
+      "finalUrl": "https://mourner.github.io/simplify-js/",
+      "contentType": "text/html; charset=utf-8"
+    },
+    {
+      "url": "https://react-wheel-picker.chanhdai.com/docs/getting-started",
+      "status": 200,
+      "finalUrl": "https://react-wheel-picker.chanhdai.com/docs/getting-started",
+      "contentType": "text/html; charset=utf-8"
+    },
+    {
+      "url": "https://sandcastle.cesium.com/index.html?id=multiple-synced-views",
+      "status": 200,
+      "finalUrl": "https://sandcastle.cesium.com/index.html?id=multiple-synced-views",
+      "contentType": "text/html"
+    },
+    {
+      "url": "https://www.embla-carousel.com/docs/v8",
+      "status": 200,
+      "finalUrl": "https://www.embla-carousel.com/docs/v8",
+      "contentType": "text/html; charset=utf-8"
+    }
+  ]
+}

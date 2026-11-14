@@ -1,0 +1,15 @@
+{
+  "classCounts": {
+    "0": 1938582,
+    "1": 1337492,
+    "2": 18318,
+    "255": 899912
+  },
+  "northPrpZipSha256": "ecc3ea2613906ee89b38f254e9267e8abaef6b891a33f0d65400655bd5ce77f5",
+  "class0": "No prediction under these rules, not proof of no ice.",
+  "class1": "Predicted stable depth >0 and <=1m with annual maximum surface temperature >=110K.",
+  "class2": "Predicted surface cold trap: mapped permanent shadow and annual maximum surface temperature <110K.",
+  "class255": "Outside 80N or over 1000m from source triangle centre.",
+  "resolution": "Approximate 0.5km source mesh; nearest triangle centre. Image 148.4375m pixels sharpen shadow boundary only.",
+  "source": "https://pds-geosciences.wustl.edu/lro/urn-nasa-pds-lro_diviner_derived1/data_derived_prp/dlre_prp_north.tab"
+}

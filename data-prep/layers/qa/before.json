@@ -1,0 +1,10 @@
+[
+ {"do":"ready","timeout":280000},
+ {"do":"click","text":"Just enter"},
+ {"do":"wait","ms":1200},
+ {"do":"click","text":"South Pole"},
+ {"do":"wait","ms":4000},
+ {"do":"click","text":"Layers"},
+ {"do":"eval","name":"timings","js":"(async()=>{const v=window.__viewer; const rows=[]; for(const id of ['psr','waterice','danger','slope','craters','height']) {const input=document.getElementById('layer-'+id);if(!input){rows.push({id,error:'switch absent'});continue;}const old=new Map(Array.from({length:v.imageryLayers.length},(_,i)=>{const l=v.imageryLayers.get(i);return [l,l.show]}));const start=performance.now(); input.click(); const result=await new Promise(resolve=>{let off; const timer=setTimeout(()=>{off?.();resolve({ms:null,timeout:true})},60000);off=v.scene.postRender.addEventListener(()=>{const changed=Array.from({length:v.imageryLayers.length},(_,i)=>v.imageryLayers.get(i)).filter(l=>l.show&&!old.get(l));const tiles=v.scene.globe._surface._tilesToRender||[];const painted=tiles.some(t=>(t.data?.imagery||[]).some(i=>{const r=i.readyImagery;return r&&changed.includes(r.imageryLayer)&&r.texture})); if(painted){clearTimeout(timer);off();resolve({ms:Math.round((performance.now()-start)*10)/10,tiles:tiles.length});}v.scene.requestRender();}); v.scene.requestRender();}); rows.push({id,...result});input.click();await new Promise(r=>setTimeout(r,350));}return rows;})()"},
+ {"do":"shot","name":"layers-before"}
+]

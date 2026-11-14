@@ -1,0 +1,106 @@
+[
+  {
+    "id": "slim",
+    "name": "SLIM",
+    "status": "past",
+    "kind": "lander",
+    "operator": "JAXA",
+    "country": "Japan",
+    "date": "2024-01-19",
+    "lat": -13.316,
+    "lon": 25.251,
+    "precisionKm": 0.02,
+    "outcome": "success",
+    "short": "Japan landed close to its target and survived three cold lunar nights",
+    "detail": "SLIM reached its target near Shioli crater, where two small robots explored nearby. JAXA ended surface operations in August 2024 after the lander survived three lunar nights.",
+    "source": {
+      "name": "JAXA: Conclusion of Lunar Activities of SLIM",
+      "url": "https://global.jaxa.jp/press/2024/08/20240826-1_e.html"
+    },
+    "coordSource": {
+      "name": "LROC QuickMap anthropogenic_objects: SLIM; LROC landing image",
+      "url": "https://lroc.im-ldi.com/images/1358"
+    },
+    "inQuickMap": true,
+    "verify": false,
+    "note": "Landing was 19 January at 15:20 UTC, or 20 January in Japan. The supplied QuickMap point is the lander, not the two nearby robots. JAXA reported extra success despite the unusual landing attitude."
+  },
+  {
+    "id": "beresheet",
+    "name": "Beresheet",
+    "status": "past",
+    "kind": "impact",
+    "operator": "SpaceIL / Israel Aerospace Industries",
+    "country": "Israel",
+    "date": "2019-04-11",
+    "lat": 32.5953,
+    "lon": 19.3495,
+    "precisionKm": 0.03,
+    "outcome": "failed",
+    "short": "Israel's first Moon lander left a dark scar after its engine failed",
+    "detail": "Beresheet crashed after its main engine failed during descent. LROC images reveal a dark scar and bright debris in the Sea of Serenity.",
+    "source": {
+      "name": "LROC: Beresheet Crash Site Spotted",
+      "url": "https://lroc.im-ldi.com/images/1101"
+    },
+    "coordSource": {
+      "name": "LROC QuickMap anthropogenic_objects: Beresheet; LROC crash image",
+      "url": "https://lroc.im-ldi.com/images/1101"
+    },
+    "inQuickMap": true,
+    "verify": false,
+    "note": "Uses supplied QuickMap terrain-registered point; the original article gives 32.5956 N, 19.3496 E, about 9 metres away. Precision is rounded conservatively above the published 20 by 8 metre confidence interval."
+  },
+  {
+    "id": "luna-25",
+    "name": "Luna 25",
+    "status": "past",
+    "kind": "impact",
+    "operator": "Roscosmos",
+    "country": "Russia",
+    "date": "2023-08-19",
+    "lat": -57.8651,
+    "lon": 61.3588,
+    "precisionKm": 0.05,
+    "outcome": "failed",
+    "short": "A failed orbit change sent Russia's lander into a crater rim",
+    "detail": "Luna 25 crashed before its planned landing near the south pole. LROC found a new crater on the steep inner rim of Pontécoulant G, about 400 kilometres from its intended site.",
+    "source": {
+      "name": "NASA: LRO Observes Crater Likely from Luna 25 Impact",
+      "url": "https://www.nasa.gov/humans-in-space/nasas-lro-observes-crater-likely-from-luna-25-impact/"
+    },
+    "coordSource": {
+      "name": "LROC QuickMap anthropogenic_objects: Luna25; LROC impact image",
+      "url": "https://lroc.im-ldi.com/images/1311"
+    },
+    "inQuickMap": true,
+    "verify": true,
+    "note": "Crash and date are confirmed; NASA/LROC describe attribution of this new crater as likely rather than certain. The supplied QuickMap point refines the article's rounded 57.865 S, 61.360 E; 50 m uncertainty conservatively covers the original better-than-40 m location accuracy."
+  },
+  {
+    "id": "falcon-9-upper-stage-2026",
+    "name": "Falcon 9 upper-stage impact (2026)",
+    "status": "past",
+    "kind": "impact",
+    "operator": "SpaceX",
+    "country": "United States",
+    "date": "2026-08-05",
+    "lat": 19.4759,
+    "lon": -93.2862,
+    "precisionKm": 0.1,
+    "outcome": "failed",
+    "short": "A spent rocket stage made a fresh 18-metre crater on the far side",
+    "detail": "A spent Falcon 9 upper stage hit the Moon at 06:35 UTC on 5 August 2026. LROC found an 18-metre crater with bright and dark streaks of thrown-out soil.",
+    "source": {
+      "name": "LROC: Falcon 9 Impact, 18 August 2026",
+      "url": "https://www.lroc.im-ldi.com/images/1499"
+    },
+    "coordSource": {
+      "name": "LROC refined crater position; supplied QuickMap F9_2026 also contains this site",
+      "url": "https://www.lroc.im-ldi.com/images/1499"
+    },
+    "inQuickMap": true,
+    "verify": false,
+    "note": "Uses the LROC article's refined 19.4759 N, 266.7138 E, converted to -93.2862 east-positive longitude. Supplied QuickMap has 19.473 N, -93.286 E, about 88 m away; 0.1 km is conservative because the article gives no formal uncertainty. Outcome failed describes the unplanned surface collision, not the landers launched by this stage."
+  }
+]

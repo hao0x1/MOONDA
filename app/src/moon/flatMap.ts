@@ -18,27 +18,27 @@
 
 import type { FlatLabel, PlaceIcon } from './labels';
 import { MAX_LABELS, MIN_PX } from './labels';
-import type { Place } from '../data/places';
 import { MOON_R, type V3 } from './frame';
 import { DETAIL_COLORS } from './dataDetail';
+import { POLAR_EXTENT_M } from './layers';
 import { SUN_URL, EARTH_URL } from '../ui/glyphs';
+import type { RouteResult } from '../science/route';
+import { MAP_DETAIL_SOURCES, POLAR_HALF as PHOTO_POLAR_HALF, POLAR_MAX_LEVEL, TILE, TREK_MAX_LEVEL, detailUrl, mapImagery, polarXY, trekUrl, type MapPhotoSource } from '../explore/mapImagery';
 
 const DEG = Math.PI / 180;
 const M_PER_DEG = MOON_R * DEG; // 30.3 km
-// The closest zoom (km across the free part of the screen), where the picture still looks good: the whole-Moon
-// picture is 1.3 km per pixel, about 6 screen pixels per picture pixel at 250 km (sharpened, see samplePic);
-// closer, it only gets more blurred (tried 160 km and 20 km: soft mush). The LOLA height map stored with the app
-// (dem/global16.bin, 1.9 km per pixel) is coarser than the photo, so hill shading from it adds no detail.
-// Round the poles the sharper polar pictures (333 m per pixel, south6.jpg / north6.jpg, the files the globe uses)
-// are drawn between about 56 and 76 degrees; closer to a pole the flat map's own sideways stretch is the limit
-// (a degree of longitude there is only a few km), so the closest zoom stays the same everywhere.
-const MIN_VIEW_KM = 250;
+// Fine tiles share the surface maps' checked catalogue and cache. At 5 km across, use the
+// real last level of each photo; beyond this the globe is a better way to go closer.
+const MIN_VIEW_KM = 5;
 /** the polar pictures: display-frame boxes (degrees) around the true south / north pole, as in base.json */
 const POLAR_PICS = [
   { file: 'south6.jpg', west: 56.25, north: 33.75, span: 67.5 },
   { file: 'north6.jpg', west: -123.75, north: 33.75, span: 67.5 },
 ] as const;
-const BACKDROP: V3 = [10 / 255, 11 / 255, 15 / 255];
+/** The south-pole science maps (layers.ts, POLAR_EXTENT_M), in Moon radii: half their width, and where they are cut off (80.02° S, as on the globe). */
+const POLAR_HALF = POLAR_EXTENT_M / MOON_R;
+const POLAR_RHO_CLIP = 2 * Math.cos(-80.02 * DEG) / (1 - Math.sin(-80.02 * DEG));
+const BACKDROP: V3 =[10 / 255, 11 / 255, 15 / 255];
 const NX = 192, NY = 96;
 const HAIR = ' ';
 
@@ -48,8 +48,11 @@ export interface Insets { top: number; bottom: number; left: number; right: numb
 export interface FlatHooks {
   /** names and places the switches allow */
   labels(): FlatLabel[];
-  icon(kind: Place['kind']): PlaceIcon | undefined;
+  icon(kind: string): PlaceIcon | undefined;
   pins(): FlatPin[];
+  route?(): RouteResult | null;
+  destination?(): { lat: number; lon: number } | null;
+  choosingDestination?(): boolean;
   /** screen boxes of the page's own panels and buttons (canvas CSS px) */
   panelBoxes(): { x0: number; y0: number; x1: number; y1: number }[];
   insets(): Insets;
@@ -69,15 +72,33 @@ const easeOut = (t: number) => 1 - (1 - t) ** 3;
 const wrap180 = (d: number) => ((((d + 180) % 360) + 360) % 360) - 180;
 const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
 
+// These helpers are used by both the draw and pick paths, in CSS pixels, never device pixels.
+export function flatScreen(lat: number, lon: number, v: FlatView, origin: { cx: number; cy: number }) {
+  return { x: origin.cx + wrap180(lon - v.lonC) * v.s, y: origin.cy - (lat - v.latC) * v.s };
+}
+export function flatGround(x: number, y: number, v: FlatView, origin: { cx: number; cy: number }) {
+  return { lat: v.latC - (y - origin.cy) / v.s, lon: wrap180(v.lonC + (x - origin.cx) / v.s) };
+}
+
+
 const VS = `#version 300 es
 precision highp float;
 in vec2 aP; // (lon - centre lon, lat) in radians
 uniform float uC, uA, uB, uS, uD;
 uniform vec2 uO;
+uniform vec4 uFlat; // scale, latitude centre, CSS origin x/y
+uniform vec2 uSize;
 uniform mat4 uProj;
 out vec2 vLL;
+invariant gl_Position; // the coloured layers draw the same mesh again on top: same depth, bit for bit
 void main() {
   float a = aP.x, lat = aP.y;
+  if (uA >= 1.0 && uB >= 1.0) {
+    vec2 pixel = vec2(uFlat.z + degrees(a) * uFlat.x, uFlat.w - (degrees(lat) - uFlat.y) * uFlat.x);
+    vLL = aP;
+    gl_Position = vec4(pixel.x / uSize.x * 2.0 - 1.0, 1.0 - pixel.y / uSize.y * 2.0, 0.0, 1.0);
+    return;
+  }
   vec3 sph = vec3(cos(lat) * sin(a), sin(lat), cos(lat) * cos(a));
   // the cylinder that unrolls: curvature k from 1 (radius 1, the sphere's size) to 0, width from 1 to uS per radian
   float L = mix(1.0, uS, uB), k = 1.0 - uB, s = a * L;
@@ -96,7 +117,7 @@ const FS = `#version 300 es
 precision highp float;
 in vec2 vLL;
 uniform sampler2D uTex;
-uniform float uC, uSunOn, uDetail, uGrid;
+uniform float uC, uSunOn, uDetail, uGrid, uPhoto;
 uniform vec3 uSun;
 uniform vec3 uTint0, uTint1, uTint2;
 uniform sampler2D uPolS, uPolN;
@@ -158,6 +179,8 @@ void main() {
       }
     }
   }
+  // Photo switched off: the plain grey the globe shows then (MoonMap.tsx, globe.baseColor #3a3c41)
+  g = mix(0.235, g, uPhoto);
   vec3 n = vec3(cos(lat) * cos(lon), cos(lat) * sin(lon), sin(lat));
   float d = dot(n, uSun);
   float day = smoothstep(-0.035, 0.12, d);
@@ -178,6 +201,111 @@ void main() {
   }
   o = vec4(c, 1.0);
 }`;
+
+// One coloured layer (Height colours, a south-pole science map), drawn over the photo with the same mesh.
+//   uKind 0: a whole-Moon picture on the true lon/lat grid (Moon Trek: column 0 at 180° W, row 0 at 90° N),
+//            drawn north of uLatMin only (the sharper polar map takes over south of it, as on the globe)
+//   uKind 1: a south-polar-stereographic picture (x = rho·sin(lon), y = rho·cos(lon), ±uHalf Moon radii,
+//            row 0 = +y, as createPolarRasterProvider in imagery.ts), cut off crisply at uRhoClip
+const OFS = `#version 300 es
+precision highp float;
+in vec2 vLL;
+uniform sampler2D uOv;
+uniform float uC, uSunOn, uKind, uAlpha, uLatMin, uHalf, uRhoClip;
+uniform vec3 uSun;
+out vec4 o;
+const float PI = 3.14159265;
+void main() {
+  float lon = uC + vLL.x, lat = vLL.y;
+  float sl = sin(lat), cl = cos(lat);
+  vec4 c;
+  if (uKind < 0.5) {
+    c = texture(uOv, vec2(lon / (2.0 * PI) + 0.5, 0.5 - lat / PI));
+    c.a *= clamp((lat - uLatMin) / max(fwidth(lat), 1e-6) + 0.5, 0.0, 1.0);
+  } else {
+    float f = 2.0 * cl / max(1.0 - sl, 1e-6);
+    vec2 p = vec2(f * sin(lon), f * cos(lon));
+    float rho = length(p);
+    c = texture(uOv, vec2((p.x + uHalf) / (2.0 * uHalf), (uHalf - p.y) / (2.0 * uHalf)));
+    c.a *= lat > 0.0 ? 0.0 : clamp((uRhoClip - rho) / max(fwidth(rho), 1e-9) + 0.5, 0.0, 1.0);
+  }
+  vec3 n = vec3(cl * cos(lon), cl * sin(lon), sl);
+  float d = dot(n, uSun);
+  float day = smoothstep(-0.035, 0.12, d);
+  float lit = mix(1.0, mix(0.2, 0.9 + 0.32 * clamp(d, 0.0, 1.0), day), uSunOn);
+  o = vec4(c.rgb * lit, c.a * uAlpha);
+}`;
+
+// Detail uses only the visible tile rectangles, without re-projecting or reading back any pixels.
+const TVS = `#version 300 es
+precision highp float;
+in vec2 aP;
+uniform vec4 uRect;
+uniform vec2 uSize;
+out vec2 vPixel;
+void main() {
+  vPixel = uRect.xy + aP * uRect.zw;
+  gl_Position = vec4(vPixel.x / uSize.x * 2.0 - 1.0, 1.0 - vPixel.y / uSize.y * 2.0, 0.0, 1.0);
+}`;
+const TFS = `#version 300 es
+precision highp float;
+in vec2 vPixel;
+uniform sampler2D uTex;
+uniform vec4 uView; // longitude centre, latitude centre, scale, alpha
+uniform vec2 uOrigin;
+uniform vec4 uBounds; // west / north / width / height, or polar x / y / span / span
+uniform float uPolar, uSunOn, uDetail, uGrid;
+uniform vec3 uSun, uTint0, uTint1, uTint2;
+out vec4 o;
+const float PI = 3.14159265359;
+void main() {
+  float lonD = uView.x + (vPixel.x - uOrigin.x) / uView.z;
+  float latD = uView.y - (vPixel.y - uOrigin.y) / uView.z;
+  float lon = radians(lonD), lat = radians(latD);
+  vec2 uv;
+  if (uPolar > 0.5) {
+    if (latD > -79.5 || latD < -90.0) discard;
+    float rho = 3474800.0 * tan(PI / 4.0 + lat / 2.0);
+    vec2 p = vec2(rho * sin(lon), rho * cos(lon));
+    uv = vec2((p.x - uBounds.x) / uBounds.z, (uBounds.y - p.y) / uBounds.w);
+  } else uv = vec2((lonD - uBounds.x) / uBounds.z, (uBounds.y - latD) / uBounds.w);
+  if (min(uv.x, uv.y) < 0.0 || max(uv.x, uv.y) > 1.0 || abs(latD) > 90.0) discard;
+  vec4 photo = texture(uTex, uv);
+  if (photo.a < 0.005) discard;
+  vec3 n = vec3(cos(lat) * cos(lon), cos(lat) * sin(lon), sin(lat));
+  float d = dot(n, uSun), day = smoothstep(-0.035, 0.12, d);
+  float lit = mix(1.0, mix(0.2, 0.9 + 0.32 * clamp(d, 0.0, 1.0), day), uSunOn);
+  vec3 colour = photo.rgb * lit;
+  if (uDetail > 0.0) {
+    float l = mod(lonD + 540.0, 360.0) - 180.0;
+    vec3 tint = latD < -80.0 ? uTint0 : (l < -90.0 ? uTint2 : uTint1);
+    colour = mix(colour, tint * (0.35 + 0.65 * lit), 0.4 * uDetail);
+  }
+  if (uGrid > 0.0) {
+    vec2 dg = vec2(lonD, latD) / 30.0, w = fwidth(dg);
+    vec2 f = abs(fract(dg + 0.5) - 0.5) / max(w, vec2(1e-6));
+    float line = 1.0 - clamp(min(f.x, f.y) - 0.25, 0.0, 1.0);
+    colour = mix(colour, vec3(0.85, 0.9, 1.0), 0.16 * line * uGrid);
+  }
+  o = vec4(colour, photo.a * uView.w);
+}`;
+
+/** A coloured layer for the flat map. `polar`: a south-polar map file; `global`: a Moon Trek layer, assembled from its level-2 tiles. */
+export type FlatOverlay =
+  | { id: string; kind: 'polar'; url: string; alpha: number }
+  | { id: string; kind: 'global'; layer: string; ext: string; latMin: number; alpha: number };
+
+/** Moon Trek tile (true lon/lat, 256 px, level z = 2^(z+1) x 2^z tiles); the same address the globe's workers use. */
+const trekTile = (layer: string, ext: string, z: number, x: number, y: number) =>
+  `https://trek.nasa.gov/tiles/Moon/EQ/${layer}/1.0.0/default/default028mm/${z}/${y}/${x}.${ext}`;
+/** The Moon Trek level the flat map's whole-Moon colour layers are built from (8 x 4 tiles, 2048 x 1024 px). */
+export const FLAT_TREK_LEVEL = 2;
+/** Every tile of a Moon Trek layer at the flat map's level (for preloading them). */
+export function flatTrekTiles(layer: string, ext: string): string[] {
+  const z = FLAT_TREK_LEVEL, out: string[] = [];
+  for (let y = 0; y < 2 ** z; y++) for (let x = 0; x < 2 ** (z + 1); x++) out.push(trekTile(layer, ext, z, x, y));
+  return out;
+}
 
 const RS = `#version 300 es
 precision highp float;
@@ -232,13 +360,13 @@ export class FlatMap {
   private pol: (WebGLTexture | null)[] = [null, null];
   private polState: ('none' | 'loading' | 'ready' | 'failed')[] = ['none', 'none'];
   private light = false;
-  /** width of the whole-Moon picture in use (8192, or 2048 in Smooth graphics) */
-  private texW = 8192;
   private u: Record<string, WebGLUniformLocation | null> = {};
   private preparing: Promise<void> | null = null;
   private hooks: FlatHooks;
   private raf = 0;
   private dpr = 1;
+  private width = 1;
+  private height = 1;
   // what is drawn
   view: FlatView = { lonC: 0, latC: 0, s: 4 };
   morphA = 1; morphB = 1;
@@ -251,6 +379,13 @@ export class FlatMap {
   sun: V3 = [1, 0, 0];
   earth: V3 | null = null;
   sunOn = true;
+  /** the Moon photo layer is switched on (off: plain grey, as the globe) */
+  photo = true;
+  /** the coloured layers switched on, bottom first (setOverlays) */
+  private overlays: FlatOverlay[] = [];
+  private ovProg: WebGLProgram | null = null;
+  private ovU: Record<string, WebGLUniformLocation | null> = {};
+  private ovTex = new Map<string, { state: 'loading' | 'ready' | 'failed'; tex: WebGLTexture | null }>();
   /** the flat map owns the screen (input, keys) */
   active = false;
   /** a transition is running: input is ignored */
@@ -265,7 +400,7 @@ export class FlatMap {
   private entries: FlatLabel[] | null = null;
   // motion
   private flight: { from: FlatView; to: FlatView; t0: number; dur: number; done: () => void } | null = null;
-  private zoomTarget: { s: number; x: number; y: number; lat: number; lon: number } | null = null;
+  private zoomTarget: { s: number; from: number; t0: number; x: number; y: number; lat: number; lon: number } | null = null;
   private fling: { vx: number; vy: number } | null = null;
   private drag: { x0: number; y0: number; lat: number; lon: number; moved: boolean; hist: { x: number; y: number; t: number }[] } | null = null;
   private clickTimer = 0;
@@ -275,9 +410,21 @@ export class FlatMap {
   private pillTimer = 0;
   private keysHeld = new Set<string>();
   private lastTick = 0;
+  private drawn: { view: FlatView; origin: { cx: number; cy: number } } | null = null;
+  private tileProg: WebGLProgram | null = null;
+  private tileU: Record<string, WebGLUniformLocation | null> = {};
+  private tileVao: WebGLVertexArrayObject | null = null;
+  private tileTextures = new Map<string, { texture: WebGLTexture; bitmap: ImageBitmap; used: number }>();
+  private tileKeys = new Set<string>();
+  private tileFrame = 0;
+  private tileFading = false;
+  private tileLevels = new Set<string>();
+  private offImagery: () => void;
+  private alive = true;
 
   constructor(parent: HTMLElement, hooks: FlatHooks) {
     this.hooks = hooks;
+    this.offImagery = mapImagery.subscribe(() => { if (this.alive && this.active) this.request(); });
     this.el = document.createElement('div');
     this.el.className = 'flat-map';
     this.el.style.cssText = 'position:absolute;inset:0;z-index:1;opacity:0;pointer-events:none;visibility:hidden;touch-action:none;';
@@ -296,7 +443,7 @@ export class FlatMap {
     this.ui.addEventListener('pointerdown', this.onDown);
     this.ui.addEventListener('pointermove', this.onMove);
     this.ui.addEventListener('pointerup', this.onUp);
-    this.ui.addEventListener('pointercancel', this.onUp);
+    this.ui.addEventListener('pointercancel', this.onCancel);
     this.ui.addEventListener('pointerleave', () => { if (!this.drag) { this.setHover(null); this.hooks.onHover(null); } });
     this.ui.addEventListener('dblclick', this.onDbl);
     this.ui.addEventListener('wheel', this.onWheel, { passive: false });
@@ -316,7 +463,17 @@ export class FlatMap {
       const res = await fetch(new URL(light ? './data/base/v5/moon2k.jpg' : './data/base/v5/moon8k.jpg', document.baseURI).href);
       const bmp = await createImageBitmap(await res.blob(), { colorSpaceConversion: 'none', premultiplyAlpha: 'none' });
       this.prog = compile(gl, VS, FS);
-      for (const n of ['uC', 'uA', 'uB', 'uS', 'uD', 'uO', 'uProj', 'uTex', 'uSunOn', 'uDetail', 'uGrid', 'uSun', 'uTint0', 'uTint1', 'uTint2', 'uPolS', 'uPolN', 'uPolOn', 'uSharp']) this.u[n] = gl.getUniformLocation(this.prog, n);
+      for (const n of ['uC', 'uA', 'uB', 'uS', 'uD', 'uO', 'uFlat', 'uSize', 'uProj', 'uTex', 'uSunOn', 'uDetail', 'uGrid', 'uPhoto', 'uSun', 'uTint0', 'uTint1', 'uTint2', 'uPolS', 'uPolN', 'uPolOn', 'uSharp']) this.u[n] = gl.getUniformLocation(this.prog, n);
+      this.ovProg = compile(gl, VS, OFS);
+      for (const n of ['uC', 'uA', 'uB', 'uS', 'uD', 'uO', 'uFlat', 'uSize', 'uProj', 'uOv', 'uSunOn', 'uSun', 'uKind', 'uAlpha', 'uLatMin', 'uHalf', 'uRhoClip']) this.ovU[n] = gl.getUniformLocation(this.ovProg, n);
+      this.tileProg = compile(gl, TVS, TFS);
+      for (const n of ['uRect', 'uSize', 'uView', 'uOrigin', 'uBounds', 'uPolar', 'uTex', 'uSunOn', 'uSun', 'uDetail', 'uGrid', 'uTint0', 'uTint1', 'uTint2']) this.tileU[n] = gl.getUniformLocation(this.tileProg, n);
+      this.tileVao = gl.createVertexArray();
+      gl.bindVertexArray(this.tileVao);
+      const tileBuffer = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, tileBuffer);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([0, 0, 0, 1, 1, 0, 1, 1]), gl.STATIC_DRAW);
+      gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+      gl.bindVertexArray(null);
       // mesh
       const v = new Float32Array((NX + 1) * (NY + 1) * 2);
       let k = 0;
@@ -345,7 +502,6 @@ export class FlatMap {
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
       const W = Math.min(gl.getParameter(gl.MAX_TEXTURE_SIZE) as number, bmp.width), H = W / 2;
-      this.texW = W;
       bmp.close();
       const tex = gl.createTexture()!;
       gl.bindTexture(gl.TEXTURE_2D, tex);
@@ -415,8 +571,65 @@ export class FlatMap {
     })();
   }
 
+  /** The coloured layers to draw over the photo, bottom first. Their pictures load the first time they are asked for. */
+  setOverlays(list: FlatOverlay[]) {
+    this.overlays = list;
+    for (const o of list) if (!this.ovTex.has(o.id)) this.loadOverlay(o);
+    this.request();
+  }
+
+  private loadOverlay(o: FlatOverlay) {
+    const entry: { state: 'loading' | 'ready' | 'failed'; tex: WebGLTexture | null } = { state: 'loading', tex: null };
+    this.ovTex.set(o.id, entry);
+    void (async () => {
+      try {
+        let src: ImageBitmap | OffscreenCanvas | HTMLCanvasElement;
+        if (o.kind === 'polar') {
+          const res = await fetch(new URL(o.url, document.baseURI).href);
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          src = await createImageBitmap(await res.blob(), { colorSpaceConversion: 'none', premultiplyAlpha: 'none' });
+        } else {
+          // the whole-Moon layer from its Moon Trek tiles (a missing tile stays see-through)
+          const z = FLAT_TREK_LEVEL, nx = 2 ** (z + 1), ny = 2 ** z;
+          const cv = typeof OffscreenCanvas !== 'undefined' ? new OffscreenCanvas(nx * 256, ny * 256) : Object.assign(document.createElement('canvas'), { width: nx * 256, height: ny * 256 });
+          const ctx = cv.getContext('2d') as CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
+          let got = 0;
+          await Promise.all(Array.from({ length: nx * ny }, async (_, i) => {
+            const x = i % nx, y = Math.floor(i / nx);
+            try {
+              const r = await fetch(trekTile(o.layer, o.ext, z, x, y));
+              if (!r.ok) return;
+              const b = await createImageBitmap(await r.blob(), { colorSpaceConversion: 'none', premultiplyAlpha: 'none' });
+              ctx.drawImage(b, x * 256, y * 256, 256, 256); b.close(); got++;
+            } catch { /* offline: that square stays empty */ }
+          }));
+          if (!got) throw new Error('no tiles');
+          src = cv;
+        }
+        const gl = this.gl, tex = gl.createTexture()!;
+        gl.bindTexture(gl.TEXTURE_2D, tex);
+        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+        gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
+        gl.pixelStorei(gl.UNPACK_ALIGNMENT, 4);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, src as TexImageSource);
+        if ('close' in src && typeof src.close === 'function') src.close();
+        gl.generateMipmap(gl.TEXTURE_2D);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, o.kind === 'global' ? gl.REPEAT : gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        entry.tex = tex; entry.state = 'ready';
+        this.request();
+      } catch (e) {
+        entry.state = 'failed';
+        this.ovTex.delete(o.id); // asked for again the next time the layer is switched on
+        console.warn('Flat map: layer not available', o.id, e);
+      }
+    })();
+  }
+
   // ---- geometry ----------------------------------------------------------------------------
-  private size() { return { W: this.ui.clientWidth || 1, H: this.ui.clientHeight || 1 }; }
+  private size() { return { W: this.width, H: this.height }; }
   /** The free part of the screen (between the bars and panels), canvas CSS px. */
   free() {
     const { W, H } = this.size();
@@ -425,8 +638,8 @@ export class FlatMap {
     return { x0, x1, y0, y1, w: x1 - x0, h: y1 - y0, cx: (x0 + x1) / 2, cy: (y0 + y1) / 2 };
   }
   fitScale() { const f = this.free(); return Math.min(f.w / 360, f.h / 180); }
-  /** The closest zoom (a little further out with the smaller picture of Smooth graphics). */
-  maxScale() { const f = this.free(); return f.w / (MIN_VIEW_KM * Math.sqrt(8192 / this.texW) * 1000 / M_PER_DEG); }
+  /** The stored photo is a fallback; real tiles allow the same 5 km limit in either graphics mode. */
+  maxScale() { const f = this.free(); return f.w / (MIN_VIEW_KM * 1000 / M_PER_DEG); }
   /** Keep the map's top and bottom edges from leaving the free area once it is taller than it. */
   private clampView(v: FlatView): FlatView {
     const f = this.free();
@@ -438,14 +651,15 @@ export class FlatMap {
   wholeView(lonC = this.view.lonC): FlatView { return { lonC, latC: 0, s: this.fitScale() }; }
   toScreen(lat: number, lon: number, v = this.view) {
     const f = this.free();
-    return { x: f.cx + wrap180(lon - v.lonC) * v.s, y: f.cy - (lat - v.latC) * v.s };
+    return flatScreen(lat, lon, v, f);
   }
   toLatLon(x: number, y: number, v = this.view) {
     const f = this.free();
-    return { lat: v.latC - (y - f.cy) / v.s, lon: wrap180(v.lonC + (x - f.cx) / v.s) };
+    return flatGround(x, y, v, f);
   }
 
   resize() {
+    this.width = this.ui.clientWidth || 1; this.height = this.ui.clientHeight || 1;
     const { W, H } = this.size();
     this.dpr = Math.min(2, window.devicePixelRatio || 1);
     for (const c of [this.glCanvas, this.ui]) {
@@ -466,7 +680,7 @@ export class FlatMap {
     let more = this.stepMotion(now, dt);
     if (this.active && (this.view !== before || this.drag)) this.hooks.onView?.((this.free().h / this.view.s) * M_PER_DEG / 1000 / (2 * Math.tan(this.fovy / 2)));
     this.draw();
-    more = this.drawOverlay(dt) || more;
+    more = this.drawOverlay(dt) || this.tileFading || more;
     if (this.busy) { if (this.lastFrame) this.frameLog.push(now - this.lastFrame); this.lastFrame = now; } else this.lastFrame = 0;
     if (more || this.busy) this.request();
   };
@@ -486,19 +700,27 @@ export class FlatMap {
     // perspective camera on the z axis, looking at the centre (as Cesium's camera at the whole-Moon pose)
     const aspect = W / H, f = 1 / Math.tan(this.fovy / 2), near = 0.05, far = 60;
     const P = new Float32Array([f / aspect, 0, 0, 0, 0, f, 0, 0, 0, 0, (far + near) / (near - far), -1, 0, 0, (2 * far * near) / (near - far), 0]);
-    gl.uniformMatrix4fv(this.u.uProj, false, P);
     // the plane (at z = 1) in world units per screen pixel
     const k = (this.camD - 1) * 2 * Math.tan(this.fovy / 2) / H;
     const v = this.view, fr = this.free();
+    this.drawn = { view: { ...v }, origin: { cx: fr.cx, cy: fr.cy } };
     const sRad = v.s / DEG * k;
-    gl.uniform1f(this.u.uC, v.lonC * DEG);
-    gl.uniform1f(this.u.uA, this.morphA);
-    gl.uniform1f(this.u.uB, this.morphB);
-    gl.uniform1f(this.u.uS, sRad);
-    gl.uniform1f(this.u.uD, this.camD);
-    gl.uniform2f(this.u.uO, (fr.cx - W / 2) * k, (H / 2 - fr.cy) * k - v.latC * DEG * sRad);
-    gl.uniform1f(this.u.uSunOn, this.sunOn ? 1 : 0);
-    gl.uniform3f(this.u.uSun, this.sun[0], this.sun[1], this.sun[2]);
+    // the mesh's shape and the light: the same for the photo and for each coloured layer drawn over it
+    const shared = (u: Record<string, WebGLUniformLocation | null>) => {
+      gl.uniformMatrix4fv(u.uProj, false, P);
+      gl.uniform4f(u.uFlat, v.s, v.latC, fr.cx, fr.cy);
+      gl.uniform2f(u.uSize, W, H);
+      gl.uniform1f(u.uC, v.lonC * DEG);
+      gl.uniform1f(u.uA, this.morphA);
+      gl.uniform1f(u.uB, this.morphB);
+      gl.uniform1f(u.uS, sRad);
+      gl.uniform1f(u.uD, this.camD);
+      gl.uniform2f(u.uO, (fr.cx - W / 2) * k, (H / 2 - fr.cy) * k - v.latC * DEG * sRad);
+      gl.uniform1f(u.uSunOn, this.sunOn ? 1 : 0);
+      gl.uniform3f(u.uSun, this.sun[0], this.sun[1], this.sun[2]);
+    };
+    shared(this.u);
+    gl.uniform1f(this.u.uPhoto, this.photo ? 1 : 0);
     gl.uniform1f(this.u.uDetail, this.detail);
     gl.uniform1f(this.u.uGrid, this.grid * this.morphB);
     const t = (c: [number, number, number]) => [c[0] / 255, c[1] / 255, c[2] / 255] as const;
@@ -515,10 +737,199 @@ export class FlatMap {
     for (let i = 0; i < 2; i++) { gl.activeTexture(gl.TEXTURE1 + i); gl.bindTexture(gl.TEXTURE_2D, this.pol[i] ?? this.tex); }
     gl.uniform1i(this.u.uPolS, 1); gl.uniform1i(this.u.uPolN, 2);
     gl.uniform2f(this.u.uPolOn, this.pol[0] ? 1 : 0, this.pol[1] ? 1 : 0);
-    gl.uniform1f(this.u.uSharp, this.light ? 0 : 1);
+    gl.uniform1f(this.u.uSharp, this.light || v.s > 32 || this.zoomTarget || this.drag ? 0 : 1);
     gl.bindVertexArray(this.vao);
     gl.drawElements(gl.TRIANGLES, this.nIdx, gl.UNSIGNED_SHORT, 0);
+    this.drawDetail();
+    gl.bindVertexArray(this.vao);
+    // the coloured layers, each the same mesh again, blended over the photo (the canvas keeps its own alpha)
+    const ready = this.overlays.filter(o => this.ovTex.get(o.id)?.state === 'ready' && o.alpha > 0);
+    if (ready.length && this.ovProg) {
+      gl.useProgram(this.ovProg);
+      shared(this.ovU);
+      gl.depthFunc(gl.LEQUAL);
+      gl.depthMask(false);
+      gl.enable(gl.BLEND);
+      gl.blendFuncSeparate(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA, gl.ZERO, gl.ONE);
+      gl.activeTexture(gl.TEXTURE0);
+      gl.uniform1i(this.ovU.uOv, 0);
+      gl.uniform1f(this.ovU.uHalf, POLAR_HALF);
+      gl.uniform1f(this.ovU.uRhoClip, POLAR_RHO_CLIP);
+      for (const o of ready) {
+        gl.bindTexture(gl.TEXTURE_2D, this.ovTex.get(o.id)!.tex);
+        gl.uniform1f(this.ovU.uKind, o.kind === 'polar' ? 1 : 0);
+        gl.uniform1f(this.ovU.uAlpha, o.alpha);
+        gl.uniform1f(this.ovU.uLatMin, o.kind === 'global' ? o.latMin * DEG : -10);
+        gl.drawElements(gl.TRIANGLES, this.nIdx, gl.UNSIGNED_SHORT, 0);
+      }
+      gl.disable(gl.BLEND);
+      gl.depthMask(true);
+      gl.depthFunc(gl.LESS);
+    }
     gl.bindVertexArray(null);
+  }
+
+  /** Real tiled detail. The shared cache bounds downloads; GPU copies are bounded separately. */
+  private drawDetail() {
+    this.tileFading = false;
+    this.tileKeys = new Set<string>(); this.tileLevels.clear(); this.tileFrame++;
+    if (!this.active || this.busy || this.morphB < 1 || !this.photo || this.view.s < 8 || !this.tileProg) {
+      mapImagery.retain(this, this.tileKeys); return;
+    }
+    const gl = this.gl, v = this.view, fr = this.free(), { W, H } = this.size(), u = this.tileU;
+    gl.useProgram(this.tileProg); gl.bindVertexArray(this.tileVao);
+    gl.disable(gl.DEPTH_TEST); gl.depthMask(false); gl.enable(gl.BLEND);
+    gl.blendFuncSeparate(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA, gl.ZERO, gl.ONE);
+    gl.activeTexture(gl.TEXTURE0); gl.uniform1i(u.uTex, 0);
+    gl.uniform2f(u.uSize, W, H); gl.uniform2f(u.uOrigin, fr.cx, fr.cy);
+    gl.uniform1f(u.uSunOn, this.sunOn ? 1 : 0); gl.uniform3f(u.uSun, ...this.sun);
+    gl.uniform1f(u.uDetail, this.detail); gl.uniform1f(u.uGrid, this.grid);
+    for (const [name, colour] of [['uTint0', DETAIL_COLORS.sharp], ['uTint1', DETAIL_COLORS.global], ['uTint2', DETAIL_COLORS.rebuilt]] as const) gl.uniform3f(u[name], colour[0] / 255, colour[1] / 255, colour[2] / 255);
+    const west = v.lonC - fr.cx / v.s, east = v.lonC + (W - fr.cx) / v.s;
+    const south = Math.max(-90, v.latC - (H - fr.cy) / v.s), north = Math.min(90, v.latC + fr.cy / v.s);
+    const desired = Math.max(0, Math.ceil(Math.log2(180 * v.s * this.dpr / 256)));
+    this.drawGeographicTiles('trek', Math.min(TREK_MAX_LEVEL, desired), [west, east, south, north], trekUrl, 10);
+    for (const source of MAP_DETAIL_SOURCES) {
+      if (desired <= 8 || (source.maxZ > 10 && desired <= 10)) continue;
+      this.drawDetailSource(source, desired, [west, east, south, north]);
+    }
+    if (south < -79.5) this.drawPolarTiles([west, east, south, Math.min(-79.5, north)]);
+    mapImagery.retain(this, this.tileKeys);
+    // Textures are small (256 or 512 px); keep recent copies without growing with every pan.
+    if (this.tileTextures.size > 96) for (const [key, item] of this.tileTextures) {
+      if (item.used === this.tileFrame) continue;
+      gl.deleteTexture(item.texture); this.tileTextures.delete(key);
+      if (this.tileTextures.size <= 64) break;
+    }
+    gl.disable(gl.BLEND); gl.depthMask(true); gl.enable(gl.DEPTH_TEST); gl.depthFunc(gl.LESS);
+  }
+
+  private drawDetailSource(source: MapPhotoSource, desired: number, visible: [number, number, number, number]) {
+    const [west, east, south, north] = visible;
+    for (const shift of [-360, 0, 360]) {
+      const bounds: [number, number, number, number] = [Math.max(west, source.west + shift), Math.min(east, source.east + shift), Math.max(south, source.south), Math.min(north, source.north)];
+      if (bounds[0] >= bounds[1] || bounds[2] >= bounds[3]) continue;
+      this.drawGeographicTiles(`detail-${source.layer}`, Math.min(source.maxZ, desired), bounds, (z, x, y) => detailUrl(source, z, x, y), source.maxZ > 10 ? 30 : 20);
+    }
+  }
+
+  private drawGeographicTiles(id: string, top: number, bounds: [number, number, number, number], url: (z: number, x: number, y: number) => string, priority: number) {
+    const [west, east, south, north] = bounds;
+    while (top > 0) {
+      const step = 180 / 2 ** top;
+      if ((Math.floor(east / step) - Math.floor(west / step) + 2) * (Math.floor(north / step) - Math.floor(south / step) + 2) <= 64) break;
+      top--;
+    }
+    const v = this.view, fr = this.free();
+    for (let z = Math.max(0, top - 1); z <= top; z++) {
+      const rows = 2 ** z, cols = rows * 2, span = 180 / rows;
+      const x0 = Math.floor((west + 180) / span), x1 = Math.floor((east + 180) / span);
+      const y0 = Math.max(0, Math.floor((90 - north) / span)), y1 = Math.min(rows - 1, Math.floor((90 - south) / span));
+      for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
+        const wrapped = ((x % cols) + cols) % cols, key = `${id}-${z}-${wrapped}-${y}`;
+        const texture = this.detailTexture(key, [url(z, wrapped, y)], priority + z - top);
+        if (!texture) continue;
+        const w = x * span - 180, n = 90 - y * span;
+        const xL = Math.max(west, w), xR = Math.min(east, w + span), yN = Math.min(north, n), yS = Math.max(south, n - span);
+        const rect: [number, number, number, number] = [fr.cx + (xL - v.lonC) * v.s, fr.cy - (yN - v.latC) * v.s, (xR - xL) * v.s, (yN - yS) * v.s];
+        this.drawDetailTile(key, texture, rect, [w, n, span, span], false);
+        this.tileLevels.add(`${id}:${z}`);
+      }
+    }
+  }
+
+  private drawPolarTiles(bounds: [number, number, number, number]) {
+    const [west, east, south, north] = bounds, samples: [number, number][] = [];
+    for (let j = 0; j <= 4; j++) for (let i = 0; i <= 4; i++) samples.push(polarXY(south + (north - south) * j / 4, west + (east - west) * i / 4));
+    const minX = Math.min(...samples.map(p => p[0])), maxX = Math.max(...samples.map(p => p[0]));
+    const minY = Math.min(...samples.map(p => p[1])), maxY = Math.max(...samples.map(p => p[1]));
+    const mpp = M_PER_DEG / this.view.s / this.dpr;
+    let top = Math.max(0, Math.min(south < -84 ? POLAR_MAX_LEVEL : 4, Math.ceil(Math.log2(PHOTO_POLAR_HALF * 2 / (TILE * mpp)))));
+    while (top > 0 && (Math.ceil((maxX - minX) / (608000 / 2 ** top)) + 2) * (Math.ceil((maxY - minY) / (608000 / 2 ** top)) + 2) > 48) top--;
+    for (let k = Math.max(0, top - 1); k <= top; k++) {
+      const count = 2 ** k, span = PHOTO_POLAR_HALF * 2 / count;
+      const i0 = Math.max(0, Math.floor((minX + PHOTO_POLAR_HALF) / span)), i1 = Math.min(count - 1, Math.floor((maxX + PHOTO_POLAR_HALF) / span));
+      const j0 = Math.max(0, Math.floor((PHOTO_POLAR_HALF - maxY) / span)), j1 = Math.min(count - 1, Math.floor((PHOTO_POLAR_HALF - minY) / span));
+      for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) {
+        const key = `polar-${k}-${i}-${j}`, texture = this.detailTexture(key, mapImagery.polarUrls(k, i, j), -60 + k);
+        if (!texture) continue;
+        const { W, H } = this.size();
+        this.drawDetailTile(key, texture, [0, 0, W, H], [-PHOTO_POLAR_HALF + i * span, PHOTO_POLAR_HALF - j * span, span, span], true);
+        this.tileLevels.add(`polar:${k}`);
+      }
+    }
+  }
+
+  private detailTexture(key: string, urls: string[], priority: number): WebGLTexture | null {
+    this.tileKeys.add(key);
+    const bitmap = mapImagery.request(key, urls, priority);
+    if (!bitmap) return null;
+    let entry = this.tileTextures.get(key);
+    if (entry?.bitmap !== bitmap) {
+      const gl = this.gl;
+      if (entry) gl.deleteTexture(entry.texture);
+      const texture = gl.createTexture()!;
+      gl.bindTexture(gl.TEXTURE_2D, texture);
+      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false); gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, bitmap);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      entry = { texture, bitmap, used: this.tileFrame }; this.tileTextures.set(key, entry);
+    }
+    entry.used = this.tileFrame;
+    return entry.texture;
+  }
+
+  private drawDetailTile(key: string, texture: WebGLTexture, rect: [number, number, number, number], bounds: [number, number, number, number], polar: boolean) {
+    const gl = this.gl, u = this.tileU, v = this.view, alpha = mapImagery.fade(key);
+    if (alpha < 1) this.tileFading = true;
+    gl.bindTexture(gl.TEXTURE_2D, texture); gl.uniform4f(u.uRect, ...rect);
+    gl.uniform4f(u.uView, v.lonC, v.latC, v.s, alpha); gl.uniform4f(u.uBounds, ...bounds); gl.uniform1f(u.uPolar, polar ? 1 : 0);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+  }
+
+  /** Read the real vertex shader at CSS pixel centres, for the click-grid check. No imagery is changed. */
+  checkDrawnGrid(points: { x: number; y: number }[]) {
+    if (!this.drawn || !this.vao || this.morphA < 1 || this.morphB < 1) return [];
+    const gl = this.gl, { W, H } = this.size(), drawn = this.drawn, v = drawn.view, fr = drawn.origin;
+    const fs = `#version 300 es
+      precision highp float;
+      in vec2 vLL;
+      uniform vec4 uCheck;
+      uniform vec2 uOrigin, uSize;
+      out vec4 o;
+      vec2 pack16(float x) { float n = floor(clamp(x, 0.0, 1.0) * 65535.0 + 0.5); return vec2(floor(n / 256.0), mod(n, 256.0)) / 255.0; }
+      void main() {
+        vec2 p = vec2(uOrigin.x + degrees(vLL.x) * uCheck.x, uOrigin.y - (degrees(vLL.y) - uCheck.y) * uCheck.x);
+        o = vec4(pack16(p.x / uSize.x), pack16(p.y / uSize.y));
+      }`;
+    const program = compile(gl, VS, fs), texture = gl.createTexture(), fb = gl.createFramebuffer();
+    gl.bindTexture(gl.TEXTURE_2D, texture); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, W, H, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, fb); gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, texture, 0);
+    gl.viewport(0, 0, W, H); gl.disable(gl.BLEND); gl.disable(gl.DEPTH_TEST); gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT);
+    gl.useProgram(program); gl.bindVertexArray(this.vao);
+    const uniform = (name: string) => gl.getUniformLocation(program, name);
+    gl.uniform1f(uniform('uA'), 1); gl.uniform1f(uniform('uB'), 1);
+    gl.uniform4f(uniform('uFlat'), v.s, v.latC, fr.cx, fr.cy); gl.uniform2f(uniform('uSize'), W, H);
+    gl.uniform4f(uniform('uCheck'), v.s, v.latC, 0, 0); gl.uniform2f(uniform('uOrigin'), fr.cx, fr.cy);
+    gl.drawElements(gl.TRIANGLES, this.nIdx, gl.UNSIGNED_SHORT, 0);
+    const pixel = new Uint8Array(4);
+    const result = points.map(p => {
+      const x = Math.floor(p.x), y = Math.floor(p.y);
+      gl.readPixels(x, H - y - 1, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixel);
+      const shaderX = (pixel[0] * 256 + pixel[1]) / 65535 * W, shaderY = (pixel[2] * 256 + pixel[3]) / 65535 * H;
+      const reported = flatGround(x + 0.5, y + 0.5, v, fr), drawnGround = flatGround(shaderX, shaderY, v, fr);
+      return { x: x + 0.5, y: y + 0.5, reported, drawn: drawnGround, errorPx: Math.hypot(shaderX - x - 0.5, shaderY - y - 0.5) };
+    });
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.bindVertexArray(null);
+    gl.deleteFramebuffer(fb); gl.deleteTexture(texture); gl.deleteProgram(program); this.request();
+    return result;
+  }
+
+  /** Dev harness evidence: the exact CSS transform last drawn and the real loaded detail. */
+  diagnostics() {
+    return { drawn: this.drawn, size: this.size(), dpr: this.dpr, acrossKm: this.free().w / this.view.s * M_PER_DEG / 1000, tileLevels: [...this.tileLevels], tileCount: this.tileKeys.size, gpuTiles: this.tileTextures.size };
   }
 
   /** Names, icons, pins, the Sun / Earth points and grid labels. Returns true while something is still fading. */
@@ -533,6 +944,7 @@ export class FlatMap {
     const boxes: Box[] = [];
     const free = (b: Box) => !boxes.some(o => b.x0 < o.x1 && b.x1 > o.x0 && b.y0 < o.y1 && b.y1 > o.y0);
     for (const b of this.hooks.panelBoxes()) boxes.push(b);
+    this.drawRoute();
     // grid labels (quiet), every 30 degrees, along the top and left of the map
     ctx.font = `500 10px ${'"Google Sans Flex Variable", system-ui, sans-serif'}`;
     ctx.fillStyle = 'rgba(220,228,240,0.42)';
@@ -583,8 +995,8 @@ export class FlatMap {
       const fd = this.fades.get(e.id);
       if (e.fixed) {
         const iconOk = e.fixed === 2 || mPerPx < 1900;
-        if (iconOk) iconCand.push({ e, score: 1e6 * e.fixed - mPerPx + (fd?.it === 1 ? 5e5 : 0), x: p.x, y: p.y });
-        if (!((e.fixed === 2 && mPerPx > 2700) || (e.fixed === 3 && mPerPx > 840))) cand.push({ e, score: 1e6 * e.fixed, x: p.x, y: p.y });
+        if (iconOk) iconCand.push({ e, score: 1e6 * e.fixed + 1e5 * (e.weight - 1) - mPerPx + (fd?.it === 1 ? 5e5 : 0), x: p.x, y: p.y });
+        if (!((e.fixed === 2 && mPerPx > 2700) || (e.fixed === 3 && mPerPx > 840))) cand.push({ e, score: 1e6 * e.fixed + 1e5 * (e.weight - 1), x: p.x, y: p.y });
       } else {
         // a little stricter than on the globe: the whole map shows four times the area of a globe view
         const score = (e.sizeM / mPerPx) * e.weight;
@@ -600,7 +1012,7 @@ export class FlatMap {
     let placed = 0;
     for (const c of cand) {
       const e = c.e;
-      if (!((placed < MAX_LABELS || e.fixed) && (!e.fixed || wantIcon.has(e.id) || !this.hooks.icon(e.kind!)))) continue;
+      if (!((placed < MAX_LABELS || e.fixed) && (!e.fixed || wantIcon.has(e.id) || !(this.hooks.icon(e.iconKey) ?? this.hooks.icon(e.kind!))))) continue;
       const isPlace = e.kind !== null;
       const x0 = isPlace ? c.x + e.iconR + 5 : c.x - e.w / 2, y0 = c.y - e.h / 2;
       const b = { x0: x0 - (isPlace ? 0 : 4), y0: y0 - 2, x1: x0 + e.w + 4, y1: y0 + e.h + 2 };
@@ -623,7 +1035,7 @@ export class FlatMap {
       if (!fd.a && !fd.ia && !t && !it) { this.fades.delete(e.id); continue; }
       const p = this.toScreen(e.lat, e.lon);
       if (fd.ia > 0 && e.kind) {
-        const look = this.hooks.icon(e.kind);
+        const look = this.hooks.icon(e.iconKey) ?? this.hooks.icon(e.kind);
         if (look) {
           const im = img(look.image, () => this.request());
           ctx.globalAlpha = this.overlayAlpha * fd.ia * fd.ia * (3 - 2 * fd.ia);
@@ -656,6 +1068,30 @@ export class FlatMap {
     return fading;
   }
 
+  private drawRoute() {
+    const ctx = this.ctx, route = this.hooks.route?.(), destination = this.hooks.destination?.();
+    if (route?.ok && route.path.length >= 4) {
+      ctx.save(); ctx.lineJoin = 'round'; ctx.lineCap = 'round'; ctx.beginPath();
+      let previous: { x: number; y: number } | null = null;
+      for (let i = 0; i < route.path.length; i += 2) {
+        const p = this.toScreen(route.path[i], route.path[i + 1]);
+        if (!previous || Math.abs(p.x - previous.x) > this.view.s * 180) ctx.moveTo(p.x, p.y);
+        else ctx.lineTo(p.x, p.y);
+        previous = p;
+      }
+      ctx.strokeStyle = 'rgba(12,35,48,.85)'; ctx.lineWidth = 5.5; ctx.stroke();
+      ctx.strokeStyle = '#9bdcf4'; ctx.lineWidth = 3; ctx.stroke(); ctx.restore();
+    }
+    if (destination) {
+      const p = this.toScreen(destination.lat, destination.lon);
+      ctx.save(); ctx.translate(p.x, p.y); ctx.lineJoin = 'round';
+      ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, -29); ctx.lineTo(19, -25); ctx.lineTo(0, -19);
+      ctx.strokeStyle = '#102c3b'; ctx.lineWidth = 5; ctx.stroke();
+      ctx.fillStyle = '#a8dff4'; ctx.fill(); ctx.strokeStyle = '#d5f0fb'; ctx.lineWidth = 2; ctx.stroke();
+      ctx.beginPath(); ctx.ellipse(0, 1, 4, 2, 0, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+    }
+  }
+
   /** Names or switches changed: read them again. */
   refreshLabels() { this.entries = null; this.request(); }
 
@@ -677,8 +1113,9 @@ export class FlatMap {
     let more = false;
     if (this.zoomTarget) {
       const z = this.zoomTarget, fr = this.free();
-      const s = this.view.s + (z.s - this.view.s) * (1 - Math.exp(-dt * 14));
-      const done = Math.abs(Math.log(s / z.s)) < 0.002;
+      const progress = Math.min(1, (now - z.t0) / 80);
+      const s = Math.exp(Math.log(z.from) + Math.log(z.s / z.from) * easeOut(progress));
+      const done = progress >= 1;
       const s2 = done ? z.s : s;
       // keep the anchor point under the cursor
       this.view = this.clampView({ s: s2, lonC: z.lon - (z.x - fr.cx) / s2, latC: z.lat + (z.y - fr.cy) / s2 });
@@ -728,8 +1165,8 @@ export class FlatMap {
     // already as close as the flat map goes and asked for closer: offer the globe, at the place under the pointer
     if (logFactor > 0 && base >= this.maxScale() * 0.995 && Math.abs(ll.lat) <= 90) this.showPill(ll);
     else if (logFactor < 0) this.hidePill();
-    this.flight = null; this.fling = null;
-    this.zoomTarget = { s, x, y, lat: this.zoomTarget && !at ? this.zoomTarget.lat : ll.lat, lon: this.zoomTarget && !at ? this.zoomTarget.lon : ll.lon };
+    this.flight?.done(); this.flight = null; this.fling = null;
+    this.zoomTarget = { s, from: this.view.s, t0: performance.now(), x, y, lat: this.zoomTarget && !at ? this.zoomTarget.lat : ll.lat, lon: this.zoomTarget && !at ? this.zoomTarget.lon : ll.lon };
     this.request();
   }
   stop() { this.flight?.done(); this.flight = null; this.zoomTarget = null; this.fling = null; this.drag = null; this.keysHeld.clear(); this.hidePill(); }
@@ -742,17 +1179,27 @@ export class FlatMap {
       const msg = document.createElement('span'); msg.className = 'fl-msg'; msg.textContent = txt.msg;
       const go = document.createElement('span'); go.className = 'fl-go'; go.textContent = txt.go;
       this.pill.append(msg, go);
-      const fr = this.free();
-      this.pill.style.left = `${fr.cx}px`; this.pill.style.top = `${fr.y1 - 20}px`;
       this.pill.classList.add('show');
     }
+    const fr = this.free(), dock = document.querySelector('.oroute-dock')?.getBoundingClientRect();
+    const bounds = this.el.getBoundingClientRect();
+    // The route bar shares this edge. Keep the note above it so its button can be clicked.
+    const top = dock && dock.height > 0 ? Math.min(fr.y1 - 20, (dock.top - bounds.top) * this.height / Math.max(1, bounds.height) - 12) : fr.y1 - 20;
+    this.pill.style.left = `${fr.cx}px`; this.pill.style.top = `${top}px`;
     clearTimeout(this.pillTimer);
     this.pillTimer = window.setTimeout(() => this.hidePill(), 5000);
   }
   private hidePill() { clearTimeout(this.pillTimer); this.pill.classList.remove('show'); this.pillAt = null; }
 
   // ---- input -------------------------------------------------------------------------------
-  private local(e: { clientX: number; clientY: number }) { const r = this.ui.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; }
+  private local(e: { clientX: number; clientY: number }) {
+    const r = this.ui.getBoundingClientRect();
+    const { W, H } = this.size();
+    return { x: (e.clientX - r.left) * W / Math.max(1, r.width), y: (e.clientY - r.top) * H / Math.max(1, r.height) };
+  }
+  private drawnGround(x: number, y: number) {
+    return this.drawn ? flatGround(x, y, this.drawn.view, this.drawn.origin) : this.toLatLon(x, y);
+  }
   private tagAt(x: number, y: number): unknown {
     for (let i = this.hits.length - 1; i >= 0; i--) { const h = this.hits[i]; if (x >= h.x0 && x <= h.x1 && y >= h.y0 && y <= h.y1) return h.id; }
     return undefined;
@@ -769,7 +1216,7 @@ export class FlatMap {
     if (!this.active || this.busy || e.button !== 0) return;
     this.ui.setPointerCapture(e.pointerId);
     this.stop();
-    const p = this.local(e), ll = this.toLatLon(p.x, p.y);
+    const p = this.local(e), ll = this.drawnGround(p.x, p.y);
     this.drag = { x0: p.x, y0: p.y, lat: ll.lat, lon: ll.lon, moved: false, hist: [{ x: p.x, y: p.y, t: performance.now() }] };
   };
   private onMove = (e: PointerEvent) => {
@@ -779,8 +1226,8 @@ export class FlatMap {
     if (!d) {
       const id = this.tagAt(p.x, p.y);
       this.setHover(id);
-      this.ui.style.cursor = id !== undefined || this.pinAt(p.x, p.y) ? 'pointer' : 'grab';
-      const ll = this.toLatLon(p.x, p.y);
+      this.ui.style.cursor = this.hooks.choosingDestination?.() ? 'crosshair' : id !== undefined || this.pinAt(p.x, p.y) ? 'pointer' : 'grab';
+      const ll = this.drawnGround(p.x, p.y);
       this.hooks.onHover(Math.abs(ll.lat) <= 90 ? ll : null);
       return;
     }
@@ -794,6 +1241,11 @@ export class FlatMap {
     d.hist.push({ x: p.x, y: p.y, t: now });
     while (d.hist.length > 2 && now - d.hist[0].t > 90) d.hist.shift();
     this.request();
+  };
+  private onCancel = () => {
+    this.drag = null; this.fling = null;
+    clearTimeout(this.clickTimer); this.clickTimer = 0;
+    this.ui.style.cursor = this.hooks.choosingDestination?.() ? 'crosshair' : 'grab';
   };
   private onUp = (e: PointerEvent) => {
     const d = this.drag;
@@ -810,14 +1262,15 @@ export class FlatMap {
     }
     const p = this.local(e);
     if (this.clickTimer) { clearTimeout(this.clickTimer); this.clickTimer = 0; return; } // second click: dblclick handles it
+    // The picture can move or resize during the double-click pause. Pick the picture that
+    // was actually under this click, before any new panel or frame can change its transform.
+    const ll = this.drawnGround(p.x, p.y), choosing = this.hooks.choosingDestination?.() === true;
+    const id = choosing ? undefined : this.tagAt(p.x, p.y), pin = choosing ? null : this.pinAt(p.x, p.y);
     this.clickTimer = window.setTimeout(() => {
       this.clickTimer = 0;
       if (!this.active || this.busy) return;
-      const id = this.tagAt(p.x, p.y);
       if (id !== undefined) return this.hooks.onClickTag(id);
-      const pin = this.pinAt(p.x, p.y);
       if (pin) return this.hooks.onClickGround(pin.lat, pin.lon);
-      const ll = this.toLatLon(p.x, p.y);
       if (Math.abs(ll.lat) <= 90) this.hooks.onClickGround(ll.lat, ll.lon);
     }, 240);
   };
@@ -830,8 +1283,8 @@ export class FlatMap {
   private onWheel = (e: WheelEvent) => {
     e.preventDefault();
     if (!this.active || this.busy) return;
-    const px = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaY;
-    this.zoomBy(clamp(-px * 0.0022, -0.9, 0.9), this.local(e));
+    const px = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaMode === 2 ? e.deltaY * this.size().H : e.deltaY;
+    this.zoomBy(clamp(-px * Math.log(1.6) / 100, -1.4, 1.4), this.local(e));
   };
   private typing() { const a = document.activeElement as HTMLElement | null; return !!a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA' || a.tagName === 'SELECT' || a.isContentEditable); }
   private onKey = (e: KeyboardEvent) => {
@@ -847,10 +1300,13 @@ export class FlatMap {
     this.el.style.visibility = on || opacity > 0 ? 'visible' : 'hidden';
     this.el.style.opacity = String(opacity);
     this.el.style.pointerEvents = on ? 'auto' : 'none';
-    this.ui.style.cursor = this.busy ? 'default' : 'grab';
+    this.ui.style.cursor = this.busy ? 'default' : this.hooks.choosingDestination?.() ? 'crosshair' : 'grab';
+    if (!on && opacity === 0) mapImagery.release(this);
   }
 
   destroy() {
+    this.alive = false; this.offImagery(); mapImagery.release(this);
+    clearTimeout(this.clickTimer); clearTimeout(this.pillTimer);
     cancelAnimationFrame(this.raf);
     window.removeEventListener('keydown', this.onKey);
     window.removeEventListener('keyup', this.onKeyUp);

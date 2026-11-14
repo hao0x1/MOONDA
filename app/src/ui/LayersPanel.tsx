@@ -1,17 +1,15 @@
-// The Layers box (opens under the Layers button): grouped switches, each with one plain line,
-// a colour key when the layer is on, and a strength slider for the coloured map overlays only.
+// The Layers box: useful switches, compact colour keys and colour-map strength.
 
 import { X } from '@phosphor-icons/react';
 import type { CSSProperties } from 'react';
-import { useT } from '../i18n';
-import { layerHelp, layerLine, layerNotes, layerTitle, type LayerDef, type LegendStop } from '../moon/layers';
+import { useT, type Key } from '../i18n';
+import { CLASS_LAYERS, layerCoverage, layerHelp, layerSource, layerTitle, type LayerDef, type LayerGroup, type LegendStop } from '../moon/layers';
 import { Help } from './Help';
 import { IconButton, useReachesControls } from './kit';
-import { detailCss } from '../moon/dataDetail';
 
 interface Props {
   /** `title` and `note` are only the English fallback: the words on screen come from the group of the layers inside. */
-  groups: { title: string; note?: string; layers: LayerDef[] }[];
+  groups: { title: string; group?: LayerGroup; note?: string; layers: LayerDef[] }[];
   state: Record<string, boolean>;
   opacity: Record<string, number>;
   onToggle(id: string, on: boolean): void;
@@ -46,18 +44,20 @@ export function Legend({ stops, units }: { stops: LegendStop[]; units?: string }
   );
 }
 
-/** The three tones of the Data detail layer, with the one-line note under them. */
-function DetailLegend() {
+/** The colour key of a layer: a list of swatches for maps that show classes, a scale bar for the rest. */
+export function LayerLegend({ layer }: { layer: Pick<LayerDef, 'id' | 'legend' | 'units'> }) {
   const t = useT();
-  return (
-    <div className="legend-detail" style={{ display: 'grid', gap: 6 }}>
-      {DETAIL_ORDER.map(c => <div key={c} className="legend-one"><i style={{ background: detailCss(c) }} />{t(`layer.dataDetail.${c}`)}</div>)}
-      <p className="legend-note" style={{ margin: '2px 0 0', fontSize: 'var(--fs-12)', color: 'var(--text-3)', lineHeight: 1.4 }}>{t('layer.dataDetail.note')}</p>
-    </div>
-  );
+  const classes = CLASS_LAYERS[layer.id];
+  if (classes) {
+    return (
+      <div className="legend-classes">
+        {classes.map(c => <div key={c.key} className="legend-one"><i style={{ background: c.color }} />{t(c.key as Key)}</div>)}
+        {layer.id === 'waterice' && <div className="legend-marker-note">{t('layer.waterice.markers')}</div>}
+      </div>
+    );
+  }
+  return layer.legend ? <Legend stops={layer.legend} units={layer.units} /> : null;
 }
-const DETAIL_ORDER = ['sharp', 'global', 'rebuilt'] as const;
-
 export function LayersPanel({ groups, state, opacity, onToggle, onOpacity, onClose, onReach }: Props) {
   const root = useReachesControls(r => onReach?.(r));
   const t = useT();
@@ -65,15 +65,14 @@ export function LayersPanel({ groups, state, opacity, onToggle, onOpacity, onClo
     <section ref={root} className="layers panel" role="dialog" aria-label={t('layers.aria')}>
       <header className="drawer-head">
         <h2>{t('layers.title')}</h2>
-        <span className="drawer-sub">{t('layers.sub')}</span>
         <span className="drawer-gap" />
         <IconButton size="sm" label={t('layers.close')} onClick={onClose}><X size={16} /></IconButton>
       </header>
       <div className="layers-body">
         {groups.map(g => {
-          const kind = g.layers[0]?.group;
+          const kind = g.group ?? g.layers[0]?.group;
           const groupTitle = kind ? t(`layers.group.${kind}`) : g.title;
-          const groupNote = kind === 'science' ? t('layers.group.science.note') : g.note;
+          const groupNote = g.note;
           return (
           <div key={g.title} className="layer-group">
             <div className="layer-group-title">{groupTitle}{groupNote && <span>{groupNote}</span>}</div>
@@ -81,22 +80,21 @@ export function LayersPanel({ groups, state, opacity, onToggle, onOpacity, onClo
               const on = !!state[l.id];
               const overlay = l.group === 'science' || l.id === 'height';
               const strength = opacity[l.id] ?? 0.7;
-              const title = layerTitle(l), notes = layerNotes(l);
+              const title = layerTitle(l), source = layerSource(l), coverage = layerCoverage(l);
               return (
                 <div key={l.id} className={`layer${on ? ' on' : ''}`}>
                   <label className="layer-row" htmlFor={`layer-${l.id}`}>
                     <span className="layer-text">
                       <span className="layer-title">{title}</span>
-                      <span className="layer-desc">{layerLine(l)}</span>
+                      {coverage && <small style={{ color: 'var(--text-3)', fontSize: 11 }}>{coverage}</small>}
                     </span>
-                    <Help text={<>{layerHelp(l)}{notes ? <><br /><br /><span className="muted">{notes}</span></> : null}{l.source ? <><br /><br /><span className="faint">{t('place.source', { name: l.source.name })}</span></> : null}</>} />
+                    <Help side="left" text={<>{layerHelp(l)}{source && <span className="layer-help-source">{t('place.source', { name: source })}</span>}</>} />
                     <input id={`layer-${l.id}`} type="checkbox" className="sr-only" checked={on} onChange={e => onToggle(l.id, e.target.checked)} />
                     <span className="switch" aria-hidden="true"><i /></span>
                   </label>
-                  {on && l.id === 'dataDetail' && <div className="layer-extra"><DetailLegend /></div>}
                   {on && (l.legend || overlay) && (
                     <div className="layer-extra">
-                      {l.legend && <Legend stops={l.legend} units={l.units} />}
+                      {l.legend && <LayerLegend layer={l} />}
                       {overlay && (
                         <label className="strength">
                           <span>{t('layers.strength')}</span>

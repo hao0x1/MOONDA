@@ -1,0 +1,17 @@
+{
+  "sourceRows": 1296796,
+  "drawingRows": 1296796,
+  "everySourceRowExactlyOnce": true,
+  "chunks": 385,
+  "recordBytes": 15561552,
+  "indexBytes": 206269,
+  "largestChunkBytes": 286404,
+  "maxFloat32CentreErrorM": 0.22949799164783274,
+  "maxFloat32DiameterErrorM": 0.11718750010913936,
+  "allRegionalCapsContainTheirRims": true,
+  "retainedFileSha256": {
+    "craters.bin": "ad361a2552e27c2e081f1b958be8cb96b7b8cdaaf8ded561c52d36b7986f0a40",
+    "craters-small-south.bin": "32d3a5c1259e90dcd223965a30fa2bf0e0cba6ba9176ee43ebbd9e02653f6373"
+  },
+  "sourceCsvSha256": "39a419e0ca627b792be1a9f761c3fa1372094cdc5bc0db88afd365c07af8ad62"
+}

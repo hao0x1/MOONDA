@@ -13,11 +13,12 @@ import { Cartographic, Ellipsoid, GeographicTilingScheme } from 'cesium';
 import { displayToTrueLatLon, polarMapFromDisplayUnit, trueToDisplayLatLon } from '../src/moon/frame.ts';
 import { toMap } from '../src/science/heights.ts';
 import {
-  Footprint, KEY_LEVEL, PYRAMID_MAX_K, PYRAMID_NAC_LAT_DEG, PYRAMID_WAC_MAX_K, Packer, POLAR_FEATHER_M, POLAR_LIMIT_DEG, PYRAMID_PX, TILE,
+  Footprint, KEY_LEVEL, NORTH_PHOTO_HALF_M, NORTH_PHOTO_LAT, NORTH_PHOTO_MAX_Z, PHOTO_FINE_TC, PHOTO_FINE_TC_MAX_Z, PHOTO_REGIONS, PHOTO_TC, PHOTO_TC_MAX_Z, PYRAMID_MAX_K, PYRAMID_NAC_LAT_DEG, PYRAMID_WAC_MAX_K, Packer, POLAR_FEATHER_M, POLAR_LIMIT_DEG, PYRAMID_PX, TILE,
   buildMips, cutTile, fillClear, parsePyramidIndex, parseTrekDepth, pixelDeg,
   planPyramid, planRaster, planTrek, polarGeometry, polarRho, pyramidHasLocal, pyramidLevelFor, pyramidLocalUrl, pyramidMaxKFor,
   pyramidParentIsEnough, pyramidSurelyLocal, pyramidUrl, sampleTiles, tileTrueLatRange,
   FIX_BAND_EAST, FIX_BAND_WEST, fixShadeFor, fixWeightDeg, halvePoleAware, planSynth, sampleLonLat, tileFixRange, type FixParams,
+  addPhotoDetail, matchPhotoTone, featherPhotoBlack, northFootprint, northPhotoUrl, photoMaxLevel, photoRegionCovers, photoRegionsFor, planNorthPhoto, planPhotoRegion, tcNoData,
   trekCapabilitiesUrl, trekGeometry, trekTileOf, trekUrl,
   type Plan, type Raster, type Rect, type Src,
 } from '../src/moon/imageryWorker.ts';
@@ -456,7 +457,7 @@ const tapColumns = (p: number) => { const k = fp.taps[p], u0 = fp.u[p] - 0.5 * (
 
 // 9b. Optional (--network): Moon Trek's real WMTS descriptions and tiles --------------------------
 if (process.argv.includes('--network')) {
-  for (const [layer, ext, want] of [['LRO_LOLA_ClrShade_Global_256ppd_v06', 'png', 6], ['LRO_WAC_Mosaic_Global_303ppd_v02', 'jpg', 8]] as const) {
+  for (const [layer, ext, want] of [['LRO_LOLA_ClrShade_Global_256ppd_v06', 'png', 6], ['LRO_WAC_Mosaic_Global_303ppd_v02', 'jpg', 8], [PHOTO_TC, 'png', PHOTO_TC_MAX_Z]] as const) {
     const r = await fetch(trekCapabilitiesUrl(layer), { headers: { Origin: 'http://127.0.0.1:5190' } });
     const depth = parseTrekDepth(await r.text()), cors = r.headers.get('access-control-allow-origin');
     const deepest = await fetch(trekUrl(layer, ext, want, 2 ** want, 2 ** (want - 1)), { method: 'HEAD' });
@@ -465,6 +466,12 @@ if (process.argv.includes('--network')) {
       depth === want && cors === '*' && deepest.status === 200 && beyond.status === 404 && !beyond.headers.get('access-control-allow-origin'),
       `depth ${depth}, ACAO ${cors}, level ${want}: ${deepest.status}, level ${want + 1}: ${beyond.status} ACAO ${beyond.headers.get('access-control-allow-origin')}`);
   }
+  const n = 2 ** PHOTO_FINE_TC_MAX_Z, x = Math.floor((23.473 + 180) / 360 * n), y = Math.floor((90 - 0.674) / 360 * n);
+  const fine = await fetch(`https://lroc-tiles.quickmap.io/tiles/${PHOTO_FINE_TC.layer}/lunar-fulleqc/${PHOTO_FINE_TC_MAX_Z}/${x}/${y}.png?d_val=0,5000&d_opt=wcolut0`);
+  const fineBytes = (await fine.arrayBuffer()).byteLength;
+  check('QuickMap primary TC: a real finest-level PNG is public with CORS', fine.status === 200
+    && fine.headers.get('content-type')?.includes('image/png') === true && fine.headers.get('access-control-allow-origin') === '*' && fineBytes > 1000,
+    `status ${fine.status}, ${fine.headers.get('content-type')}, ${fineBytes} bytes`);
 }
 
 // 10. Optional: render real NASA pictures to PNGs for a visual check -----------------------------
@@ -714,6 +721,119 @@ console.log('\n12. Seamless Moon (v5)');
     check('v5 base.json: pictures on the tile grid (global, quick, south, north) and the fix albedo exists', onGrid && !!meta.pictures.north && !!meta.pictures.south && !!a && existsSync(join(dir, a.file)) && Math.abs(a.width / (a.east - a.west) - 8192 / 360) < 0.05,
       Object.entries(meta.pictures).map(([k, p]) => `${k} ${p.width}x${p.height} L${p.level}`).join(', '));
   } else console.log('      (no public/data/base/v5/base.json here: v5 picture checks skipped)');
+}
+
+// 13. Sharper photos: honest source limits, bounded requests and stable tone ---------------------
+console.log('\n13. Sharper photos');
+{
+  const far = displayTileAt(20, 150, 14).rect;
+  const farPlan = planPhotoRegion(fp, far, 14, PHOTO_FINE_TC_MAX_Z, PHOTO_FINE_TC)!;
+  const fallbackPlan = planPhotoRegion(fp, far, 14, PHOTO_TC_MAX_Z)!;
+  check('global 7.4 m TC uses the z12 delivery grid and stops at display13; NASA fallback stays at served z10',
+    PHOTO_FINE_TC_MAX_Z === 12 && Math.abs(pixelDeg(PHOTO_FINE_TC_MAX_Z) * DEG * R - 5.205) < 0.01
+    && PHOTO_FINE_TC.layer === 'kag_tc_e_7m' && PHOTO_FINE_TC.global === true
+    && PHOTO_TC_MAX_Z === 10 && Math.abs(pixelDeg(PHOTO_TC_MAX_Z) * DEG * R - 20.82) < 0.02
+    && photoRegionsFor(far).length === 0 && photoMaxLevel(far) === 13
+    && farPlan.keys.every(key => Math.floor(key / KEY_LEVEL) <= PHOTO_FINE_TC_MAX_Z)
+    && fallbackPlan.keys.every(key => trekTileOf(key).z <= PHOTO_TC_MAX_Z));
+  const apollo = [[11, 0.674, 23.473], [12, -3.0138, -23.4219], [14, -3.64589, -17.47194],
+    [15, 26.13239, 3.6333], [16, -8.9734, 15.5011], [17, 20.1908, 30.7717]];
+  let sites = 0;
+  for (const [number, lat, lon] of apollo) {
+    const r = displayTileAt(lat, lon, 14).rect;
+    const region = photoRegionsFor(r).find(p => p.layer.toUpperCase().includes(`APOLLO${number}`));
+    if (region && planPhotoRegion(fp, r, 14, region.maxZ, region) && photoMaxLevel(r) >= region.maxZ + 1) sites++;
+  }
+  check('all six Apollo landing sites choose a real NAC region and its own detail limit', sites === 6, `${sites}/6`);
+  const a11 = PHOTO_REGIONS.find(p => p.layer.includes('Apollo11'))!;
+  check('a NAC region wholly outside the current tile produces no request plan', planPhotoRegion(fp, far, 14, a11.maxZ, a11) === null);
+  const a12 = PHOTO_REGIONS.find(p => p.layer.includes('Apollo12'))!;
+  const finest = planPhotoRegion(fp, displayTileAt(-3.0138, -23.4219, 17).rect, 17, a12.maxZ, a12)!;
+  check('level-16 source keys do not spill into another level and remain exact integers', finest.keys.length > 0 && finest.keys.every(key => {
+    const t = trekTileOf(key);
+    return Number.isSafeInteger(key) && t.z === 16 && t.x >= 0 && t.x < 2 ** 17 && t.y >= 0 && t.y < 2 ** 16;
+  }));
+
+  // QuickMap uses 512 px squares. Its pixel grid matches Trek's 256 px squares at the same
+  // level; sampling an independent continuous pattern must therefore give the same picture.
+  const qm = PHOTO_REGIONS.find(p => p.quickmap)!;
+  const lat = (qm.north + qm.south) / 2, lon = (qm.east + qm.west) / 2;
+  const r = displayTileAt(lat, lon, 15).rect, pq = planPhotoRegion(fp, r, 15, 15, qm)!;
+  const pattern = (x: number, y: number) => 100 + Math.round(20 * Math.sin(x / 17) + 20 * Math.cos(y / 19));
+  const qs = pq.keys.map(key => {
+    const z = Math.floor(key / KEY_LEVEL), local = key - z * KEY_LEVEL, n = 2 ** z;
+    return grey(512, 512, (x, y) => pattern((local % n) * 512 + x, Math.floor(local / n) * 512 + y));
+  });
+  const qpx = sampleTiles(fp, pq.grids, pq.keys, qs, false)!;
+  const normal = { ...qm, quickmap: false }, pt = planPhotoRegion(fp, r, 15, 15, normal)!;
+  const tpx = sampleTiles(fp, pt.grids, pt.keys, trekSources(pt, (_z, x, y) => grey(256, 256, (c, rr) => pattern(x * 256 + c, y * 256 + rr))), false)!;
+  check('QuickMap 512 px tiles and Trek 256 px tiles meet at the same true-frame pixels',
+    pq.grids[15].tileW === 512 && pq.grids[15].tilesX === 2 ** 15 && qpx.every((v, i) => v === tpx[i]));
+
+  // A constant image has no extra detail, even when it has a very different exposure.
+  const rgba = (values: number[], alpha = 255) => new Uint8ClampedArray(values.flatMap(v => [v, v, v, alpha]));
+  const flat = rgba([80, 80, 80, 80]), original = flat.slice();
+  addPhotoDetail(flat, rgba([190, 190, 190, 190]), rgba([190, 190, 190, 190]));
+  const detail = rgba([80, 80, 80, 80]);
+  addPhotoDetail(detail, rgba([170, 210, 170, 210]), rgba([190, 190, 190, 190]), 1);
+  const clear = rgba([80, 80]);
+  addPhotoDetail(clear, rgba([0, 255], 0), rgba([190, 190]));
+  check('tone matching preserves the base for flat or missing data and adds zero-mean detail without an exposure jump',
+    flat.every((v, i) => v === original[i]) && detail[0] === 60 && detail[4] === 100 && detail[8] === 60 && detail[12] === 100
+    && clear[0] === 80 && clear[4] === 80 && detail[3] === 255);
+  const exposed = rgba([77]), shadow = rgba([77]), absent = rgba([77]), cappedHigh = rgba([77]), cappedLow = rgba([77]);
+  matchPhotoTone(exposed, rgba([20]), rgba([20]), rgba([40]));
+  matchPhotoTone(shadow, rgba([0]), rgba([20]), rgba([40]));
+  matchPhotoTone(absent, rgba([20], 0), rgba([20]), rgba([40]));
+  matchPhotoTone(cappedHigh, rgba([20]), rgba([1]), rgba([200]));
+  matchPhotoTone(cappedLow, rgba([40]), rgba([200]), rgba([20]));
+  check('fixed-reference exposure matches flat tone, preserves black shadows and missing pixels, and caps extreme gains',
+    exposed[0] === 40 && shadow[0] === 0 && shadow[3] === 255 && absent[0] === 77 && cappedHigh[0] === 80 && cappedLow[0] === 10);
+
+  const noHole = grey(2, 1, c => c + 1), greyHoles = tcNoData(grey(3, 1, c => c === 1 ? 0 : 11));
+  const rgbHoles = tcNoData({ w: 3, h: 1, ch: 3, data: new Uint8Array([0, 0, 0, 0, 1, 0, 1, 0, 0]) });
+  const rgbaHoles = tcNoData({ w: 3, h: 1, ch: 4, data: new Uint8Array([0, 0, 0, 255, 1, 1, 1, 127, 20, 20, 20, 0]) });
+  check('NASA fallback TC opaque black gaps become transparent; valid dark pixels and existing alpha survive unchanged',
+    tcNoData(noHole) === noHole && greyHoles.ch === 4 && greyHoles.data[3] === 255 && greyHoles.data[7] === 0 && greyHoles.data[11] === 255
+    && rgbHoles.data[3] === 0 && rgbHoles.data[7] === 255 && rgbHoles.data[11] === 255
+    && rgbaHoles.data[3] === 0 && rgbaHoles.data[7] === 127 && rgbaHoles.data[11] === 0);
+
+  const shadowSource = grey(32, 16, c => c < 8 ? 0 : 12 + c);
+  const softened = featherPhotoBlack(shadowSource);
+  const alpha = (x: number) => softened.data[(8 * 32 + x) * 4 + 3];
+  check('detail-free black feathers over six source pixels without changing textured shadows',
+    softened.ch === 4 && alpha(7) === 0 && alpha(8) > 0 && alpha(8) < alpha(10) && alpha(10) < alpha(12)
+    && alpha(13) === 255 && softened.data[(8 * 32 + 20) * 4] === shadowSource.data[8 * 32 + 20]
+    && featherPhotoBlack(grey(16, 16, c => 3 + c)).ch === 1);
+  const composite = rgba([90]);
+  matchPhotoTone(composite, rgba([0], 0), rgba([80]), rgba([90]));
+  check('black source falls back to existing broad ground; safe NAC interiors skip the hidden TC',
+    composite[0] === 90 && photoRegionCovers(displayTileAt(0.674, 23.473, 16).rect, PHOTO_REGIONS[0])
+    && !photoRegionCovers(displayTileAt(0.674, 23.44, 16).rect, PHOTO_REGIONS[0]));
+
+  let maxNorthError = 0, bounded = true;
+  let worstNorthScale = 0;
+  for (const [latN, lonN] of [[89.7, 0], [90, 0], [86, 130], [84.1, -70]]) {
+    const rN = displayTileAt(latN, lonN, 14).rect;
+    const plan = planNorthPhoto(fp, rN, 14);
+    bounded &&= !!plan && plan.keys.length > 0 && plan.keys.length <= 12 && plan.level <= NORTH_PHOTO_MAX_Z;
+    northFootprint(fp, rN, NORTH_PHOTO_MAX_Z);
+    for (let j = 0; j < TILE; j += 31) for (let i = 0; i < TILE; i += 29) {
+      const p = j * TILE + i;
+      if (!fp.cov[p]) continue;
+      const d = pixelCentre(rN, i, j), t = displayToTrueLatLon(d.lat, d.lon);
+      const rho = 2 * R * Math.tan(Math.PI / 4 - t.lat * DEG / 2);
+      maxNorthError = Math.max(maxNorthError, Math.abs(fp.a[p] - rho * Math.sin(t.lon * DEG)), Math.abs(fp.b[p] + rho * Math.cos(t.lon * DEG)));
+      const scale = PYRAMID_PX * 2 ** NORTH_PHOTO_MAX_Z / (2 * NORTH_PHOTO_HALF_M);
+      worstNorthScale = Math.max(worstNorthScale, Math.abs(fp.u[p] - ((fp.a[p] + NORTH_PHOTO_HALF_M) * scale - 0.5)), Math.abs(fp.v[p] - ((NORTH_PHOTO_HALF_M - fp.b[p]) * scale - 0.5)));
+    }
+  }
+  const northUrl = new URL(northPhotoUrl(NORTH_PHOTO_MAX_Z, 2048, 2047));
+  check('controlled north NAC uses QuickMap\'s own polar grid with bounded requests, including directly over 90 N',
+    bounded && maxNorthError < 0.001 && worstNorthScale < 1e-9 && NORTH_PHOTO_LAT === 84
+    && Math.abs(2 * NORTH_PHOTO_HALF_M / (PYRAMID_PX * 2 ** NORTH_PHOTO_MAX_Z) - 0.888) < 0.001
+    && northUrl.origin === 'https://lroc-tiles.quickmap.io' && northUrl.pathname === '/tiles/lnpole_avg/lunar-sterenp/12/2048/2047.png',
+    `largest position error ${maxNorthError.toExponential(2)} m`);
 }
 
 console.log(failures === 0 ? '\nAll imagery checks passed.' : `\n${failures} imagery check(s) FAILED.`);

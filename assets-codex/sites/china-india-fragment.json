@@ -1,0 +1,210 @@
+[
+  {
+    "id": "change-3",
+    "name": "Chang'e-3",
+    "status": "past",
+    "kind": "lander",
+    "operator": "CNSA",
+    "country": "China",
+    "date": "2013-12-14",
+    "lat": 44.1214,
+    "lon": -19.5117,
+    "precisionKm": 0.01,
+    "outcome": "success",
+    "short": "China's first Moon lander, beside a wide crater in the Sea of Rains.",
+    "detail": "The lander delivered the Yutu rover to a plain made by ancient lava. Its telescope later watched the sky from the Moon.",
+    "source": {
+      "name": "CNSA: China's lunar probe sets record for longest stay",
+      "url": "https://www.cnsa.gov.cn/english/n6465652/n6465653/c6480404/content.html"
+    },
+    "coordSource": {
+      "name": "LROC QuickMap anthropogenic objects: Chang'e 3 Lander",
+      "url": "https://lroc.im-ldi.com/images/637"
+    },
+    "inQuickMap": true,
+    "verify": true,
+    "note": "Current operating status could not be confirmed for 2026-11-14. The cited CNSA operations report is from 2016; past is a conservative display fallback, not a claim that the lander has stopped. Yutu is a separate pin."
+  },
+  {
+    "id": "yutu",
+    "name": "Yutu",
+    "status": "past",
+    "kind": "rover",
+    "operator": "CNSA",
+    "country": "China",
+    "date": "2013-12-14",
+    "lat": 44.1208,
+    "lon": -19.5122,
+    "precisionKm": 0.0129,
+    "outcome": "success",
+    "short": "China's first Moon rover worked for 972 days.",
+    "detail": "Yutu drove near the Chang'e-3 lander before a fault stopped its wheels. It kept taking measurements until July 2016.",
+    "source": {
+      "name": "CNSA: A delivery from the Moon (2022 retrospective)",
+      "url": "https://www.cnsa.gov.cn/n6758823/n6758844/n6760445/n6760446/c6841528/content.html"
+    },
+    "coordSource": {
+      "name": "LROC QuickMap anthropogenic objects: Chang'e 3 Yutu Rover",
+      "url": "https://lroc.im-ldi.com/images/637"
+    },
+    "inQuickMap": true,
+    "verify": false,
+    "note": "Pin is the rover position in the supplied QuickMap list, not its landing carrier. Date is landing aboard Chang'e-3, before rover deployment. CNSA confirms operations ended on 2016-07-31."
+  },
+  {
+    "id": "change-4-yutu-2",
+    "name": "Chang'e-4 / Yutu-2",
+    "status": "past",
+    "kind": "lander",
+    "operator": "CNSA",
+    "country": "China",
+    "date": "2019-01-03",
+    "lat": -45.4562,
+    "lon": 177.5886,
+    "precisionKm": 0.02,
+    "outcome": "success",
+    "short": "The first soft landing on the Moon's far side.",
+    "detail": "Chang'e-4 landed inside Von Kármán crater and released Yutu-2. A satellite relays their signals because the Moon blocks a direct view of Earth.",
+    "source": {
+      "name": "CNSA: Chang'e and Yutu exploration retrospective (2025)",
+      "url": "https://www.cnsa.gov.cn/n6758968/n6758973/c10666020/content.html"
+    },
+    "coordSource": {
+      "name": "LROC QuickMap anthropogenic objects: Chang'e 4 Lander",
+      "url": "https://lroc.im-ldi.com/images/1168"
+    },
+    "inQuickMap": true,
+    "verify": true,
+    "note": "Pin is the fixed lander, not Yutu-2's current position. CNSA described continuing record-setting work on 2025-04-25, but operation on 2026-11-14 could not be confirmed. Past is a conservative display fallback, not a claim that the mission ended. QuickMap lists 177.5886 E; the 2020 LROC article gives 177.5885 E and 13 m uncertainty."
+  },
+  {
+    "id": "change-5",
+    "name": "Chang'e-5",
+    "status": "past",
+    "kind": "sample-return",
+    "operator": "CNSA",
+    "country": "China",
+    "date": "2020-12-01",
+    "lat": 43.0576,
+    "lon": -51.9161,
+    "precisionKm": 0.02,
+    "outcome": "success",
+    "short": "Brought Moon rocks to Earth for the first time since 1976.",
+    "detail": "The spacecraft drilled and scooped soil from a young lava plain in the Ocean of Storms. Its sample capsule returned 1,731 grams to Earth.",
+    "source": {
+      "name": "CNSA: Chang'e-5 retrieves 1,731 grams of Moon samples",
+      "url": "https://www.cnsa.gov.cn/english/n6465652/n6465653/c6810963/content.html"
+    },
+    "coordSource": {
+      "name": "LROC QuickMap anthropogenic objects: Chang'e 5 Lander",
+      "url": "https://lroc.im-ldi.com/images/1172"
+    },
+    "inQuickMap": true,
+    "verify": false,
+    "note": "Pin is the lander that remained on the Moon, not the capsule that returned to Earth."
+  },
+  {
+    "id": "change-6",
+    "name": "Chang'e-6",
+    "status": "past",
+    "kind": "sample-return",
+    "operator": "CNSA",
+    "country": "China",
+    "date": "2024-06-01",
+    "lat": -41.6383,
+    "lon": -153.9857,
+    "precisionKm": 0.03,
+    "outcome": "success",
+    "short": "The first mission to bring home rocks from the Moon's far side.",
+    "detail": "Chang'e-6 collected soil in the Apollo basin on the far side. It returned 1,935.3 grams to Earth for scientists to study.",
+    "source": {
+      "name": "CNSA: Chang'e-6 collects 1,935.3 grams of far-side samples",
+      "url": "https://www.cnsa.gov.cn/english/n6465652/n6465653/c10573149/content.html"
+    },
+    "coordSource": {
+      "name": "LROC QuickMap anthropogenic objects: Chang'e 6 Lander",
+      "url": "https://lroc.im-ldi.com/images/1374"
+    },
+    "inQuickMap": true,
+    "verify": false,
+    "note": "UTC landing date is 2024-06-01 (22:23 UTC), although China's local date was June 2. Supplied QuickMap coordinates are the preferred later catalogue values; the initial LROC article gives -41.6385, -153.9852 with 30 m uncertainty."
+  },
+  {
+    "id": "chandrayaan-1-mip",
+    "name": "Chandrayaan-1 Moon Impact Probe",
+    "status": "past",
+    "kind": "impact",
+    "operator": "ISRO",
+    "country": "India",
+    "date": "2008-11-14",
+    "lat": -89.55,
+    "lon": -122.93,
+    "precisionKm": 2,
+    "outcome": "success",
+    "short": "India's first probe to reach the Moon hit a ridge near the south pole.",
+    "detail": "The probe sent pictures and measurements while falling toward the Moon. Researchers matched its last pictures to maps to estimate where it hit.",
+    "source": {
+      "name": "NASA: Chandrayaan-1 / Moon Impact Probe",
+      "url": "https://science.nasa.gov/mission/chandrayaan-1/"
+    },
+    "coordSource": {
+      "name": "Stooke, Ahmed and Subramanian (2021), LPSC abstract 1013: impact location refined",
+      "url": "https://www.hou.usra.edu/meetings/lpsc2021/pdf/1013.pdf"
+    },
+    "inQuickMap": false,
+    "verify": true,
+    "note": "Estimated impact point from the final descent pictures, not a crater located in LROC imagery. Authors give near 89.55 S, 122.93 W and say the crater/ejecta has not been found; 2 km is a conservative display uncertainty, not a published error bar. This supersedes widely repeated legacy estimates near 89.76 S, 39.40 W."
+  },
+  {
+    "id": "chandrayaan-2-vikram",
+    "name": "Chandrayaan-2 Vikram",
+    "status": "past",
+    "kind": "impact",
+    "operator": "ISRO",
+    "country": "India",
+    "date": "2019-09-06",
+    "lat": -70.8811,
+    "lon": 22.7834,
+    "precisionKm": 0.01,
+    "outcome": "failed",
+    "short": "India's first Moon lander broke apart during its landing attempt.",
+    "detail": "Vikram lost contact during descent and crashed in the southern highlands. A public search helped NASA locate the scattered pieces.",
+    "source": {
+      "name": "LROC: Vikram Lander Found",
+      "url": "https://lroc.im-ldi.com/images/1131"
+    },
+    "coordSource": {
+      "name": "LROC QuickMap anthropogenic objects: Chandrayaan-2 Vikram Lander",
+      "url": "https://lroc.im-ldi.com/images/1131"
+    },
+    "inQuickMap": true,
+    "verify": false,
+    "note": "UTC impact date is 2019-09-06; it was already September 7 in India. This pin is the impact site, not the still-operating Chandrayaan-2 orbiter."
+  },
+  {
+    "id": "chandrayaan-3",
+    "name": "Chandrayaan-3 / Pragyan",
+    "status": "past",
+    "kind": "lander",
+    "operator": "ISRO",
+    "country": "India",
+    "date": "2023-08-23",
+    "lat": -69.374,
+    "lon": 32.3187,
+    "precisionKm": 0.01,
+    "outcome": "success",
+    "short": "India's first soft Moon landing sent a small rover across the soil.",
+    "detail": "The Vikram lander and Pragyan rover studied the southern highlands during one lunar day. The site is about 600 km from the south pole.",
+    "source": {
+      "name": "ISRO: Chandrayaan-3 mission updates",
+      "url": "https://www.isro.gov.in/Chandrayaan3.html"
+    },
+    "coordSource": {
+      "name": "LROC QuickMap anthropogenic objects: Chandrayaan-3 Vikram Lander",
+      "url": "https://lroc.im-ldi.com/images/1314"
+    },
+    "inQuickMap": true,
+    "verify": false,
+    "note": "Pin is Vikram, not Pragyan's final parking spot. ISRO says both were put to sleep in September 2023 and later communication attempts continued; no confirmed resumed surface operations were found. Passive laser-reflector use does not mean powered surface operations."
+  }
+]

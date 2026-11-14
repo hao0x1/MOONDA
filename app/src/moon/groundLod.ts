@@ -12,7 +12,7 @@
 //     (small craters fade out earlier with distance, fewer smooth scan reads, shorter little-shadow walks);
 //     when the view is still it brings it all back over about a second. Never a jump: every knob is a fade.
 
-import type { Cartesian2, Scene } from 'cesium';
+import type { Cartesian2, Scene, Viewer } from 'cesium';
 
 /** How dense the (invisible) fog is for refining tiles: errors far away may grow by up to FOG_SSE px (reached ~60 km out). */
 const FOG_DENSITY = 1 / 30000, FOG_SSE = 2;
@@ -42,6 +42,13 @@ const FRAME_HIGH_MS = 18.5;
 const SHED_RATE = 1.6, BACK_RATE_STILL = 1.0, BACK_RATE_MOVING = 0.25;
 /** At the lowest level the crater sizes fade out this many times nearer (see lvLod.y in the shader). */
 const FOOTPRINT_MAX = 2.4;
+/** The drawing size never falls below this share of the full size while moving: the picture must stay sharp (a 2x screen still gets 1.5x). */
+const DRAWING_FLOOR = 0.75;
+/** At least 1.5 pixels per screen point, or the user's chosen size if that is already smaller. */
+const DRAWING_NATIVE_FLOOR = 1.5;
+/** Give shader detail time to ease down before reducing the picture's size. */
+const DRAWING_HIGH_DWELL_S = 0.4, DRAWING_STEP_MS = 250;
+const DRAWING_BACK_MOVING = 0.25, DRAWING_BACK_STILL = 1;
 
 type TimerExt = { TIME_ELAPSED_EXT: number; GPU_DISJOINT_EXT: number };
 
@@ -51,7 +58,7 @@ export class GroundGovernor {
   private gpuMs = 0;
   /** for tests: every measured GPU frame time (ms), when set to an array */
   samples: number[] | null = null;
-  /** for tests: hold the level here (no governing) */
+  /** for tests: hold shader detail here; drawing size still follows the frame budget */
   hold: number | null = null;
   private frameMs = 16.7;
   private lastT = 0;
@@ -59,7 +66,14 @@ export class GroundGovernor {
   private readonly ext: TimerExt | null;
   private readonly pending: WebGLQuery[] = [];
   private active: WebGLQuery | null = null;
+  private drawingRevision = 0;
+  private activeRevision = 0;
   private readonly offs: (() => void)[] = [];
+  private drawingBase = 0;
+  private drawingScale = 1;
+  private drawingApplied = 0;
+  private drawingAt = 0;
+  private overBudgetS = 0;
 
   constructor(scene: Scene) {
     const gl = (scene as unknown as { context: { _gl: WebGL2RenderingContext; webgl2: boolean } }).context;
@@ -73,12 +87,13 @@ export class GroundGovernor {
         const q = g.createQuery();
         if (!q) return;
         g.beginQuery(X.TIME_ELAPSED_EXT, q);
-        this.active = q;
+        this.active = q; this.activeRevision = this.drawingRevision;
       }));
       this.offs.push(scene.postRender.addEventListener(() => {
         if (!this.active) return;
         g.endQuery(X.TIME_ELAPSED_EXT);
-        this.pending.push(this.active);
+        if (this.activeRevision === this.drawingRevision) this.pending.push(this.active);
+        else g.deleteQuery(this.active); // drawing size changed after this query began
         this.active = null;
       }));
     }
@@ -104,25 +119,78 @@ export class GroundGovernor {
    * Once a frame (lander.ts stepMarch). moving: the view turns fast or the robot drives. Sets lvLod
    * (x = level, y = crater footprint factor) and returns true while it still changes (draw another frame).
    */
-  step(dt: number, moving: boolean, lod: Cartesian2): boolean {
+  step(dt: number, moving: boolean, lod: Cartesian2, viewer?: Viewer): boolean {
     const now = performance.now();
-    if (this.lastT && now - this.lastT < 100) this.frameMs += (now - this.lastT - this.frameMs) * 0.15;
+    const gap = now - this.lastT;
+    // Slow frames count too, but waking after a long idle is not a graphics-chip measurement.
+    if (this.lastT && gap > 0 && gap < 500) this.frameMs += (Math.min(gap, 100) - this.frameMs) * 0.15;
     this.lastT = now;
     this.poll();
+    const high = this.ext ? this.gpuMs > GPU_HIGH_MS : this.frameMs > FRAME_HIGH_MS;
+    const low = this.ext ? this.gpuMs > 0 && this.gpuMs < GPU_TARGET_MS : this.frameMs < 17.2;
+    this.overBudgetS = moving && high ? this.overBudgetS + Math.min(Math.max(dt, 0), 0.1) : 0;
     let L = this.level;
     if (this.hold !== null) L = this.hold;
     else if (!moving) L = Math.min(1, L + dt * BACK_RATE_STILL);
     else {
-      const high = this.ext ? this.gpuMs > GPU_HIGH_MS : this.frameMs > FRAME_HIGH_MS;
-      const low = this.ext ? this.gpuMs < GPU_TARGET_MS : this.frameMs < 17.2;
       if (high) L = Math.max(0, L - dt * SHED_RATE);
-      else if (low) L = Math.min(1, L + dt * BACK_RATE_MOVING);
+      // Recover a sharp picture first. Once its full size is back, richer shading may return.
+      else if (low && (!viewer || this.drawingScale === 1)) L = Math.min(1, L + dt * BACK_RATE_MOVING);
     }
     this.level = L;
     const x = L, y = 1 + (FOOTPRINT_MAX - 1) * (1 - L) * (1 - L * 0.5);
     const changed = Math.abs(lod.x - x) > 1e-3 || Math.abs(lod.y - y) > 1e-3;
     lod.x = x; lod.y = y;
-    return changed;
+    // A tiny final recovery step can be smaller than the visible-change threshold. Keep the
+    // sleeping render loop awake until full detail is back, unless a test deliberately holds it.
+    const restoring = !moving && this.hold === null && L < 1;
+    return (viewer ? this.stepDrawing(now, moving, viewer) : false) || changed || restoring;
+  }
+
+  /** Capture the surface view's normal drawing size after its quality setting is applied. */
+  resetDrawing(viewer: Viewer): void {
+    this.drawingBase = this.drawingApplied = viewer.resolutionScale;
+    this.drawingScale = 1; this.drawingAt = performance.now();
+    this.resetDrawingTimings();
+  }
+
+  /** Old buffer timings cannot tell us whether its replacement is still over budget. */
+  private resetDrawingTimings(): void {
+    this.drawingRevision++;
+    if (this.gl) this.pending.forEach(q => this.gl!.deleteQuery(q));
+    this.pending.length = 0;
+    this.gpuMs = 0; this.frameMs = 16.7; this.overBudgetS = 0;
+  }
+
+  /**
+   * Once shader detail has been shed, fewer pixels are the remaining way to meet the frame budget.
+   * One bounded budget correction avoids several expensive buffer reallocations for the same
+   * overload. Recovery stays smooth, at most four updates a second.
+   * The terrain and wheel samples stay real; the full drawing size returns when the view stops.
+   */
+  private stepDrawing(now: number, moving: boolean, viewer: Viewer): boolean {
+    if (!this.drawingBase || Math.abs(viewer.resolutionScale - this.drawingApplied) > 1e-3) this.resetDrawing(viewer);
+    const elapsed = Math.min(1, Math.max(0, (now - this.drawingAt) / 1000));
+    if (now - this.drawingAt < DRAWING_STEP_MS) return !moving && this.drawingScale < 1;
+    this.drawingAt = now;
+    let next = this.drawingScale;
+    const high = this.ext ? this.gpuMs > GPU_HIGH_MS : this.frameMs > FRAME_HIGH_MS;
+    const low = this.ext ? this.gpuMs > 0 && this.gpuMs < GPU_TARGET_MS : this.frameMs < 17.2;
+    if (!moving) next = Math.min(1, next + elapsed * DRAWING_BACK_STILL);
+    else if (high && this.level < 0.2 && this.overBudgetS >= DRAWING_HIGH_DWELL_S) {
+      const budget = this.ext ? Math.sqrt(GPU_TARGET_MS / this.gpuMs) : Math.sqrt(16.7 / this.frameMs);
+      const dpr = Number.isFinite(globalThis.devicePixelRatio) && globalThis.devicePixelRatio > 0 ? globalThis.devicePixelRatio : 2;
+      // Full detail already caps large Retina buffers. A further relative cut must not take
+      // their actual drawing below 1.5x, or reduce a 1x / Smooth view below the user's choice.
+      const floor = Math.max(DRAWING_FLOOR, Math.min(1, DRAWING_NATIVE_FLOOR / (dpr * this.drawingBase)));
+      next = Math.max(floor, next * budget);
+    } else if (low) next = Math.min(1, next + elapsed * DRAWING_BACK_MOVING);
+    if (next === this.drawingScale) return !moving && next < 1;
+    this.drawingScale = next;
+    this.drawingApplied = this.drawingBase * next;
+    viewer.resolutionScale = this.drawingApplied;
+    this.resetDrawingTimings();
+    return true;
   }
 
   /** for tests: the smoothed GPU time per frame (ms; 0 without a timer) */

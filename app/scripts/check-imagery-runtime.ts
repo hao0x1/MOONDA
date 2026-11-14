@@ -6,7 +6,7 @@
 // What a browser does that these stand-ins copy: a cross-origin 404 from Moon Trek arrives
 // WITHOUT the CORS header, so fetch() rejects with a TypeError exactly like a network failure.
 import { registerHooks } from 'node:module';
-import { Cartographic, Ellipsoid, GeographicTilingScheme } from 'cesium';
+import { Cartesian3, Cartographic, Ellipsoid, GeographicTilingScheme, type Viewer } from 'cesium';
 import { trueToDisplayLatLon } from '../src/moon/frame.ts';
 import type { FromWorker, Rect, ToWorker } from '../src/moon/imageryWorker.ts';
 
@@ -14,6 +14,7 @@ let failures = 0;
 const check = (name: string, ok: boolean, detail = '') => { console.log(`${ok ? 'ok  ' : 'FAIL'}  ${name}${detail ? '  — ' + detail : ''}`); if (!ok) failures++; };
 const g = globalThis as Record<string, unknown>;
 const realSetTimeout = setTimeout;
+const realClearTimeout = clearTimeout;
 const sleep = (ms: number) => new Promise(r => realSetTimeout(r, ms));
 let clock = 1_000_000; // our own clock for performance.now(), so "20 s later" takes no time
 performance.now = () => clock;
@@ -27,22 +28,27 @@ class FakeBlob {
   readonly w: number;
   readonly h: number;
   readonly body: string;
-  constructor(pixels: Uint8ClampedArray | null, w: number, h: number, body = '') { this.pixels = pixels; this.w = w; this.h = h; this.body = body; }
+  readonly large: boolean;
+  constructor(pixels: Uint8ClampedArray | null, w: number, h: number, body = '', large = false) { this.pixels = pixels; this.w = w; this.h = h; this.body = body; this.large = large; }
   async text() { return this.body; }
 }
-g.createImageBitmap = async (src: FakeBlob | { data: Uint8ClampedArray }) =>
-  src instanceof FakeBlob ? { width: src.w, height: src.h, pixels: src.pixels, close() {} } : { width: 256, height: 256, data: src.data, close() {} };
+let bigDecodeActive = 0, maxBigDecodeActive = 0;
+g.createImageBitmap = async (src: FakeBlob | { data: Uint8ClampedArray }) => {
+  if (!(src instanceof FakeBlob)) return { width: 256, height: 256, data: src.data, close() {} };
+  if (src.large) { bigDecodeActive++; maxBigDecodeActive = Math.max(maxBigDecodeActive, bigDecodeActive); await sleep(4); }
+  return { width: src.w, height: src.h, pixels: src.pixels, close() { if (src.large) bigDecodeActive--; } };
+};
 g.ImageData = class { data: Uint8ClampedArray; width: number; height: number; constructor(d: Uint8ClampedArray, w: number, h: number) { this.data = d; this.width = w; this.height = h; } };
 g.OffscreenCanvas = class {
-  readonly w: number;
-  constructor(w: number) { this.w = w; }
+  width: number;
+  height: number;
+  constructor(w: number, h: number) { this.width = w; this.height = h; }
   getContext() {
-    let bmp: { pixels: Uint8ClampedArray } | null = null, sy = 0, sh = 0;
-    const w = this.w;
+    let bmp: { width: number; pixels: Uint8ClampedArray } | null = null, sy = 0, sh = 0;
     return {
       clearRect() {},
-      drawImage(b: { pixels: Uint8ClampedArray }, _sx: number, y: number, _sw: number, h: number) { bmp = b; sy = y; sh = h; },
-      getImageData() { return { data: bmp!.pixels.slice(sy * w * 4, (sy + sh) * w * 4) }; },
+      drawImage(b: { width: number; pixels: Uint8ClampedArray }, _sx: number, y: number, _sw: number, h: number) { bmp = b; sy = y; sh = h; },
+      getImageData() { const w = bmp!.width; return { data: bmp!.pixels.slice(sy * w * 4, (sy + sh) * w * 4) }; },
     };
   }
 };
@@ -68,6 +74,7 @@ let remoteDown = false; // trek.nasa.gov and Lunaserv fail, the app's own files 
 const LOCAL = 'http://127.0.0.1:5190/';
 const missingLocal = new Set<string>(); // files listed in an index that are not on disk (404)
 const localJson: Record<string, unknown> = {}; // url -> content of a .json file
+const fixtureImages = new Map<string, FakeBlob>();
 /** Pictures of the local whole-Moon set: every 2x2 block has one value, so half-size copies are exact. */
 const BASE_BIG = `${LOCAL}data/base/slow-moon.jpg`, BASE_QUICK = `${LOCAL}data/base/quick.jpg`;
 const basePixels = (w: number, h: number, f: (c: number, r: number) => number) => {
@@ -79,15 +86,27 @@ const bigValue = (c: number, r: number) => ((c >> 1) * 3 + (r >> 1) * 5) & 255, 
 const fetched: string[] = [];
 const active = new Map<string, number>();
 let maxPerHost = 0, maxTotal = 0, total = 0;
-g.fetch = async (url: string) => {
+let fetchDelay = 2, abortedFetches = 0;
+const failedLayers = new Set<string>();
+let sourceOverride: ((layer: string, z: number, size: number) => Uint8ClampedArray | null) | undefined;
+const fetchWait = (signal?: AbortSignal) => new Promise<void>((resolve, reject) => {
+  const finish = () => { signal?.removeEventListener('abort', abort); resolve(); };
+  const timer = realSetTimeout(finish, fetchDelay);
+  const abort = () => { realClearTimeout(timer); signal?.removeEventListener('abort', abort); abortedFetches++; reject(new DOMException('Cancelled', 'AbortError')); };
+  signal?.addEventListener('abort', abort, { once: true });
+  if (signal?.aborted) abort();
+});
+g.fetch = async (url: string, options?: { signal?: AbortSignal }) => {
   const host = new URL(url).host;
   fetched.push(url);
   total++; active.set(host, (active.get(host) ?? 0) + 1);
   maxPerHost = Math.max(maxPerHost, active.get(host)!); maxTotal = Math.max(maxTotal, total);
   try {
-    await sleep(2);
+    await fetchWait(options?.signal);
     if (offline || (remoteDown && !url.startsWith(LOCAL))) throw new TypeError('Failed to fetch');
     const ok = (blob: FakeBlob) => ({ status: 200, ok: true, blob: async () => blob });
+    const fixture = fixtureImages.get(url);
+    if (fixture) return ok(fixture);
     if (url in localJson) return { status: 200, ok: true, json: async () => localJson[url], blob: async () => new FakeBlob(null, 0, 0) };
     if (url.startsWith(`${LOCAL}data/polar/t/`)) return missingLocal.has(url) ? { status: 404, ok: false, blob: async () => new FakeBlob(null, 0, 0) } : ok(new FakeBlob(new Uint8ClampedArray(512 * 512 * 4).fill(90), 512, 512));
     if (url === BASE_BIG) { await sleep(40); return ok(new FakeBlob(basePixels(1024, 512, bigValue), 1024, 512)); } // a big picture takes a while
@@ -97,10 +116,17 @@ g.fetch = async (url: string) => {
     const t = /EQ\/([^/]+)\/1\.0\.0\/default\/default028mm\/(\d+)\/(\d+)\/(\d+)\./.exec(url);
     if (t) {
       const [layer, z, y, x] = [t[1], +t[2], +t[3], +t[4]];
+      if (failedLayers.has(layer)) throw new TypeError('Failed to fetch');
       if (z > depthOf[layer]) throw new TypeError('Failed to fetch'); // a 404 without CORS header, as the browser reports it
-      return ok(new FakeBlob(trekPixels(layer, z, x, y), 256, 256));
+      return ok(new FakeBlob(sourceOverride?.(layer, z, 256) ?? trekPixels(layer, z, x, y), 256, 256));
     }
     if (host.endsWith('im-ldi.com')) return ok(new FakeBlob(new Uint8ClampedArray(512 * 512 * 4).fill(180), 512, 512));
+    if (host === 'lroc-tiles.quickmap.io') {
+      const match = /\/tiles\/([^/]+)\/[^/]+\/(\d+)\//.exec(url)!;
+      const layer = match[1], z = +match[2];
+      if (failedLayers.has(layer) || layer === 'kag_tc_e_7m' && z > 12) throw new TypeError('Failed to fetch');
+      return ok(new FakeBlob(sourceOverride?.(layer, z, 512) ?? basePixels(512, 512, (c, r) => layer === 'lnpole_avg' ? 170 : 140 + ((c + r) % 30)), 512, 512));
+    }
     if (url.includes('/data/')) return ok(new FakeBlob(rasterPixels, RASTER_PX, RASTER_PX));
     return { status: 404, ok: false, blob: async () => new FakeBlob(null, 0, 0) };
   } finally {
@@ -114,6 +140,8 @@ g.WorkerGlobalScope = function WorkerGlobalScope() {};
 g.self = globalThis;
 g.postMessage = (m: FromWorker) => { outbox.push(m); };
 const W = await import('../src/moon/imageryWorker.ts');
+depthOf[W.PHOTO_TC] = W.PHOTO_TC_MAX_Z;
+for (const region of W.PHOTO_REGIONS) if (!region.quickmap) depthOf[region.layer] = region.maxZ;
 const send = (m: ToWorker) => (g.onmessage as (e: { data: ToWorker }) => void)({ data: m });
 let nextId = 1;
 /** Post jobs to the worker and wait for all their answers. */
@@ -274,22 +302,196 @@ function rgb(px: Uint8ClampedArray) { const d = new Uint8Array((px.length / 4) *
   check('local Moon picture missing: the tile is transparent and reported (the Moon Trek photo then takes over)', gone.bitmap === null && gone.gaps && !gone.parent);
 }
 
-// 4. Polar rasters: all 7 science maps + the photo on screen at once are decoded once, not over and over --
+// 3d. One photo layer chooses fine sources only for the visible region -------------------------
 {
-  const urls = [...Array(8).keys()].map(n => `http://127.0.0.1:5190/data/layers/map${n}.png`);
+  const photoJob = (lat: number, lon: number, level: number): Extract<ToWorker, { id: number }> => ({
+    id: nextId++, flipRows: false, job: { kind: 'photo', rect: rectAt(lat, lon, level), level, layer: WAC, minTrueLat: -81.5 },
+  });
+  let n0 = fetched.length;
+  const [far] = await run([photoJob(20, 150, 13)]);
+  const farUrls = fetched.slice(n0);
+  const tcLevels = farUrls.filter(u => u.includes(`/${W.PHOTO_FINE_TC.layer}/`)).map(u => /lunar-fulleqc\/(\d+)\//.exec(u)?.[1]).filter(Boolean).map(Number);
+  check('far-side photo: primary 7.4 m TC uses its z12 grid with no NASA fallback or unrelated NAC fetched',
+    !!pixelsOf(far) && !far.gaps && tcLevels.includes(12) && tcLevels.every(z => z <= 12)
+    && !farUrls.some(u => u.includes(W.PHOTO_TC) || u.includes('LRO_NAC') || u.includes('wac_nac_nacroi') || u.includes('im-ldi.com')));
+  n0 = fetched.length;
+  const [coarseApollo] = await run([photoJob(0.674, 23.473, 9)]);
+  check('NAC lighting is already present in coarse site views before a landing', !!coarseApollo.bitmap && fetched.slice(n0).some(u => u.includes('/LRO_NAC_Apollo11_Mosaic_p/1.0.0/default/default028mm/9/')));
+  n0 = fetched.length;
+  const [apollo] = await run([photoJob(0.674, 23.473, 13)]);
+  check('Apollo 11 photo: the real NAC mosaic is requested while unrelated Apollo mosaics stay idle',
+    !!pixelsOf(apollo) && !apollo.gaps && fetched.slice(n0).some(u => u.includes('/LRO_NAC_Apollo11_Mosaic_p/'))
+    && !fetched.slice(n0).some(u => /Apollo(?:12|14|15|16|17)/.test(u)));
+  n0 = fetched.length;
+  const [change] = await run([photoJob(44.1214, -19.5116, 14)]);
+  check('recent lander: QuickMap requests use the public 512 px geographic endpoint',
+    !!pixelsOf(change) && !change.gaps && fetched.slice(n0).some(u => /quickmap\.io\/tiles\/wac_nac_nacroi\/lunar-fulleqc\/14\//.test(u)));
+  n0 = fetched.length;
+  const northJob = photoJob(89.7, 0, 13), parentRect = rectAt(89.7, 0, 6);
+  if (northJob.job.kind !== 'photo') throw new Error('Expected a photo job');
+  northJob.job.northBase = { cut: { url: BASE_BIG, mip: 0, px: 512, py: 256, mips: 1 }, rect: parentRect };
+  const [north] = await run([northJob]);
+  const northUrls = fetched.slice(n0).filter(u => u.includes('/lnpole_avg/lunar-sterenp/'));
+  const northPx = pixelsOf(north), rr = northJob.job.rect;
+  let northLocal = !!northPx, northError = 0;
+  const roundedGrey = new Uint8ClampedArray(1);
+  for (let j = 0; j < 256; j += 37) for (let i = 0; i < 256; i += 41) {
+    const u = 512 + 256 * (rr.west + (i + 0.5) * (rr.east - rr.west) / 256 - parentRect.west) / (parentRect.east - parentRect.west) - 0.5;
+    const v = 256 + 256 * (parentRect.north - rr.north + (j + 0.5) * (rr.north - rr.south) / 256) / (parentRect.north - parentRect.south) - 0.5;
+    const x = Math.floor(u), y = Math.floor(v), tx = u - x, ty = v - y;
+    roundedGrey[0] = (bigValue(x, y) * (1 - tx) + bigValue(x + 1, y) * tx) * (1 - ty)
+      + (bigValue(x, y + 1) * (1 - tx) + bigValue(x + 1, y + 1) * tx) * ty;
+    const value = northPx?.[((255 - j) * 256 + i) * 4];
+    northError = Math.max(northError, Math.abs((value ?? -1) - roundedGrey[0]));
+    if (value !== roundedGrey[0]) northLocal = false;
+  }
+  check('north photo: controlled polar tiles keep the exact local brightness reference and fetch no Trek rings',
+    northLocal && !north.gaps && northUrls.length > 0
+    && !fetched.slice(n0).some(u => u.includes('trek.nasa.gov') || u.includes('im-ldi.com')), `${northUrls.length} cached polar source squares; largest grey error ${northError}`);
+
+  // A source square with no visible ground must keep the existing broad reference.
+  clock++;
+  failedLayers.add(W.PHOTO_FINE_TC.layer);
+  sourceOverride = (layer, _z, size) => basePixels(size, size, () => layer === W.PHOTO_TC ? 0 : 150);
+  const [tcGap] = await run([photoJob(12, 116, 13)]);
+  const gapPx = pixelsOf(tcGap);
+  check('NASA fallback opaque black gaps keep WAC brightness instead of drawing dark joins',
+    !!gapPx && tcGap.gaps && !tcGap.parent && gapPx.every((v, i) => v === (i % 4 === 3 ? 255 : 150)));
+  sourceOverride = undefined;
+  n0 = fetched.length;
+  const fallbackJob = photoJob(11, 113, 12), [fallback] = await run([fallbackJob]);
+  const fallbackUrls = fetched.slice(n0);
+  check('if the primary server fails, the NASA z10 TC fallback still draws and asks for a later upgrade',
+    !!fallback.bitmap && fallback.gaps && !fallback.parent && fallbackUrls.some(u => u.includes(`/${W.PHOTO_TC}/`))
+    && !fallbackUrls.some(u => /Kaguya_TCortho_Mosaic_Global_4096ppd.*default028mm\/1[1-9]\//.test(u)));
+  const count = fetched.length;
+  const [repeat] = await run([{ ...fallbackJob, id: nextId++ }]);
+  check('failed primary photos back off without repeatedly fetching the same source squares', !!repeat.bitmap && repeat.gaps && fetched.length === count);
+  failedLayers.add(W.PHOTO_TC);
+  const downJob = photoJob(10, 118, 12), [down] = await run([downJob]);
+  check('if primary and fallback both fail, the sharp tile keeps its old photo parent', down.parent === true && down.gaps && down.bitmap === null);
+  failedLayers.clear(); send({ forgetFailures: true });
+  const [back] = await run([{ ...downJob, id: nextId++ }]);
+  check('sharp imagery recovers after the online signal, preserving the original photo underneath', !!back.bitmap && !back.gaps && !back.parent);
+
+  const morningLayer = 'kag_tc_m_7m';
+  n0 = fetched.length;
+  sourceOverride = (layer, z, size) => basePixels(size, size, () => (layer === W.PHOTO_FINE_TC.layer || layer === morningLayer) && z > 8 ? 0 : 150);
+  const [eveningShadow] = await run([photoJob(15, 120, 13)]);
+  const eveningPx = pixelsOf(eveningShadow);
+  check('where Evening and Morning are both black the original broad photo stays visible',
+    !!eveningPx && !eveningShadow.gaps && fetched.slice(n0).some(u => u.includes(`/${morningLayer}/`))
+    && eveningPx.every((v, i) => v === (i % 4 === 3 ? 255 : 150)));
+  sourceOverride = (layer, z, size) => basePixels(size, size, () => layer.includes('Apollo14') && z > 8 ? 0 : 150);
+  const [nacShadow] = await run([photoJob(-3.7, -17.44, 13)]);
+  const shadowPx = pixelsOf(nacShadow);
+  check('an entirely black NAC square keeps its broad WAC reference without a dark hole',
+    !!shadowPx && !nacShadow.gaps && shadowPx.every((v, i) => v === (i % 4 === 3 ? 255 : 150)));
+  n0 = fetched.length;
+  sourceOverride = (_layer, _z, size) => basePixels(size, size, () => 150);
+  const [bright] = await run([photoJob(30, 100, 13)]);
+  check('a bright Evening photo asks for no unnecessary Morning source squares',
+    !!bright.bitmap && !bright.gaps && !fetched.slice(n0).some(u => u.includes(`/${morningLayer}/`)));
+  n0 = fetched.length;
+  sourceOverride = (layer, z, size) => basePixels(size, size, c => {
+    if (layer === W.PHOTO_FINE_TC.layer && z > 8) return c % 64 < 32 ? 0 : 180;
+    return layer === morningLayer && z > 8 ? 120 : 150;
+  });
+  const [filled] = await run([photoJob(35, 110, 13)]);
+  const filledPx = pixelsOf(filled);
+  check('only visible black Evening areas request Morning detail and keep the result opaque',
+    !!filledPx && !filled.gaps && fetched.slice(n0).some(u => u.includes(`/${morningLayer}/`))
+    && filledPx.every((v, i) => i % 4 === 3 ? v === 255 : v > 10));
+  sourceOverride = undefined;
+
+  // The same display tile in two photo consumers shares source downloads. Removing one
+  // consumer must not cancel the other's request; removing the last one should stop work.
+  fetchDelay = 40;
+  n0 = fetched.length;
+  const sharedA = photoJob(22, 114, 13), sharedB = { ...sharedA, id: nextId++ };
+  send(sharedA); send(sharedB);
+  await sleep(8); send({ cancel: sharedA.id });
+  for (let n = 0; n < 2000 && !outbox.some(m => m.id === sharedB.id); n++) await sleep(1);
+  const shared = outbox.find(m => m.id === sharedB.id);
+  const urls = fetched.slice(n0);
+  check('one cancelled consumer does not abort shared photo downloads needed by another tile', !!shared?.bitmap && !shared.gaps
+    && new Set(urls).size === urls.length);
+  const abandoned = photoJob(24, 115, 13);
+  const abandonedStart = fetched.length;
+  send(abandoned);
+  // Wait past the small WAC baseline; only sharp requests take a cancellation signal.
+  for (let n = 0; n < 2000 && !fetched.slice(abandonedStart).some(u => u.includes(`/${W.PHOTO_FINE_TC.layer}/`)); n++) await sleep(1);
+  const abortedBefore = abortedFetches;
+  send({ cancel: abandoned.id });
+  for (let n = 0; n < 2000 && !outbox.some(m => m.id === abandoned.id); n++) await sleep(1);
+  const cancelled = outbox.find(m => m.id === abandoned.id);
+  check('abandoning the last photo consumer aborts active sharp downloads without creating a server failure',
+    abortedFetches > abortedBefore && cancelled?.parent === true && !cancelled.gaps);
+  fetchDelay = 2;
+  const [retry] = await run([{ ...abandoned, id: nextId++ }]);
+  check('a cancelled sharp download can be requested again immediately without error backoff', !!retry.bitmap && !retry.gaps);
+}
+
+// 4. A hard source-cache budget keeps every layer usable without retaining every full picture --
+{
+  // Small fixtures exercise RGBA packing, mips and eviction without allocating 170 MiB.
+  const budget = 2 ** 20, urls = [...Array(8).keys()].map(n => `${LOCAL}data/cache-check/map${n}.png`);
+  for (const [n, url] of urls.entries()) {
+    const px = basePixels(256, 256, () => 50 + n * 10); px[3] = 0;
+    fixtureImages.set(url, new FakeBlob(px, 256, 256, '', true));
+  }
   const rj = (url: string, dx: number): ToWorker => ({ id: nextId++, flipRows: false, job: { kind: 'raster', rect: rectAt(-88, 30, 7, dx), level: 7, url, extentM: 304000, clipTrueLat: -80.02, featherM: 0 } });
-  for (let round = 0; round < 4; round++) for (const [n, u] of urls.entries()) { await run([rj(u, round)]); clock += 200 + n; }
-  const loads = urls.map(u => fetched.filter(f => f === u).length);
-  check('8 polar maps in use (170 MiB, over the 150 MiB budget): each decoded once, none dropped while in use', loads.every(n => n === 1), `downloads per map: ${loads.join(',')}`);
-  // Later only map 0 stays in use; a ninth map makes room by dropping maps nobody looked at for a while.
-  clock += 30_000;
-  await run([rj(urls[0], 0)]);
-  const ninth = 'http://127.0.0.1:5190/data/layers/map8.png';
-  await run([rj(ninth, 0)]);
-  await run([rj(urls[0], 1)]);
-  await run([rj(urls[1], 1)]);
-  check('...maps no longer in use are dropped when room is needed, the one in use is kept',
-    fetched.filter(f => f === urls[0]).length === 1 && fetched.filter(f => f === urls[1]).length === 2);
+  send({ cacheBudgetBytes: budget });
+  const cached: FromWorker[] = [];
+  for (let n = 0; n < 3; n++) cached.push(...await run([rj(urls[n], 0)]));
+  const three = cached.at(-1)!.cache!;
+  const rasterBytes = (256 ** 2 + 128 ** 2 + 64 ** 2 + 32 ** 2) * 4;
+  check('source telemetry counts exact decoded mip buffers within the configured hard budget',
+    three.budgetBytes === budget && three.retainedBytes === 3 * rasterBytes && three.retainedCount === 3
+    && three.bytesByKind.raster === three.retainedBytes && three.countByKind.raster === 3);
+  await run([rj(urls[0], 1)]); // map0 becomes newest; adding map3 must evict map1.
+  const [four] = await run([rj(urls[3], 0)]);
+  const beforeTouch = fetched.filter(f => f === urls[0]).length;
+  await run([rj(urls[0], 2)]);
+  const [reloaded] = await run([rj(urls[1], 1)]);
+  check('decoded LRU keeps a touched source and re-fetches an evicted raster instead of retaining its settled promise',
+    fetched.filter(f => f === urls[0]).length === beforeTouch && fetched.filter(f => f === urls[1]).length === 2
+    && !!reloaded.bitmap && !reloaded.gaps && four.cache!.retainedBytes <= budget && four.cache!.evictions > three.evictions);
+
+  const maskKey = 'runtime-check:mask', mask = new Uint8Array(128 * 128), masks = new Map([[maskKey, mask]]);
+  W.registerDecoded(maskKey, mask.buffer.byteLength, () => { masks.delete(maskKey); }, 'mask');
+  const [withMask] = await run([rj(urls[1], 2)]);
+  const baseUrl = `${LOCAL}data/cache-check/base.jpg`;
+  fixtureImages.set(baseUrl, new FakeBlob(basePixels(256, 256, () => 123), 256, 256, '', true));
+  const baseJob: ToWorker = { id: nextId++, flipRows: false, job: { kind: 'base', rect: rectAt(10, 40, 0), level: 0,
+    cut: { url: baseUrl, mip: 0, px: 0, py: 0, mips: 0 } } };
+  const [withBase] = await run([baseJob]);
+  const [withTiles] = await run([trekJob(WAC, 'jpg', rectAt(10, 40, 6), 6, 8)]);
+  const sum = (m: FromWorker) => Object.values(m.cache!.bytesByKind).reduce((a, b) => a + b, 0);
+  check('masks, stored pictures and streamed tiles use the same retained-byte budget',
+    withMask.cache!.bytesByKind.mask === mask.byteLength && withMask.cache!.countByKind.mask === 1
+    && withBase.cache!.bytesByKind.base === 256 ** 2 && withBase.cache!.countByKind.base === 1
+    && withTiles.cache!.bytesByKind.tile > 0
+    && [withMask, withBase, withTiles].every(m => m.cache!.retainedBytes <= budget && sum(m) === m.cache!.retainedBytes));
+  // A byte counter alone is insufficient: callbacks must remove the actual stored references.
+  const pressure = 'runtime-check:pressure';
+  W.registerDecoded(pressure, 2 * budget, () => {}, 'mask');
+  const [afterPressure] = await run([{ ...baseJob, id: nextId++ }]);
+  check('hard eviction removes actual mask/base references and an oversized entry is never retained',
+    masks.size === 0 && !W.touchDecoded(maskKey) && !W.touchDecoded(pressure)
+    && fetched.filter(f => f === baseUrl).length === 2 && afterPressure.cache!.retainedBytes <= budget);
+
+  maxBigDecodeActive = 0;
+  const layers = await run(urls.map(u => rj(u, 0)));
+  check('all eight science/photo rasters still draw while the cache evicts full source pictures',
+    layers.every(m => !!m.bitmap && !m.gaps && m.cache!.retainedBytes <= budget));
+  check('large raster decoding is serial and the shared strip canvas releases its backing store when idle',
+    maxBigDecodeActive === 1 && bigDecodeActive === 0
+    && layers.at(-1)!.cache!.decodesQueued === 0 && layers.at(-1)!.cache!.decodesActive === 0
+    && layers.at(-1)!.cache!.canvasBytes === 4);
+  send({ cacheBudgetBytes: 64 * 2 ** 20 });
+  for (const url of urls) fixtureImages.delete(url);
+  fixtureImages.delete(baseUrl);
 }
 
 // 5. Main thread: layers reload their holes once the network works again ------------------------
@@ -396,6 +598,22 @@ function rgb(px: Uint8ClampedArray) { const d = new Uint8Array((px.length / 4) *
     if (sent && reply) w.onmessage!({ data: { id: sent.id, bitmap: null, gaps: false, recovered: false, ...reply } });
     return { waiting: false, sent, image: sent && !reply ? undefined : await pending };
   };
+  const sharper = I.createMoonTrekProvider({ layer: WAC, ext: 'jpg', maxSourceLevel: 8, minTrueLat: -81.5, credit: 'x', sharpPhoto: true });
+  const startTile = xy(0, 30, 3), farTile = xy(20, 150, 13), farTooDeep = xy(20, 150, 14), apolloFine = xy(0.674, 23.473, 16);
+  const startJob = await ask(sharper, startTile.x, startTile.y, 3, {});
+  const farJob = await ask(sharper, farTile.x, farTile.y, 13, {}), farParent = await ask(sharper, farTooDeep.x, farTooDeep.y, 14);
+  const apolloJob = await ask(sharper, apolloFine.x, apolloFine.y, 16, {});
+  check('one photo provider leaves coarse views unchanged, sharpens global and site views, then keeps the last real parent',
+    startJob.sent?.job.kind === 'trek' && farJob.sent?.job.kind === 'photo' && apolloJob.sent?.job.kind === 'photo'
+    && farParent.sent === null && isParentMark(farParent.image) && sharper.worker === photo.worker && sharper.maximumLevel === 17);
+  const request = { state: 0, cancel() {} };
+  const cancelTile = xy(15, 130, 11), beforeCancel = worker.sent.length;
+  const cancelled = sharper.requestImage(cancelTile.x, cancelTile.y, 11, request)!.then(() => false, error => error.name === 'AbortError');
+  await sleep(0); await sleep(0);
+  const cancelMessage = worker.sent[beforeCancel] as Sent;
+  request.cancel();
+  check('Cesium cancelling a photo tile removes its worker job and rejects as a retryable cancellation',
+    await cancelled && worker.sent.some(m => 'cancel' in m && m.cancel === cancelMessage.id));
   const failed = await ask(photo, 301, 100, 8, { parent: true, gaps: true }), fine = await ask(photo, 302, 100, 8, {});
   check('a worker answer "keep the parent" reaches Cesium as the picture its discard policy throws away', isParentMark(failed.image) && fine.image !== undefined && !isParentMark(fine.image) && photo.tileDiscardPolicy.isReady());
   const wac = xy(-82, 40, 10), nac = xy(-87, 40, 10);
@@ -476,6 +694,42 @@ function rgb(px: Uint8ClampedArray) { const d = new Uint8Array((px.length / 4) *
   const g3 = cutOf((await ask(base5, 5, 2, 3)).sent), n6 = cutOf((await ask(base5, nth.x, nth.y, 6)).sent);
   check('v5 base: the whole-Moon pictures are halved pole-aware; levels 5-6 near the north pole come from the north picture',
     g3?.cut.poleAware === true && n6?.cut.url === `${vdir}north6.jpg` && n6.cut.poleAware === false);
+  const sharpNorth = I.createMoonTrekProvider({ layer: WAC, ext: 'jpg', maxSourceLevel: 8, minTrueLat: -81.5, credit: 'x', overBase: true, sharpPhoto: true });
+  const n13 = xy(89.7, 0, 13), nq13 = xy(89.7, -135, 13);
+  const nJob = await ask(sharpNorth, n13.x, n13.y, 13, {}), nqJob = await ask(sharpNorth, nq13.x, nq13.y, 13, {});
+  check('sharp north tiles use the stored north picture, including the quadrant already fixed for lighting',
+    nJob.sent?.job.kind === 'photo' && nJob.sent.job.northBase?.cut.url === `${vdir}north6.jpg`
+    && nqJob.sent?.job.kind === 'photo' && nqJob.sent.job.northBase?.cut.url === `${vdir}north6.jpg`
+    && (await ask(fix5, nq13.x, nq13.y, 13)).sent === null);
+
+  // A failed target used to leave skipped intermediate requests UNLOADED forever, even
+  // though no worker jobs remained. Exercise the real provider gate with a small camera
+  // stand-in; only the browser's readiness check needs the full Cesium scene.
+  const centre = trueToDisplayLatLon(0.674, 23.473);
+  const gateGlobe = { maximumScreenSpaceError: 1, preloadAncestors: true, preloadSiblings: true,
+    getHeight: () => 0, _surface: { _tilesToRender: [] } };
+  const gateCamera = { frustum: { fovy: Math.PI / 3 },
+    positionCartographic: new Cartographic(centre.lon, centre.lat, 1000),
+    positionWC: Cartesian3.fromRadians(centre.lon, centre.lat, 1000, Ellipsoid.MOON), getPickRay: () => undefined };
+  const gateViewer = { isDestroyed: () => false, camera: gateCamera,
+    scene: { drawingBufferHeight: 1800, canvas: { clientWidth: 1440, clientHeight: 900 }, globe: gateGlobe, requestRender() {} } } as unknown as Viewer;
+  I.cancelOffscreenImagery(gateViewer, false);
+  const coarseGate = xy(0.674, 23.473, 10), targetGate = xy(0.674, 23.473, 15);
+  const deferredGate = await ask(sharper, coarseGate.x, coarseGate.y, 10);
+  const failedTarget = await ask(sharper, targetGate.x, targetGate.y, 15, { parent: true, gaps: true });
+  const offlineCoarse = await ask(sharper, coarseGate.x, coarseGate.y, 10, { parent: true, gaps: true });
+  check('offline target failure releases deferred intermediate tiles so they can settle on their parent',
+    deferredGate.waiting && failedTarget.sent?.job.kind === 'photo' && isParentMark(failedTarget.image)
+    && offlineCoarse.sent?.job.kind === 'photo' && isParentMark(offlineCoarse.image));
+  clock += W.RETRY_MS + 1;
+  const deferredAgain = await ask(sharper, coarseGate.x, coarseGate.y, 10);
+  check('photo deferral resumes after network backoff, rather than invalidating useful intermediate imagery', deferredAgain.waiting && deferredAgain.sent === null);
+  gateCamera.positionCartographic.height = 100_000;
+  gateCamera.positionWC = Cartesian3.fromRadians(centre.lon, centre.lat, 100_000, Ellipsoid.MOON);
+  I.cancelOffscreenImagery(gateViewer, false);
+  const zoomedOut = await ask(sharper, coarseGate.x, coarseGate.y, 10, {});
+  check('zooming out releases the same intermediate tile and restores the original preload settings',
+    zoomedOut.sent?.job.kind === 'photo' && gateGlobe.preloadAncestors && gateGlobe.preloadSiblings);
 }
 
 console.log(failures === 0 ? '\nAll imagery runtime checks passed.' : `\n${failures} imagery runtime check(s) FAILED.`);

@@ -1,0 +1,37 @@
+{
+  "mode": "before",
+  "errors": [],
+  "views": [],
+  "shots": [],
+  "baselineModuleSha256": "2f76fcf75863b9b2b5fdcc37c854f2fdee09e8206b1d4748cf9b7b850a829d3c",
+  "beforeEnter": {
+    "diagnostic": null,
+    "data": {},
+    "width": 300,
+    "height": 150,
+    "visible": "hidden",
+    "ready": true
+  },
+  "firstSwitch": {
+    "ms": 474.60000002384186,
+    "polls": 28,
+    "rings": 0,
+    "canvasPixels": 5184000,
+    "visible": "visible"
+  },
+  "afterFirstSwitch": {
+    "diagnostic": null,
+    "data": {
+      "minKm": "56.489498138427734",
+      "rings": "400",
+      "loading": "0",
+      "drawing": "false",
+      "chunks": "1"
+    },
+    "width": 2880,
+    "height": 1800,
+    "visible": "visible",
+    "ready": true
+  },
+  "hotUpdatesIgnored": 2
+}

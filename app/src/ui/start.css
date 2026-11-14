@@ -45,10 +45,83 @@
 .start-prefs { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 16px; }
 .start-music { display: inline-flex; align-items: center; gap: 10px; color: var(--text-2); font-size: var(--fs-14); cursor: pointer; }
 
-.start-enter { width: 240px; margin-top: 24px; }
+.start-actions { display: flex; flex-direction: column; align-items: center; gap: 10px; width: 100%; margin-top: 24px; }
+.start-enter { width: min(340px, 100%); min-height: 48px; height: auto; padding-block: 12px; white-space: normal; text-align: center; }
+.start-enter-quiet { width: min(340px, 100%); min-height: 40px; height: auto; padding: 9px 12px; border: 1px solid var(--line-2); background: transparent; color: var(--text-2); white-space: normal; text-align: center; }
+.start-enter-quiet:hover:not(:disabled) { color: var(--text); }
+.start-enter-quiet:disabled { opacity: .4; cursor: default; }
+html.lang-km .start-actions .btn { line-height: 1.65; }
 .start-skip { margin-top: 10px; padding: 4px 8px; border: 0; border-radius: 6px; background: none; color: var(--text-3); font-size: var(--fs-13); cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
 .start-skip:hover { color: var(--text); }
 
 
 @media (max-width: 520px) { .start-mode-list { grid-template-columns: 1fr; } }
 @media (prefers-reduced-motion: reduce) { .st-line.busy i { animation: none; width: 100%; opacity: .4; } }
+
+/* "While you wait": a small board on two ropes beside the column (WaitQuestions.tsx). A moment after loading
+   has begun it falls in from above, bounces once on its ropes, swings and settles; it gives a little swing when an
+   answer is tapped, and is pulled back up as the visitor enters. Hidden where there is no room beside the column.
+   (The fall moves `translate` on the outer box; the swing turns `rotate` on the inner one, about a point far up
+   the ropes, so the two never fight. The resting state is simply "there".) */
+.start-sign { position: fixed; top: 0; left: calc(50% + 314px); width: 304px; z-index: 1; animation: start-sign-drop 1150ms linear 1300ms backwards; }
+.start-sign.leaving { animation: start-sign-up 420ms ease-in forwards; }
+.start-sign-swing { position: relative; padding-top: 92px; transform-origin: 50% -320px; animation: start-sign-settle 2600ms ease-out 2050ms backwards, start-sign-sway 7s ease-in-out 4650ms infinite; }
+.start-sign-swing.nudged { animation: start-sign-nudge 1300ms ease-out, start-sign-sway 7s ease-in-out 1300ms infinite; }
+.start-rope { position: absolute; top: -300px; width: 10px; height: 407px; filter: drop-shadow(0 2px 3px rgba(0, 0, 0, .5)); }
+.start-rope.left { left: 31px; }
+.start-rope.right { right: 31px; }
+
+.start-sign-board { position: relative; padding: 36px 16px 12px; border-radius: 16px; background: linear-gradient(180deg, #25272d 0%, #1b1c21 100%); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .16), inset 0 -1px 0 rgba(0, 0, 0, .5), 0 0 0 1px rgba(255, 255, 255, .07), 0 28px 54px rgba(0, 0, 0, .6); }
+/* the two metal eyelets the ropes are tied through */
+.start-eyelet { position: absolute; top: 9px; width: 18px; height: 18px; border-radius: 50%; background: radial-gradient(circle at 50% 45%, #0a0b0d 0 34%, #5c5f67 36% 42%, #e3e6ea 50%, #8b8e96 62%, #4a4c53 72%, transparent 74%); }
+.start-eyelet.left { left: 27px; }
+.start-eyelet.right { right: 27px; }
+.start-sign-top { position: absolute; top: 8px; left: 54px; right: 54px; height: 20px; display: flex; align-items: center; justify-content: center; }
+.start-sign-kicker { font-size: var(--fs-11); font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--sun); }
+.start-sign-close { position: absolute; top: 34px; right: -44px; display: grid; place-items: center; width: 24px; height: 24px; padding: 0; border: 0; border-radius: 7px; background: transparent; color: var(--text-3); cursor: pointer; }
+.start-sign-close:hover { background: var(--fill-2); color: var(--text); }
+.start-sign-q { animation: start-sign-q 260ms var(--ease); }
+.start-sign-count { margin: 0 0 2px; color: var(--text-3); font-size: var(--fs-12); }
+.start-sign-q h2 { display: flex; align-items: center; gap: 6px; margin: 0; padding-right: 26px; font-size: 17px; line-height: 23px; font-weight: 600; letter-spacing: -.005em; }
+.start-sign-ask { margin: 10px 0 0; color: var(--text-2); font-size: var(--fs-13); line-height: 19px; }
+/* two ready answers, side by side */
+.start-sign-quick { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 14px; }
+.start-sign-quick button { height: 40px; padding: 0 10px; border: 0; border-radius: 12px; background: var(--fill-2); box-shadow: inset 0 0 0 1px var(--line-2); color: var(--text); font: inherit; font-size: var(--fs-14); font-weight: 600; cursor: pointer; transition: background var(--fast) ease-out, color var(--fast) ease-out, transform var(--fast) ease-out; }
+.start-sign-quick button:hover { background: var(--white); color: var(--ink); }
+.start-sign-quick button:active { transform: scale(.97); }
+/* ... or your own number of days */
+.start-sign-own { display: flex; align-items: center; gap: 8px; height: 40px; margin-top: 8px; padding: 0 5px 0 12px; border-radius: 12px; background: #101114; box-shadow: inset 0 0 0 1px var(--line-2); color: var(--text-2); font-size: var(--fs-13); cursor: text; transition: box-shadow var(--fast) ease-out; }
+.start-sign-own:focus-within { box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, .7); }
+.start-sign-own input { flex: 1; min-width: 0; height: 30px; padding: 0; border: 0; outline: 0; background: transparent; color: var(--text); font: inherit; font-size: var(--fs-16); font-weight: 600; font-variant-numeric: tabular-nums; text-align: right; }
+.start-sign-own input::placeholder { color: var(--text-3); font-weight: 400; }
+.start-sign-own button { flex: none; display: grid; place-items: center; width: 30px; height: 30px; padding: 0; border: 0; border-radius: 9px; background: var(--white); color: var(--ink); cursor: pointer; transition: opacity var(--fast) ease-out; }
+.start-sign-own button:disabled { opacity: .25; cursor: default; }
+.start-sign-foot { display: flex; align-items: center; justify-content: space-between; margin-top: 12px; min-height: 26px; }
+.start-sign-dots { display: flex; gap: 5px; }
+.start-sign-dots i { width: 6px; height: 6px; border-radius: 3px; background: rgba(255, 255, 255, .2); }
+.start-sign-dots i.done { background: var(--good); }
+.start-sign-dots i.on { width: 14px; background: var(--white); }
+.start-sign-skip { height: 26px; padding: 0 8px; border: 0; border-radius: 13px; background: transparent; color: var(--text-3); font: inherit; font-size: var(--fs-12); cursor: pointer; }
+.start-sign-skip:hover { background: var(--fill-2); color: var(--text); }
+.start-sign-sum { list-style: none; margin: 12px 0 0; padding: 0; border-top: 1px solid var(--line); }
+.start-sign-sum li { display: flex; justify-content: space-between; gap: 12px; height: 32px; align-items: center; border-bottom: 1px solid var(--line); font-size: var(--fs-13); }
+.start-sign-sum span { color: var(--text-2); }
+.start-sign-sum b { font-weight: 600; font-variant-numeric: tabular-nums; }
+html.lang-km .start-sign-kicker { letter-spacing: 0; text-transform: none; }
+html.lang-km .start-sign-q h2 { line-height: 29px; }
+/* falling under gravity, one bounce on the ropes, a smaller one */
+@keyframes start-sign-drop {
+  0% { translate: 0 -130%; animation-timing-function: cubic-bezier(.55, 0, 1, .7); }
+  52% { translate: 0 0; animation-timing-function: cubic-bezier(0, .5, .5, 1); }
+  66% { translate: 0 -34px; animation-timing-function: cubic-bezier(.5, 0, 1, .5); }
+  80% { translate: 0 0; animation-timing-function: cubic-bezier(0, .5, .5, 1); }
+  90% { translate: 0 -9px; animation-timing-function: cubic-bezier(.5, 0, 1, .5); }
+  100% { translate: 0 0; }
+}
+@keyframes start-sign-settle { 0% { rotate: 1.5deg; } 22% { rotate: -1.15deg; } 44% { rotate: .8deg; } 64% { rotate: -.5deg; } 82% { rotate: .25deg; } 100% { rotate: 0deg; } }
+@keyframes start-sign-nudge { 0% { rotate: 0deg; } 18% { rotate: .9deg; } 42% { rotate: -.6deg; } 66% { rotate: .32deg; } 86% { rotate: -.12deg; } 100% { rotate: 0deg; } }
+@keyframes start-sign-sway { 0%, 100% { rotate: -.22deg; } 50% { rotate: .22deg; } }
+@keyframes start-sign-up { to { translate: 0 -130%; opacity: .4; } }
+@keyframes start-sign-q { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@media (max-width: 1250px) { .start-sign { display: none; } }
+@media (prefers-reduced-motion: reduce) { .start-sign, .start-sign.leaving, .start-sign-swing, .start-sign-swing.nudged, .start-sign-q { animation: none; } }

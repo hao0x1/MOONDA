@@ -29,7 +29,7 @@ export interface SpotStats {
 }
 
 /** Fraction of a disc of angular radius r above a straight line at `sky`, centre at `el`. */
-function discFraction(el: number, sky: number, r: number): number {
+export function discFraction(el: number, sky: number, r: number): number {
   const d = (el - sky) / r; // -1 .. 1 across the disc
   if (d >= 1) return 1;
   if (d <= -1) return 0;

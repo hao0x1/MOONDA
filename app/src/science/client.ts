@@ -4,6 +4,7 @@
 import { useEffect, useSyncExternalStore } from 'react';
 import type { SpotTimeline } from './analysis';
 import type { DemMeta } from './heights';
+import type { RoutePrefer, RouteResult } from './route';
 import type { HorizonResult } from './terrain';
 import type { WorkerRequest, WorkerResponse } from './worker';
 
@@ -18,6 +19,8 @@ const cache = new Map<string, SpotEntry>();
 const jobs = new Map<number, { key: string; req: WorkerRequest }>(); // sent to the worker, not answered yet
 const waiting = new Map<string, number>(); // how many promise callers wait for each spot
 const listeners = new Set<() => void>();
+/** route requests sent to the worker and not answered yet (kept apart from the spot jobs above) */
+const routes = new Map<number, { req: WorkerRequest; done: (r: RouteResult) => void; fail: (e: Error) => void }>();
 let nextId = 1;
 let heard = 0;                              // last time the worker said anything
 let lastHeights: WorkerRequest | null = null;
@@ -37,6 +40,7 @@ function restartWorker() {
   if (lastHeights) worker.postMessage(lastHeights);
   else if (warmed) worker.postMessage(warmed);
   for (const j of jobs.values()) worker.postMessage(j.req);
+  for (const r of routes.values()) worker.postMessage(r.req);
 }
 
 /** Ask the worker if it is still alive; restart it when it does not answer within 3 s. */
@@ -62,6 +66,13 @@ function onMessage(ev: MessageEvent<WorkerResponse>) {
   const msg = ev.data;
   heard = Date.now();
   if (msg.type === 'pong') return;
+  if (msg.type === 'route' || msg.type === 'routeError') {
+    const r = routes.get(msg.id);
+    if (!r) return;
+    routes.delete(msg.id);
+    if (msg.type === 'route') r.done(msg.result); else r.fail(new Error(msg.message));
+    return;
+  }
   const job = jobs.get(msg.id);
   if (!job) return;
   if (msg.type === 'progress') set(job.key, { status: 'loading', message: msg.message });
@@ -154,5 +165,23 @@ export function analyseSpotAsync(spec: SpotSpec, timeoutMs = 60000, signal?: Abo
     signal?.addEventListener('abort', onAbort);
     listeners.add(check);
     check();
+  });
+}
+
+/**
+ * A predicted route for the rover between two places (science/route.ts), worked out in the background.
+ * `timeMs` = the time on the time bar: the answer also says where the Sun and Earth can be seen along the way then.
+ * Abort with `signal` when the answer is no longer wanted.
+ */
+export function planRouteAsync(o: { from: { lat: number; lon: number }; to: { lat: number; lon: number }; mastM: number; prefer: RoutePrefer; timeMs?: number; spot?: { lat: number; lon: number } }, signal?: AbortSignal): Promise<RouteResult> {
+  const id = nextId++;
+  const req: WorkerRequest = { type: 'route', id, dataBase: new URL('./data/', document.baseURI).href, ...o };
+  return new Promise<RouteResult>((done, fail) => {
+    const stop = () => { if (routes.delete(id)) { worker.postMessage({ type: 'cancel', id } satisfies WorkerRequest); fail(new DOMException('Aborted', 'AbortError')); } };
+    if (signal?.aborted) { fail(new DOMException('Aborted', 'AbortError')); return; }
+    signal?.addEventListener('abort', stop, { once: true });
+    const timer = setTimeout(() => { if (routes.delete(id)) fail(new Error('The route took too long')); }, 90000);
+    routes.set(id, { req, done: r => { clearTimeout(timer); done(r); }, fail: e => { clearTimeout(timer); fail(e); } });
+    worker.postMessage(req);
   });
 }

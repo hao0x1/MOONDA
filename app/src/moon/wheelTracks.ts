@@ -150,6 +150,13 @@ export class WheelTracks {
   private k = new CesiumAll.Cartesian4(0, 1, 1, 1);
   private look = new CesiumAll.Cartesian4(TRACKS.pressed, TRACKS.relief, TRACKS.near, TRACKS.far);
   private destroyed = false;
+  private reseatEnv: WalkEnv | null = null;
+  private reseatLeft = 0;
+  private reseatAt = 0;
+  private reseatAgain = false;
+  private warmRequested = false;
+  private warmDone = false;
+  private offWarm: (() => void) | null = null;
   show = true;
 
   constructor(scene: Scene, light: boolean) {
@@ -163,8 +170,69 @@ export class WheelTracks {
     scene.primitives.add(this);
   }
 
+  /** Compile the real draw path under the curtain, without writing a track or moving the rover. */
+  warmGpu(at: Cartesian3, up: Cartesian3, sun: Cartesian3): void {
+    if (this.warmDone || this.warmRequested || this.destroyed) return;
+    this.warmRequested = true;
+    if (!this.count) Cartesian3.clone(at, this.origin);
+    Cartesian3.clone(up, this.up); Cartesian3.clone(sun, this.sun);
+    this.scene.requestRender();
+  }
+
+  get gpuWarm(): boolean { return this.warmDone; }
+
+  private finishWarmAfterDraw(): void {
+    if (this.warmDone || this.offWarm) return;
+    this.offWarm = this.scene.postRender.addEventListener(() => {
+      this.offWarm?.(); this.offWarm = null;
+      this.warmRequested = false; this.warmDone = true;
+      for (const cmd of this.cmds) (cmd as typeof cmd & { cull: boolean }).cull = true;
+    });
+  }
+
   /** Forget every track (leaving, or standing somewhere else). */
-  clear() { this.count = 0; this.head = 0; this.along = 0; this.dirty.length = 0; }
+  clear() {
+    this.offWarm?.(); this.offWarm = null; this.warmRequested = false;
+    for (const cmd of this.cmds) (cmd as typeof cmd & { cull: boolean }).cull = true;
+    this.count = 0; this.head = 0; this.along = 0; this.dirty.length = 0;
+    this.reseatEnv = null; this.reseatLeft = 0; this.reseatAgain = false;
+  }
+
+  /** A finer ground tile arrived: put the old prints on its triangles too. Work is spread over frames. */
+  reseat(env: WalkEnv) {
+    if (!this.count) return;
+    if (this.reseatLeft) { this.reseatAgain = true; return; }
+    this.reseatEnv = env; this.reseatLeft = this.count; this.reseatAt = (this.head - 1 + this.n) % this.n;
+    this.scene.requestRender();
+  }
+
+  private seatOld(camera: Cartesian3) {
+    const env = this.reseatEnv;
+    if (!env || !this.reseatLeft) return;
+    const until = performance.now() + 0.8;
+    do {
+      const i = this.reseatAt, base = i * 12;
+      Cartesian3.fromElements(this.origin.x + this.pos[base], this.origin.y + this.pos[base + 1], this.origin.z + this.pos[base + 2], sA);
+      // The rest of the kept trail is already invisible. Do not ray-pick hundreds of hidden metres.
+      if (Cartesian3.distance(camera, sA) < TRACKS.far + 10) {
+        for (let v = 0; v < 4; v++) {
+          const at = base + v * 3;
+          Cartesian3.fromElements(this.origin.x + this.pos[at], this.origin.y + this.pos[at + 1], this.origin.z + this.pos[at + 2], sA);
+          const h = env.ground(sA) + TRACKS.lift;
+          Cartesian3.multiplyByScalar(Cartesian3.normalize(sA, sA), MOON_R_M + h, sA);
+          const rel = Cartesian3.subtract(sA, this.origin, sB);
+          this.pos[at] = rel.x; this.pos[at + 1] = rel.y; this.pos[at + 2] = rel.z;
+          Cartesian3.minimumByComponent(this.lo, rel, this.lo); Cartesian3.maximumByComponent(this.hi, rel, this.hi);
+        }
+        this.dirty.push(i);
+      }
+      this.reseatAt = (i - 1 + this.n) % this.n;
+      this.reseatLeft--;
+    } while (this.reseatLeft && performance.now() < until);
+    if (this.reseatLeft) this.scene.requestRender();
+    else if (this.reseatAgain) { this.reseatAgain = false; this.reseat(env); }
+    else this.reseatEnv = null;
+  }
 
   /** Lay track under the robot as it moves. `sun` is the direction to the Sun (world). */
   step(d: Driver, env: WalkEnv, sun: Cartesian3) {
@@ -241,7 +309,8 @@ export class WheelTracks {
 
   /** Called by Cesium every frame. */
   update(frameState: { context: GlContext; commandList: unknown[]; camera: { viewMatrix: Matrix4; positionWC: Cartesian3 }; passes: { render: boolean } }) {
-    if (!this.show || this.count < 2 || !frameState.passes.render) return;
+    if (!this.show || (this.count < 2 && !this.warmRequested) || !frameState.passes.render) return;
+    this.seatOld(frameState.camera.positionWC);
     if (!this.mesh) this.build(frameState.context);
     const mesh = this.mesh!;
     // upload the new sections (a few floats each)
@@ -259,6 +328,17 @@ export class WheelTracks {
     const c = Cartesian3.midpoint(this.lo, this.hi, sA);
     Cartesian3.add(this.origin, c, this.bound.center);
     this.bound.radius = Cartesian3.distance(this.lo, this.hi) / 2 + 1;
+    if (this.count < 2) {
+      // Slots 1 and 2 have never been written when the buffer is cold. Their identical zero
+      // positions make a triangle with no area, so the renderer binds all shader variants but
+      // paints no soil. No dummy sections enter the history or the rover's ground sampling.
+      const cmd = this.cmds[0];
+      cmd.offset = 12; cmd.count = 6;
+      (cmd as typeof cmd & { cull: boolean }).cull = false;
+      frameState.commandList.push(cmd);
+      this.finishWarmAfterDraw();
+      return;
+    }
     // the segments to draw: all but the one that would join the newest section to the oldest
     const n = this.n, newest = (this.head - 1 + n) % n;
     const ranges: [number, number][] = this.count < n ? [[0, this.count - 1]] : [[0, newest], [newest + 1, n]];
@@ -268,12 +348,14 @@ export class WheelTracks {
       cmd.offset = a * 12; cmd.count = (b - a) * 12;
       frameState.commandList.push(cmd);
     });
+    this.finishWarmAfterDraw();
   }
 
   isDestroyed() { return this.destroyed; }
   destroy() {
     if (this.destroyed) return;
     this.destroyed = true;
+    this.offWarm?.(); this.offWarm = null; this.warmRequested = false;
     this.mesh?.vertexArray.destroy();
     this.program?.destroy();
   }

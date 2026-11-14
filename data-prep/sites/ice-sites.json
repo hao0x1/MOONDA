@@ -1,0 +1,349 @@
+[
+  {
+    "id": "ice-cabeus",
+    "name": "Cabeus",
+    "lat": -84.678,
+    "lon": -48.6937,
+    "diameterKm": 100.58,
+    "status": "confirmed",
+    "short": "Water measured in the LCROSS impact plume at one spot.",
+    "evidence": [
+      {
+        "instrument": "LCROSS near-infrared and ultraviolet spectrometers",
+        "finding": "LCROSS measured water in debris blasted from one impact site in Cabeus; this does not confirm ice across the crater.",
+        "citation": "Colaprete, A., et al. (2010). Detection of water in the LCROSS ejecta plume. Science 330, 463-468. doi:10.1126/science.1186986.",
+        "url": "https://doi.org/10.1126/science.1186986"
+      },
+      {
+        "instrument": "Chandrayaan-1 Moon Mineralogy Mapper (M3)",
+        "finding": "M3 reported signs of surface ice in small permanently shaded patches inside this crater.",
+        "citation": "Li, S., Lucey, P.G., Milliken, R.E., Hayne, P.O., Fisher, E., Williams, J.-P., Hurley, D.M., Elphic, R.C. (2018). Direct evidence of surface exposed water ice in the lunar polar regions. PNAS 115, 8907-8912. doi:10.1073/pnas.1802345115. Lemelin, M., Li, S., Mazarico, E., Siegler, M.A., Kring, D.A., Paige, D.A. (2021). Framework for Coordinated Efforts in the Exploration of Volatiles in the South Polar Region of the Moon. The Planetary Science Journal 2, 103. doi:10.3847/PSJ/abf3c5. Data: doi:10.5281/zenodo.4646092.",
+        "url": "https://zenodo.org/records/4646092"
+      }
+    ],
+    "positionNote": "Marker at the LCROSS Centaur impact, not the crater centre; the diameter describes Cabeus."
+  },
+  {
+    "id": "ice-shackleton",
+    "name": "Shackleton",
+    "lat": -89.67,
+    "lon": 129.78,
+    "diameterKm": 20.92,
+    "status": "detected",
+    "short": "M3 reported signs of surface ice in small patches here.",
+    "evidence": [
+      {
+        "instrument": "Chandrayaan-1 Moon Mineralogy Mapper (M3)",
+        "finding": "M3 reported signs of surface ice in small permanently shaded patches inside this crater.",
+        "citation": "Li, S., Lucey, P.G., Milliken, R.E., Hayne, P.O., Fisher, E., Williams, J.-P., Hurley, D.M., Elphic, R.C. (2018). Direct evidence of surface exposed water ice in the lunar polar regions. PNAS 115, 8907-8912. doi:10.1073/pnas.1802345115. Lemelin, M., Li, S., Mazarico, E., Siegler, M.A., Kring, D.A., Paige, D.A. (2021). Framework for Coordinated Efforts in the Exploration of Volatiles in the South Polar Region of the Moon. The Planetary Science Journal 2, 103. doi:10.3847/PSJ/abf3c5. Data: doi:10.5281/zenodo.4646092.",
+        "url": "https://zenodo.org/records/4646092"
+      }
+    ]
+  },
+  {
+    "id": "ice-haworth",
+    "name": "Haworth",
+    "lat": -87.45,
+    "lon": -5.17,
+    "diameterKm": 51.42,
+    "status": "detected",
+    "short": "M3 reported signs of surface ice in small patches here.",
+    "evidence": [
+      {
+        "instrument": "Chandrayaan-1 Moon Mineralogy Mapper (M3)",
+        "finding": "M3 reported signs of surface ice in small permanently shaded patches inside this crater.",
+        "citation": "Li, S., Lucey, P.G., Milliken, R.E., Hayne, P.O., Fisher, E., Williams, J.-P., Hurley, D.M., Elphic, R.C. (2018). Direct evidence of surface exposed water ice in the lunar polar regions. PNAS 115, 8907-8912. doi:10.1073/pnas.1802345115. Lemelin, M., Li, S., Mazarico, E., Siegler, M.A., Kring, D.A., Paige, D.A. (2021). Framework for Coordinated Efforts in the Exploration of Volatiles in the South Polar Region of the Moon. The Planetary Science Journal 2, 103. doi:10.3847/PSJ/abf3c5. Data: doi:10.5281/zenodo.4646092.",
+        "url": "https://zenodo.org/records/4646092"
+      }
+    ]
+  },
+  {
+    "id": "ice-shoemaker",
+    "name": "Shoemaker",
+    "lat": -88.137,
+    "lon": 45.911,
+    "diameterKm": 51.82,
+    "status": "detected",
+    "short": "M3 reported signs of surface ice in small patches here.",
+    "evidence": [
+      {
+        "instrument": "Chandrayaan-1 Moon Mineralogy Mapper (M3)",
+        "finding": "M3 reported signs of surface ice in small permanently shaded patches inside this crater.",
+        "citation": "Li, S., Lucey, P.G., Milliken, R.E., Hayne, P.O., Fisher, E., Williams, J.-P., Hurley, D.M., Elphic, R.C. (2018). Direct evidence of surface exposed water ice in the lunar polar regions. PNAS 115, 8907-8912. doi:10.1073/pnas.1802345115. Lemelin, M., Li, S., Mazarico, E., Siegler, M.A., Kring, D.A., Paige, D.A. (2021). Framework for Coordinated Efforts in the Exploration of Volatiles in the South Polar Region of the Moon. The Planetary Science Journal 2, 103. doi:10.3847/PSJ/abf3c5. Data: doi:10.5281/zenodo.4646092.",
+        "url": "https://zenodo.org/records/4646092"
+      }
+    ]
+  },
+  {
+    "id": "ice-faustini",
+    "name": "Faustini",
+    "lat": -87.1832,
+    "lon": 84.3099,
+    "diameterKm": 42.48,
+    "status": "detected",
+    "short": "M3 reported signs of surface ice in small patches here.",
+    "evidence": [
+      {
+        "instrument": "Chandrayaan-1 Moon Mineralogy Mapper (M3)",
+        "finding": "M3 reported signs of surface ice in small permanently shaded patches inside this crater.",
+        "citation": "Li, S., Lucey, P.G., Milliken, R.E., Hayne, P.O., Fisher, E., Williams, J.-P., Hurley, D.M., Elphic, R.C. (2018). Direct evidence of surface exposed water ice in the lunar polar regions. PNAS 115, 8907-8912. doi:10.1073/pnas.1802345115. Lemelin, M., Li, S., Mazarico, E., Siegler, M.A., Kring, D.A., Paige, D.A. (2021). Framework for Coordinated Efforts in the Exploration of Volatiles in the South Polar Region of the Moon. The Planetary Science Journal 2, 103. doi:10.3847/PSJ/abf3c5. Data: doi:10.5281/zenodo.4646092.",
+        "url": "https://zenodo.org/records/4646092"
+      }
+    ]
+  },
+  {
+    "id": "ice-nobile",
+    "name": "Nobile",
+    "lat": -85.2752,
+    "lon": 53.2725,
+    "diameterKm": 79.27,
+    "status": "detected",
+    "short": "M3 reported signs of surface ice in small patches here.",
+    "evidence": [
+      {
+        "instrument": "Chandrayaan-1 Moon Mineralogy Mapper (M3)",
+        "finding": "M3 reported signs of surface ice in small permanently shaded patches inside this crater.",
+        "citation": "Li, S., Lucey, P.G., Milliken, R.E., Hayne, P.O., Fisher, E., Williams, J.-P., Hurley, D.M., Elphic, R.C. (2018). Direct evidence of surface exposed water ice in the lunar polar regions. PNAS 115, 8907-8912. doi:10.1073/pnas.1802345115. Lemelin, M., Li, S., Mazarico, E., Siegler, M.A., Kring, D.A., Paige, D.A. (2021). Framework for Coordinated Efforts in the Exploration of Volatiles in the South Polar Region of the Moon. The Planetary Science Journal 2, 103. doi:10.3847/PSJ/abf3c5. Data: doi:10.5281/zenodo.4646092.",
+        "url": "https://zenodo.org/records/4646092"
+      }
+    ]
+  },
+  {
+    "id": "ice-de-gerlache",
+    "name": "de Gerlache",
+    "lat": -88.4849,
+    "lon": -88.3447,
+    "diameterKm": 32.71,
+    "status": "detected",
+    "short": "M3 reported signs of surface ice in small patches here.",
+    "evidence": [
+      {
+        "instrument": "Chandrayaan-1 Moon Mineralogy Mapper (M3)",
+        "finding": "M3 reported signs of surface ice in small permanently shaded patches inside this crater.",
+        "citation": "Li, S., Lucey, P.G., Milliken, R.E., Hayne, P.O., Fisher, E., Williams, J.-P., Hurley, D.M., Elphic, R.C. (2018). Direct evidence of surface exposed water ice in the lunar polar regions. PNAS 115, 8907-8912. doi:10.1073/pnas.1802345115. Lemelin, M., Li, S., Mazarico, E., Siegler, M.A., Kring, D.A., Paige, D.A. (2021). Framework for Coordinated Efforts in the Exploration of Volatiles in the South Polar Region of the Moon. The Planetary Science Journal 2, 103. doi:10.3847/PSJ/abf3c5. Data: doi:10.5281/zenodo.4646092.",
+        "url": "https://zenodo.org/records/4646092"
+      }
+    ]
+  },
+  {
+    "id": "ice-scott",
+    "name": "Scott",
+    "lat": -82.3532,
+    "lon": 48.5154,
+    "diameterKm": 107.82,
+    "status": "detected",
+    "short": "M3 reported signs of surface ice in small patches here.",
+    "evidence": [
+      {
+        "instrument": "Chandrayaan-1 Moon Mineralogy Mapper (M3)",
+        "finding": "M3 reported signs of surface ice in small permanently shaded patches inside this crater.",
+        "citation": "Li, S., Lucey, P.G., Milliken, R.E., Hayne, P.O., Fisher, E., Williams, J.-P., Hurley, D.M., Elphic, R.C. (2018). Direct evidence of surface exposed water ice in the lunar polar regions. PNAS 115, 8907-8912. doi:10.1073/pnas.1802345115. Lemelin, M., Li, S., Mazarico, E., Siegler, M.A., Kring, D.A., Paige, D.A. (2021). Framework for Coordinated Efforts in the Exploration of Volatiles in the South Polar Region of the Moon. The Planetary Science Journal 2, 103. doi:10.3847/PSJ/abf3c5. Data: doi:10.5281/zenodo.4646092.",
+        "url": "https://zenodo.org/records/4646092"
+      }
+    ]
+  },
+  {
+    "id": "ice-kuhn",
+    "name": "Kuhn",
+    "lat": -84.482,
+    "lon": -152.4779,
+    "diameterKm": 16.61,
+    "status": "detected",
+    "short": "M3 reported signs of surface ice in small patches here.",
+    "evidence": [
+      {
+        "instrument": "Chandrayaan-1 Moon Mineralogy Mapper (M3)",
+        "finding": "M3 reported signs of surface ice in small permanently shaded patches inside this crater.",
+        "citation": "Li, S., Lucey, P.G., Milliken, R.E., Hayne, P.O., Fisher, E., Williams, J.-P., Hurley, D.M., Elphic, R.C. (2018). Direct evidence of surface exposed water ice in the lunar polar regions. PNAS 115, 8907-8912. doi:10.1073/pnas.1802345115. Lemelin, M., Li, S., Mazarico, E., Siegler, M.A., Kring, D.A., Paige, D.A. (2021). Framework for Coordinated Efforts in the Exploration of Volatiles in the South Polar Region of the Moon. The Planetary Science Journal 2, 103. doi:10.3847/PSJ/abf3c5. Data: doi:10.5281/zenodo.4646092.",
+        "url": "https://zenodo.org/records/4646092"
+      }
+    ]
+  },
+  {
+    "id": "ice-malapert-c",
+    "name": "Malapert C",
+    "lat": -80.9816,
+    "lon": 10.0832,
+    "diameterKm": 38.99,
+    "status": "detected",
+    "short": "M3 reported signs of surface ice in small patches here.",
+    "evidence": [
+      {
+        "instrument": "Chandrayaan-1 Moon Mineralogy Mapper (M3)",
+        "finding": "M3 reported signs of surface ice in small permanently shaded patches inside this crater.",
+        "citation": "Li, S., Lucey, P.G., Milliken, R.E., Hayne, P.O., Fisher, E., Williams, J.-P., Hurley, D.M., Elphic, R.C. (2018). Direct evidence of surface exposed water ice in the lunar polar regions. PNAS 115, 8907-8912. doi:10.1073/pnas.1802345115. Lemelin, M., Li, S., Mazarico, E., Siegler, M.A., Kring, D.A., Paige, D.A. (2021). Framework for Coordinated Efforts in the Exploration of Volatiles in the South Polar Region of the Moon. The Planetary Science Journal 2, 103. doi:10.3847/PSJ/abf3c5. Data: doi:10.5281/zenodo.4646092.",
+        "url": "https://zenodo.org/records/4646092"
+      }
+    ]
+  },
+  {
+    "id": "ice-amundsen",
+    "name": "Amundsen",
+    "lat": -84.4398,
+    "lon": 83.0691,
+    "diameterKm": 103.39,
+    "status": "predicted",
+    "short": "Cold traps are predicted here; no detection is mapped here.",
+    "evidence": [
+      {
+        "instrument": "LRO Diviner thermal model and LOLA shadow model",
+        "finding": "Temperature and shadow maps predict cold traps here, but the reviewed map of reported ice signals has no detection assigned to this crater.",
+        "citation": "Paige, D.A., et al. (2010). Diviner Lunar Radiometer observations of cold traps in the Moon's south polar region. Science 330, 479-482. doi:10.1126/science.1187726. Dataset: Paige et al. (2018), LRO DLRE Level 5 PRP V2.0, NASA PDS, LRO-L-DLRE-5-PRP-V2.0. Barker, M.K., Mazarico, E., Neumann, G.A., Smith, D.E., Zuber, M.T., Head, J.W., Sun, X. (2023). A New View of the Lunar South Pole from the Lunar Orbiter Laser Altimeter (LOLA). The Planetary Science Journal 4, 183. doi:10.3847/PSJ/acf3e1. Data doi:10.60903/gsfcpgda-lola-spole.",
+        "url": "https://pds-geosciences.wustl.edu/lro/urn-nasa-pds-lro_diviner_derived1/data_derived_prp/dlre_prp_south.tab"
+      }
+    ]
+  },
+  {
+    "id": "ice-slater",
+    "name": "Slater",
+    "lat": -88.0792,
+    "lon": 111.2881,
+    "diameterKm": 25.12,
+    "status": "predicted",
+    "short": "Cold traps are predicted here; no detection is mapped here.",
+    "evidence": [
+      {
+        "instrument": "LRO Diviner thermal model and LOLA shadow model",
+        "finding": "Temperature and shadow maps predict cold traps here, but the reviewed map of reported ice signals has no detection assigned to this crater.",
+        "citation": "Paige, D.A., et al. (2010). Diviner Lunar Radiometer observations of cold traps in the Moon's south polar region. Science 330, 479-482. doi:10.1126/science.1187726. Dataset: Paige et al. (2018), LRO DLRE Level 5 PRP V2.0, NASA PDS, LRO-L-DLRE-5-PRP-V2.0. Barker, M.K., Mazarico, E., Neumann, G.A., Smith, D.E., Zuber, M.T., Head, J.W., Sun, X. (2023). A New View of the Lunar South Pole from the Lunar Orbiter Laser Altimeter (LOLA). The Planetary Science Journal 4, 183. doi:10.3847/PSJ/acf3e1. Data doi:10.60903/gsfcpgda-lola-spole.",
+        "url": "https://pds-geosciences.wustl.edu/lro/urn-nasa-pds-lro_diviner_derived1/data_derived_prp/dlre_prp_south.tab"
+      }
+    ]
+  },
+  {
+    "id": "ice-wiechert",
+    "name": "Wiechert",
+    "lat": -84.0334,
+    "lon": 164.701,
+    "diameterKm": 40.82,
+    "status": "predicted",
+    "short": "Cold traps are predicted here; no detection is mapped here.",
+    "evidence": [
+      {
+        "instrument": "LRO Diviner thermal model and LOLA shadow model",
+        "finding": "Temperature and shadow maps predict cold traps here, but the reviewed map of reported ice signals has no detection assigned to this crater.",
+        "citation": "Paige, D.A., et al. (2010). Diviner Lunar Radiometer observations of cold traps in the Moon's south polar region. Science 330, 479-482. doi:10.1126/science.1187726. Dataset: Paige et al. (2018), LRO DLRE Level 5 PRP V2.0, NASA PDS, LRO-L-DLRE-5-PRP-V2.0. Barker, M.K., Mazarico, E., Neumann, G.A., Smith, D.E., Zuber, M.T., Head, J.W., Sun, X. (2023). A New View of the Lunar South Pole from the Lunar Orbiter Laser Altimeter (LOLA). The Planetary Science Journal 4, 183. doi:10.3847/PSJ/acf3e1. Data doi:10.60903/gsfcpgda-lola-spole.",
+        "url": "https://pds-geosciences.wustl.edu/lro/urn-nasa-pds-lro_diviner_derived1/data_derived_prp/dlre_prp_south.tab"
+      }
+    ]
+  },
+  {
+    "id": "ice-peary",
+    "name": "Peary",
+    "lat": 88.6251,
+    "lon": 24.4024,
+    "diameterKm": 78.75,
+    "status": "detected",
+    "short": "Radar signs seen from orbit; ice is possible, not measured here.",
+    "evidence": [
+      {
+        "instrument": "Chandrayaan-2 Dual-frequency Synthetic Aperture Radar (DFSAR)",
+        "finding": "Radar found unusual signals in small craters inside Peary that may come from buried ice. Rough ground also changes radar signals; no water was measured on the spot, and this is not a claim about the whole crater.",
+        "citation": "ISRO (2020). Chandrayaan-2 completes a year around the Moon, pp. 9–10, Figure 9. See also Bussey, D.B.J., Spudis, P.D., and the Mini-RF Team (2011). New insights into lunar processes and history from global mapping by Mini-RF radar. LPSC 42, abstract 2086.",
+        "url": "https://www.isro.gov.in/media_isro/pdf/chandrayaan-2_completes_a_year_around_the_moon_.pdf"
+      },
+      {
+        "instrument": "LRO Mini-RF and Chandrayaan-1 Mini-SAR",
+        "finding": "The Mini-RF team described radar signals consistent with possible ice in permanently shaded small craters inside Peary. These are orbital signs with more than one possible cause.",
+        "citation": "Bussey, D.B.J., Spudis, P.D., and the Mini-RF Team (2011). New insights into lunar processes and history from global mapping by Mini-RF radar. LPSC 42, abstract 2086.",
+        "url": "https://www.lpi.usra.edu/meetings/lpsc2011/pdf/2086.pdf"
+      }
+    ],
+    "positionSource": "https://planetarynames.wr.usgs.gov/Feature/4627",
+    "positionNote": "Marker at the named crater centre for context, not at every possible deposit."
+  },
+  {
+    "id": "ice-rozhdestvenskiy",
+    "name": "Rozhdestvenskiy",
+    "lat": 84.9943,
+    "lon": -157.8924,
+    "diameterKm": 181.15,
+    "status": "detected",
+    "short": "Radar signs seen from orbit; ice is possible, not measured here.",
+    "evidence": [
+      {
+        "instrument": "LRO Mini-RF and Chandrayaan-1 Mini-SAR",
+        "finding": "Radar found unusual signals in small craters inside Rozhdestvenskiy that may come from buried ice. Rough ground can give similar signals; no water was measured on the spot, and this is not a claim about the whole crater.",
+        "citation": "NASA/GSFC/JHUAPL. Mini RF Rozhdestvenskiy. Bussey, D.B.J., Spudis, P.D., and the Mini-RF Team (2011). New insights into lunar processes and history from global mapping by Mini-RF radar. LPSC 42, abstract 2086. Spudis et al. (2010), GRL 37, L06204, doi:10.1029/2009GL042259.",
+        "url": "https://science.nasa.gov/image-detail/rozhdestvenskiy-x-main-context-580/"
+      },
+      {
+        "instrument": "Radar interpretation limits",
+        "finding": "A high radar polarisation ratio can come from rough rock or from ice. The instrument does not directly measure water in the ground.",
+        "citation": "NASA (2010). NASA Radar Finds Ice Deposits at Moon’s North Pole, 2 March 2010; the article explains that circular polarisation ratio is not uniquely diagnostic of roughness or ice.",
+        "url": "https://science.nasa.gov/missions/mini-rf/nasa-radar-finds-ice-deposits-at-moons-north-pole/"
+      }
+    ],
+    "positionSource": "https://planetarynames.wr.usgs.gov/Feature/5207",
+    "positionNote": "Marker at the named crater centre for context, not at every possible deposit."
+  },
+  {
+    "id": "ice-hermite",
+    "name": "Hermite",
+    "lat": 86.1659,
+    "lon": -93.3152,
+    "diameterKm": 108.64,
+    "status": "detected",
+    "short": "Radar signs seen from orbit; ice is possible, not measured here.",
+    "evidence": [
+      {
+        "instrument": "LRO Mini-RF imaging radar",
+        "finding": "Mini-RF reported unusual radar signals in small craters on Hermite’s floor. A scattering model favours possible buried ice, but roughness can affect the signal; no water was measured on the spot.",
+        "citation": "Spudis, P.D., et al. (2013). Evidence for water ice on the Moon: Results for anomalous polar craters from the LRO Mini-RF imaging radar. JGR Planets 118, 2016–2029, Table 3 and Figure 7. doi:10.1002/jgre.20156.",
+        "url": "https://ntrs.nasa.gov/api/citations/20150000268/downloads/20150000268.pdf"
+      },
+      {
+        "instrument": "LRO Diviner temperature measurements and LOLA shadow models",
+        "finding": "Diviner measured very cold ground in Hermite, and LOLA models show lasting shadow in part of its south-western floor. Cold and shadow allow possible ice storage; they do not measure water.",
+        "citation": "NASA/GSFC/JHUAPL. Hermite Crater; Diviner temperature observations and LOLA long-term illumination modelling. See also NASA LRO, Taking the Moon’s Temperature.",
+        "url": "https://science.nasa.gov/image-detail/hermite/"
+      }
+    ],
+    "positionSource": "https://planetarynames.wr.usgs.gov/Feature/2471",
+    "positionNote": "Marker at the named crater centre for context, not at every possible deposit."
+  },
+  {
+    "id": "ice-erlanger",
+    "name": "Erlanger",
+    "lat": 86.9883,
+    "lon": 28.6166,
+    "diameterKm": 10.94,
+    "status": "detected",
+    "short": "Radar signs seen from orbit; ice is possible, not measured here.",
+    "evidence": [
+      {
+        "instrument": "LRO Mini-RF imaging radar",
+        "finding": "Mini-RF reported unusual radar signals inside Erlanger. A scattering model favours possible buried ice, but roughness can affect the signal; no water was measured on the spot.",
+        "citation": "Spudis, P.D., et al. (2013). Evidence for water ice on the Moon: Results for anomalous polar craters from the LRO Mini-RF imaging radar. JGR Planets 118, 2016–2029, Table 3. doi:10.1002/jgre.20156.",
+        "url": "https://ntrs.nasa.gov/api/citations/20150000268/downloads/20150000268.pdf"
+      },
+      {
+        "instrument": "LRO Narrow Angle Camera (LROC NAC)",
+        "finding": "LROC shows that much of Erlanger’s floor stays in permanent shadow. Shadow can help ice last in suitable cold patches; the photograph alone is not an ice detection.",
+        "citation": "NASA/GSFC/Arizona State University (2009). Eternal Darkness Near the North Pole, PIA12899. LROC Permanently Shadowed Regions Atlas, Erlanger entry NP_869610_0287570.",
+        "url": "https://science.nasa.gov/photojournal/eternal-darkness-near-the-north-pole/"
+      }
+    ],
+    "positionSource": "https://planetarynames.wr.usgs.gov/Feature/14525",
+    "positionNote": "Marker at the named crater centre for context, not at every possible deposit."
+  },
+  {
+    "id": "ice-bosch",
+    "name": "Bosch",
+    "lat": 86.8175,
+    "lon": 133.5429,
+    "diameterKm": 19.58,
+    "status": "predicted",
+    "short": "Cold ground could keep ice; this marker is a prediction.",
+    "evidence": [
+      {
+        "instrument": "LRO Diviner temperature measurements",
+        "finding": "NASA lists Bosch among the very cold northern craters that could trap water ice. This is a prediction from cold conditions, not a measurement of water at this crater.",
+        "citation": "Borowski, S.K., et al. (2018). Robust Exploration and Commercial Missions to the Moon Using Nuclear Thermal Rocket Propulsion and In Situ Propellants Derived from Lunar Polar Ice Deposits. NASA/TM—2018-219937, p. 7 and Figure 4(b).",
+        "url": "https://ntrs.nasa.gov/api/citations/20180008495/downloads/20180008495.pdf"
+      }
+    ],
+    "positionSource": "https://planetarynames.wr.usgs.gov/Feature/14524",
+    "positionNote": "Marker at the named crater centre for context, not at every possible deposit."
+  }
+]

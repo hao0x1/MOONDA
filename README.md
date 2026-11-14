@@ -21,25 +21,70 @@ http://127.0.0.1:5191). For the event: `npm run build`, then serve `app/dist/` f
 
 The app works without internet for the whole Moon and for the south-pole region (a whole-Moon photo
 and 4,224 sharp south-pole photo squares are stored in `app/public/data/`). With internet it also
-sharpens other regions from NASA Moon Trek and ASU Lunaserv. Names, NASA science maps, the height
+sharpens the rest of the Moon from Lunar QuickMap (JAXA Kaguya and LROC photos), NASA Moon Trek and ASU Lunaserv. Names, NASA science maps, the height
 map, the sky and all calculations are local.
 
 On first open there is a short loading screen (about 5–10 s): it loads the height map, photos and the
 sky, and quietly prepares the south-pole views so that everything is smooth afterwards.
 
+## What changed on 14 Nov 2026 (v7): driving, routes, hazard maps and the new look
+
+- **"Stand here" is now "Land here".** Same view, new name everywhere (English and Khmer).
+- **A hands-on tutorial.** The start screen offers **Enter with a short tutorial** (first visit) or **Just enter**; later visits get **Enter** and **Show the tutorial**. The tour is one banner at the top of the page with six small objectives: move the Moon, pick a spot, land on it, drive the rover, compare spots, switch on a map. It watches what you really do, in any order, ticks each one off and shows the next, with a ring on the control to use; it follows you onto the surface and back (`app/src/ui/Tutorial.tsx`, `tutorialStore.ts`; remembered in `localStorage` as `moonda.tutorial.v1`). The **Tutorial** button in the top bar runs it again.
+- **"While you wait".** While the Moon loads, a small sign drops in beside the loading list and asks three one-click questions: when the lander arrives, how long its battery lasts in the dark, how long it can go without seeing Earth. The answers set the arrival date on the time bar and the two limits in Compare (`app/src/ui/WaitQuestions.tsx`).
+- **Info panel from the team's mock** (`app/src/ui/PlaceCard.tsx`, `DayBars.tsx`): the kind of place, the name with its coordinates and copy button beside it, one plain line, the source. Then **Mission timeline**: two bar charts, **Sunlight presence** and **Earth signal**, one bar per mission day (hover a bar for that day's share; click it to move the time bar there), and a **Summary** of four numbers: sunlight, longest dark, Earth in view, longest without Earth. The ground values are below the fold.
+- **Compare from the team's mock**: "Robot information" with two rulers in **days** that you drag (quarter days, Shift for whole days, or type any number up to 365; the ruler grows past 7 days and keeps whole-number labels; clear the box to skip a check), then one table: location, longest dark, longest without Earth, a tick or a cross against your limits, and a **Best** tag. As many plans as you like (letters go on past Z, the table scrolls). A row's menu has **Compare another landing date** (a calendar with 1, 3, 7 and 14 days later one click away, or any typed date) and **Change this plan's landing date**.
+- **Rover physics.** Gravity now acts along the slope (`app/src/moon/walk.ts`, `DRIVE`): downhill MOONDA runs faster than on the flat (2.4 m/s on 10°, 2.8 on 20°), uphill it is slower, and with the keys released it rolls on down anything steeper than about 9° until you brake with S. Parked, its brakes hold. Speeds are along the ground.
+- **Small craters are real ground now.** The craters of about 1 to 50 m near the rover used to be shading only; they are now dips in the terrain itself (`app/src/moon/craterField.ts`, built into the terrain tiles in `lolaTerrain.ts`), so the rover pitches down into them and climbs out, and they stay where they are however far you drive. They are an artist's impression at sizes NASA's 80 m heights cannot show.
+- **Rocks.** A rock up to three quarters of a wheel high (19.7 cm) is driven over, as a rocker-bogie rover does; only bigger ones stop it. Rock sizes for bumping come from the stones' real meshes (`rockOutline.ts`, `ROCK_SHAPE`), and the rocks you can bump into follow the rover, not the camera. "A rock is in the way" shows only when a rock really holds the rover.
+- **Free camera while driving.** Behind the rover you can look anywhere, also up: the camera sits on a boom that shortens when a crest is in the way. The view is only eased back behind the rover after 5 s without a touch, and a glide between views never passes through a hill.
+- **Round minimap** (top right in Land here, `app/src/explore/Minimap.tsx`, `MapEngine.ts`): the real NASA photo of the ground under the rover, turning with the camera, with the rover's arrow, its trail and the pins. Scroll over it (or use its + and − buttons) to zoom smoothly from about 60 m to 300 km across.
+- **The big map** (click the round map, or press **M**; `app/src/explore/SurfaceMap.tsx`): a large map in the middle of the window over a blurred page. Drag to move, scroll to zoom fast and smoothly, all the way out to a flat map of the whole Moon and all the way in to the sharpest photo. Switches for PSR, danger zones, water ice and sunlight, each with its key.
+- **A route by tapping the map.** Click anywhere on the big map: a flag drops there and the route is worked out at once; click somewhere else or drag the flag to change it. A bar shows the distance, the driving time and the steepest slope, with four kinds of route, each with its own small picture and a "?" that explains them: **Fastest**, Gentle, Sunlit, Earth link. The route also shows on the round map and as a guide ahead of the rover.
+- **A route on the Moon itself.** On the overview (globe or flat 2D view), select a spot, press the route button in the column of map buttons, then click where you want to go: the route is drawn lying on the ground, with the same bar. **Land here** then carries it onto the surface as your destination (`app/src/ui/RouteTool.tsx`).
+- **The flat 2D view** picks exactly the point you click, zooms faster, and now uses the sharp photos down to about 5 km across.
+- **A route the rover can follow** (`app/src/science/route.ts`, `routeFine.ts`, `routeCraters.ts`, `routeRocks.ts`, `routeSpeed.ts`): "Fastest" is the least driving time, with speeds taken from the rover's own physics (2.0 m/s on the flat, 1.6 up 10°, 2.4 down 10°; ground over 25° is closed). The first 600 m from the rover and the last 150 m are planned on a 2 m grid over the exact ground the rover drives on, so the line goes round the small crater bowls and the rocks it cannot climb; further out it follows NASA's heights and goes round the rims of catalogued craters the heights are too coarse to show. Check it with `node app/scripts/check-route.ts`. It is still a prediction: the middle of a long route knows only what the orbital data shows.
+- **Waypoints over the view.** The landing spot, the destination and the Compare pins are drawn over the 3D view, through any hill, with their distance, and marked on the compass tape.
+- **Reset rover** (the round arrow in the Drive bar): back to where it first stood. Nothing is saved when you leave the surface, and nothing asks.
+- **A sharper Moon** (`app/src/moon/imagery.ts`, `imageryWorker.ts`): with internet the photo now sharpens to JAXA's Kaguya Terrain Camera mosaic (7.4 m per pixel) over the whole Moon, to LROC NAC photos (about 0.5 to 2 m) round the Apollo sites, Tycho and the recent landings, and to the 1 m NAC mosaic north of 84° N. The south pole keeps its stored 1.2 m photos. Without internet the stored photos are used as before. Exact layers, services and terms: `app/public/data/CREDITS-imagery.md`.
+- **Layers box**: PSR, Water ice, Danger zones, Slope, Craters, Height colours, then names and markers. Stars, the Milky Way and 3D mountains are always on. Every map is downloaded on the start screen and paints within about a tenth of a second of its switch.
+  - **PSR** (permanently shadowed regions, as NASA calls them): both poles, from NASA's LOLA maps, filled blue.
+  - **Water ice**, three honest parts under one switch: where ice could last (predicted from temperature and shadow, both poles), hydrogen seen from orbit over the whole Moon (a sign of water, not proven ice), and a marker per crater: white ring = water measured there (LCROSS in Cabeus, the only direct measurement), cyan ring = signs seen from orbit, dashed ring = predicted only. Each marker lists its evidence with the paper.
+  - **Slope** and **Danger zones**: the whole Moon from NASA's LOLA heights (yellow 10–15°, orange 15–25°, red over 25°), with the sharp 80 m map near the south pole.
+  - **Craters**: outlines of all 1.3 million measured craters of 1 km and more (Robbins 2019), drawn as true circles on the Moon, more as you zoom in (`app/src/moon/craterLayer.ts`).
+  - Sources, products and limits: `data-prep/layers/NOTES.md` and `app/public/data/CREDITS-layers.md`.
+- **Landing sites.** 76 places with a source each: every landing, rover, sample return and impact, two that may still be working (Chang'e-3, Chang'e-4), and 11 planned landings (dashed ring). Any of them can be pinned, compared and landed on. Researched 14 Nov 2026: `data-prep/sites/NOTES.md`.
+- **Tooltips** on every button, kept to one short sentence, and a short "half real" note in Land here.
+- **Loading.** The new maps and the crater list are fetched on the start screen with the other layers, so a switch shows its map at once.
+- **A crash fixed.** With many layers on, the surface view could stop with "texture image units count exceeds MAX_TEXTURE_IMAGE_UNITS(16)": Cesium did not count the ground shader's own eight textures. The map now leaves room for them (`MoonMap.tsx`, `GROUND_SHADER_TEXTURES`).
+
+**New data and its sources** (built by `data-prep/features/scripts/`, notes in `data-prep/features/NOTES.md`):
+
+| What | Source |
+| --- | --- |
+| Crater outlines | Robbins (2019), *A New Global Database of Lunar Impact Craters >1–2 km*, JGR Planets 124, doi:10.1029/2018JE005592 · USGS Astrogeology / NASA PDS. Small south-polar craters: Marco Figuera et al. (CC BY 4.0) |
+| PSR (permanently shadowed regions) | NASA LOLA [polar illumination archive](https://pds-geosciences.wustl.edu/lro/lro-l-lola-3-rdr-v1/lrolol_1xxx/extras/illumination/), both poles out to 65° (240 m; north 120 m above 80° and 60 m above 85°). South retains `LPSR_80S_20MPP_ADJ`, Barker et al. (2023), doi:10.3847/PSJ/acf3e1. See the [LROC atlases](https://lroc.im-ldi.com/atlases). |
+| Water ice, predicted | [LRO Diviner Polar Resource Product](https://pds-geosciences.wustl.edu/lro/urn-nasa-pds-lro_diviner_derived1/data_derived_prp/), thermal models with LOLA shadow maps; predictions are distinct from detections. [LRO science and data](https://science.nasa.gov/mission/lro/science-and-data/) |
+| Water ice, evidence | LCROSS direct measurement at one spot in Cabeus; M3 south-polar surface-ice signs; north-polar Mini-SAR/Mini-RF radar candidates, which can also be rough ground. Global [Lunar Prospector hydrogen estimates](https://pds-geosciences.wustl.edu/missions/lunarp/reduced/hydrogenhd.dat) are orbital hydrogen, not proven ice. Citations and limits: `app/public/data/CREDITS-layers.md`; [LPI Lunar South Pole Atlas](https://www.lpi.usra.edu/lunar/lunar-south-pole-atlas/) |
+| Slope and danger zones | Global [NASA LOLA LDEM_64](https://pds-geosciences.wustl.edu/lro/lro-l-lola-3-rdr-v1/lrolol_1xxx/data/lola_gdr/cylindrical/img/ldem_64.img) heights, local 3 × 3 slope stencil about 1.42 km across, displayed at 8192 × 4096. South keeps the 80 m DEM / about 240 m stencil. Danger classes also mark catalogued small crater bowls. |
+| Landing and impact sites | LROC list of human-made objects (NASA/GSFC/Arizona State University), NASA NSSDCA, ISRO, JAXA, CNSA and the lander companies' pages |
+| Reference | [NASA / ASU LROC QuickMap](https://quickmap.im-ldi.com/) (NASA, Intuitive Machines & Applied Coherent Technology) |
+
+**Said out loud:** a permanently shadowed region is a cold trap, not confirmed ice; only the LCROSS marker is a direct measurement. Hazards smaller than about 80 m are not on any of these maps. The rover's rocks, soil and driving are an artist's impression. "May still be working" means the last word from the makers, not a confirmed status today.
+
 ## What changed on 13–14 Nov 2026 (v6)
 
 - **New look**: Google Sans Flex type, calm panels without boxes inside boxes, one toolbar at the top right, big numbers in the info panel, and the Sun and Earth shown as real NASA photos everywhere (`app/public/ui/`, made by `data-prep/ui_glyphs.py`).
-- **Start screen**: loads everything first (Moon photo, mountains, sky, calculator, south-pole views, the Stand-here view, music), then "Enter". Two graphics modes: **Full detail** and **Smooth** (`app/src/app/quality.ts`). Add `?start` to the address to keep the start screen up in test runs.
+- **Start screen**: loads everything first (Moon photo, mountains, sky, calculator, south-pole views, the Land here view, music), then "Enter". Two graphics modes: **Full detail** and **Smooth** (`app/src/app/quality.ts`). Add `?start` to the address to keep the start screen up in test runs.
 - **Arrival date**: type it ("2008-07-01 14:30", "1 Jul 2008", "2040", "now", "+3d") or pick month and year directly (`app/src/ui/DateTimePicker.tsx`, years 1900–2100).
 - **Moving the Moon**: it keeps turning after a flick and slows down smoothly, like Google Earth (`app/src/moon/navigation.ts`, constants at the top).
-- **Stand here**: compass tape with degrees, Neil Armstrong's Apollo 11 gloves as first-person hands (Smithsonian 3D scans, CC0), low-gravity walking and hopping, a helmet lamp and real stars at night, Sun/Earth tags that sit on the skyline when the body is below it. The dotted skyline is off by default.
+- **Land here**: compass tape with degrees, Neil Armstrong's Apollo 11 gloves as first-person hands (Smithsonian 3D scans, CC0), low-gravity walking and hopping, a helmet lamp and real stars at night, Sun/Earth tags that sit on the skyline when the body is below it. The dotted skyline is off by default.
 - **MOONDA AI**: a saved chat can no longer show a fake endless "Working…"; there is a Stop button, a stall cut-off and a "Run again" for interrupted runs.
 - **Compare**: one table, four plans visible at once.
 - **Khmer**: the "ខ្មែរ / English" switch in the top bar and on the start screen (`app/src/i18n/`, English in `en/`, Khmer in `km/`; a missing Khmer line falls back to English).
 - **Music**: "Cylinder Five" by Chris Zabriskie (CC BY 4.0, see `app/public/audio/CREDITS.md`); the speaker button turns it off.
 - **Later on 13 Nov (from the team's own mockup)**: the boxed time bar became a borderless bottom row (menus left, ruler timeline centre, big "Projecting time" clock right); the map buttons are a column at the right edge; the info panel is one small table; the date picker is slimmer; the fling after a drag is capped lower.
-- **MOONDA the robot** replaced the gloves in Stand here:
+- **MOONDA the robot** replaced the gloves in Land here:
   - NASA's Perseverance model (public domain) at half size. Its size is one number: `ROBOT_SCALE` in `app/src/moon/walk.ts`.
   - Six wheels that spin and sit on springs, so it rocks, dips and bounces over bumps in the low Moon gravity; it bumps into rocks instead of driving through them.
   - A solar panel that turns to follow the Sun (and folds flat at night), dust thrown up by the wheels, headlights at night.
@@ -48,8 +93,8 @@ sky, and quietly prepares the south-pole views so that everything is smooth afte
   - Its own sounds (`app/src/audio/rover.ts`) and a camera head that looks where you look.
   - Keys: W A S D drive, Shift fast, V camera (Lander / Behind / Mast), L lights.
 - **Flat 2D map**: press **M** (or the 2D button) and the globe unrolls into a flat map; press again and it rolls back up. With "reduce motion" switched on in the computer's settings it simply fades instead. The flat map is drawn from the photo stored with the app (1.3 km per pixel; sharper polar photos between about 56° and 76°), so its closest zoom is about 250 km across. Zoom in again at that point and a small note offers "Go closer on the globe", which rolls the map back up at that place (`app/src/moon/flatMap.ts`, `mapMode.ts`).
-- **Looking far in Stand here** (evening of 13 Nov): the ground shading costs about a third less, so turning and driving hold 60 frames per second on a Retina laptop (Full detail draws Stand here at up to 3.9 million pixels; a small governor in `app/src/moon/groundLod.ts` sheds fine detail only while the view moves and the graphics card is behind). Distant ground keeps small dark and bright strokes instead of going smooth (`groundFar.ts`), far stones are no longer drawn black and now cast shadows, and wheel dust is the colour of the ground and dark inside the robot's own shadow.
-- **"Data detail" layer**: colours the map by how sharp the NASA data is in each part (south pole sharpest, the rest about 2 km heights and 100 m photos, one region rebuilt from a NASA brightness map). Nothing on the map is guessed or made up by AI; only the small rocks and soil near you in Stand here are an artist's impression.
+- **Looking far in Land here** (evening of 13 Nov): the ground shading costs about a third less, so turning and driving hold 60 frames per second on a Retina laptop (Full detail draws Land here at up to 3.9 million pixels; a small governor in `app/src/moon/groundLod.ts` sheds fine detail only while the view moves and the graphics card is behind). Distant ground keeps small dark and bright strokes instead of going smooth (`groundFar.ts`), far stones are no longer drawn black and now cast shadows, and wheel dust is the colour of the ground and dark inside the robot's own shadow.
+- **"Data detail" layer**: colours the map by how sharp the NASA data is in each part (south pole sharpest, the rest about 2 km heights and 100 m photos, one region rebuilt from a NASA brightness map). Nothing on the map is guessed or made up by AI; only the small rocks and soil near you in Land here are an artist's impression.
 - **Bottom row from the mockup**: menus on the left, the ruler timeline in the middle, the big "Projecting time" clock on the right, and the map buttons as one column at the right edge.
 - **Where the knobs are**: robot size `ROBOT_SCALE` in `app/src/moon/walk.ts`; shadows `SUN_SHADOW` in `app/src/moon/sunShadow.ts`; Full detail / Smooth settings in `app/src/app/quality.ts`; wheel tracks `TRACKS` in `app/src/moon/wheelTracks.ts`.
 
@@ -66,8 +111,8 @@ sky, and quietly prepares the south-pole views so that everything is smooth afte
 | Click | Select a name or marker, or drop a pin on the ground |
 | Click the **Sun** or **Earth** chip | Glide to a view where it shows above the Moon's edge |
 | `M` or the **2D** button | Switch between the globe and the flat map |
-| **Stand here** (in the info panel) | Stand on the Moon next to MOONDA the robot: drag to look around, scroll to zoom the lens, Esc or **Back to map** to leave |
-| In Stand here: `W` `A` `S` `D` · `Shift` · `V` · `L` | Drive · drive fast · camera (Lander / Behind / Mast) · lights on/off |
+| **Land here** (in the info panel) | Land on the Moon next to MOONDA the robot: drag to look around, scroll to zoom the lens, Esc or **Back to map** to leave |
+| In Land here: `W` `A` `S` `D` · `Shift` · `V` · `L` | Drive · drive fast · camera (Lander / Behind / Mast) · lights on/off |
 
 ## What's on screen
 
@@ -75,13 +120,16 @@ sky, and quietly prepares the south-pole views so that everything is smooth afte
 | --- | --- |
 | 3D Moon | CesiumJS globe with real 3D mountains from NASA LOLA heights (80 m near the south pole, ~1.9 km elsewhere), lit by the Sun where it really is at the time on the time bar. The night side stays dim but readable. |
 | Sky | The real sky around the Moon: the Milky Way, about 8,900 stars, the planets, a 3D Earth with its true phase and the side that really faces the Moon, and the Sun. All move when the time changes. |
-| Info panel (left) | Click anything (or anywhere). Same layout for every kind of place: what it is, **Stand here / Compare / Zoom in**, "Right now" in plain words, the mission numbers (% sunlight, longest dark, % Earth view, longest without Earth), lander height, NASA map values under the spot, and where the data comes from. |
-| Lander view | Stand on the real terrain at any spot: NASA's photo of that place on the ground, lit by the real Sun with real hill shadows, level horizon, the Sun and Earth in their true places, a compass strip, and plain-word status. The dotted line is the skyline our numbers use. Press play to watch the Sun move. |
-| Compare (right drawer) | Up to 4 plans (spot + arrival). Say what the lander needs ("my battery can survive 3 days of darkness", "it can go 1 day without talking to Earth") and it answers in one sentence which plan works. Each plan shows two bars — longest dark and longest without Earth — against your limit. "Try arriving 3 days later" adds the same spot with a later landing. |
+| Info panel (left) | Click anything (or anywhere). Same layout for every kind of place: what it is, its coordinates and source, **Land here / Compare / Zoom in**, the mission timeline (sunlight and Earth signal, one bar per day), a summary (% sunlight, longest dark, % Earth view, longest without Earth), then lander height and NASA map values under the spot. |
+| Lander view | Land on the real terrain at any spot: NASA's photo of that place on the ground, lit by the real Sun with real hill shadows, level horizon, the Sun and Earth in their true places, a compass strip, and plain-word status. The dotted line is the skyline our numbers use. Press play to watch the Sun move. |
+| Compare (right drawer) | Any number of plans (spot + arrival). Set battery life and the longest time without Earth with the rulers (they grow past 7 days), or type the days in their boxes. Defaults are 3 days on battery and 1 day without Earth; clearing a box skips that check. Each plan shows its longest dark and longest time without Earth against those limits, and a Best tag when one plan is better. "Compare another landing date" adds the same spot landing on any date you pick. |
 | Time bar | One row: play, date (UTC + Cambodia time), the Sun/Earth track, then menus for arrival, mission length and speed, and **Now**. |
-| Layers | Photo, sharp south-pole photo, 3D mountains, height colours, real sunlight, Sun and Earth markers, stars and Milky Way, planet and star names, place names, Artemis regions, past landings, and NASA polar maps (sunlight, Earth in view, permanent shadow, temperature, slope). |
+| Layers | Thirteen switches in three groups: South Pole maps (sunlight, Earth in view, PSR, water ice, danger zones ...), Whole Moon (craters, height colours ...), Names and markers (place names, Artemis regions, landing sites). |
 | Search | 9,087 official IAU names + NASA's 9 Artemis regions + past landings + famous spots. |
 | Names on the map | Google-Earth-style: only names big enough for the current zoom, most important first, never overlapping, fading in and out. |
+
+Compare keeps these limits in `moonda.compare.needs.v2` as `{ batteryH, contactH }` (stored in hours although the rulers show days, or `null`
+to skip a check). On first read it migrates the preset indexes in the old `moonda.compare.needs` value.
 
 ## How the science works (plain words)
 
@@ -112,10 +160,12 @@ averages, not forecasts. Artemis markers are approximate points inside NASA's re
 | What | Source |
 | --- | --- |
 | Moon photo | NASA Moon Trek — LRO WAC global mosaic. Where that mosaic is lit from the other side (90°W–180°), NASA's albedo map (SVS CGI Moon Kit) × LOLA/SLDEM2015 hillshade is used instead so there is no seam. Local copies are made by `data-prep/base_mosaic.py`; credits in `app/public/data/CREDITS-imagery.md` |
+| Sharper photos (with internet) | JAXA Kaguya Terrain Camera evening mosaic, 7.4 m per pixel (ISAS/JAXA/SELENE), LROC NAC mosaics near landing sites and the LROC NAC north-pole controlled mosaic, 1 m per pixel (NASA/GSFC/Arizona State University), streamed from [Lunar QuickMap](https://quickmap.im-ldi.com/) (NASA, Intuitive Machines & Applied Coherent Technology Corp.) with NASA Moon Trek as fallback. Layers, measured resolutions and terms: `app/public/data/CREDITS-imagery.md` |
 | South-pole photos | LROC WAC South Pole Summer Mosaic and LROC NAC south-pole controlled mosaic via ASU Lunaserv (QuickMap's server); stored locally by `data-prep/polar_tiles.py` |
 | Sky | NASA SVS Deep Star Maps 2020, HYG star database, NASA Blue Marble / Black Marble (Earth) — see `app/public/space/CREDITS.md` |
 | Heights | NASA LRO LOLA `LDEM_80S_80M` (PDS Geosciences) — `data-prep/dem.py` |
-| Sunlight, Earth view, permanent shadow | LOLA illumination products (Mazarico et al. 2011, Icarus 211) — `data-prep/layers/` |
+| Sunlight and Earth view (planner and spot values) | LOLA illumination products (Mazarico et al. 2011, Icarus 211). Their south-pole grids are retained; these have no switch in Layers. `data-prep/layers/` |
+| PSR, water ice, slope and danger zones | NASA LOLA, Diviner, Lunar Prospector, LCROSS and Chandrayaan-1 sources with coverage and limits in `app/public/data/CREDITS-layers.md`; rerunnable scripts in `data-prep/layers/NOTES.md`. Predictions, orbital signs and direct measurements have separate keys. |
 | Temperature | LRO Diviner Polar Resource Product (Paige et al. 2010, Science 330) — `data-prep/layers/` |
 | Names | IAU Gazetteer of Planetary Nomenclature (USGS) — `data-prep/names.py` |
 | Artemis regions | NASA, Oct 2024 update (approximate markers) |

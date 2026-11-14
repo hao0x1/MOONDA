@@ -1,0 +1,38 @@
+/* The tour: one banner at the top with the objective of the moment, a soft ring on the control to use, and a small
+   moving mark on the Moon for the two gestures. Nothing here takes clicks except the banner's two buttons. */
+.moonda-tutorial { position: fixed; inset: 0; z-index: 80; pointer-events: none; opacity: 0; visibility: hidden; transition: opacity 200ms ease-out, visibility 0s 200ms; }
+.moonda-tutorial-visible { opacity: 1; visibility: visible; transition: opacity 200ms ease-out; }
+
+.moonda-tutorial-banner { position: absolute; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 12px; max-width: min(680px, calc(100vw - 24px)); min-height: 48px; padding: 8px 8px 8px 12px; border-radius: 24px; background: var(--solid); box-shadow: var(--shadow-pop); pointer-events: auto; transition: top 260ms var(--ease), box-shadow 200ms ease-out; animation: moonda-tutorial-drop 320ms var(--ease); }
+.moonda-tutorial-banner.done { box-shadow: 0 0 0 1px rgba(111, 207, 157, .5), 0 24px 56px rgba(0, 0, 0, .7); }
+.moonda-tutorial-num { flex: none; display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: var(--white); color: var(--ink); font-size: var(--fs-13); font-weight: 700; font-variant-numeric: tabular-nums; transition: background 200ms ease-out, color 200ms ease-out; }
+.moonda-tutorial-banner.done .moonda-tutorial-num { background: var(--good); color: #06281a; }
+.moonda-tutorial-text { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 10px; min-width: 0; animation: moonda-tutorial-swap 260ms var(--ease); }
+.moonda-tutorial-text b { font-size: var(--fs-14); font-weight: 600; white-space: nowrap; }
+.moonda-tutorial-text span { color: var(--text-2); font-size: var(--fs-14); line-height: 20px; }
+.moonda-tutorial-banner.done .moonda-tutorial-text span { color: var(--good); }
+.moonda-tutorial-dots { flex: none; display: flex; gap: 5px; margin-left: 4px; }
+.moonda-tutorial-dots i { width: 6px; height: 6px; border-radius: 3px; background: rgba(255, 255, 255, .2); transition: width var(--fast) ease-out, background var(--fast) ease-out; }
+.moonda-tutorial-dots i.done { background: var(--good); }
+.moonda-tutorial-dots i.on { width: 14px; background: var(--white); }
+.moonda-tutorial-skip { flex: none; height: 30px; padding: 0 10px; border: 0; border-radius: 15px; background: transparent; color: var(--text-2); font: inherit; font-size: var(--fs-13); font-weight: 500; cursor: pointer; transition: background var(--fast) ease-out, color var(--fast) ease-out; }
+.moonda-tutorial-skip:hover { background: var(--fill-2); color: var(--text); }
+.moonda-tutorial-close { flex: none; display: grid; place-items: center; width: 30px; height: 30px; padding: 0; border: 0; border-radius: 50%; background: transparent; color: var(--text-3); cursor: pointer; transition: background var(--fast) ease-out, color var(--fast) ease-out; }
+.moonda-tutorial-close:hover { background: var(--fill-2); color: var(--text); }
+.moonda-tutorial-banner :focus-visible { outline: 2px solid rgba(255, 255, 255, .7); outline-offset: 1px; }
+
+/* the control to use: a ring that breathes */
+.moonda-tutorial-ring { position: absolute; border-radius: 14px; box-shadow: 0 0 0 2px rgba(255, 255, 255, .9), 0 0 0 7px rgba(255, 255, 255, .12); animation: moonda-tutorial-breathe 1.6s ease-in-out infinite; transition: left 220ms var(--ease), top 220ms var(--ease), width 220ms var(--ease), height 220ms var(--ease); }
+/* the gesture, shown on the Moon itself: a small ring that is dragged sideways, or one that is pressed */
+.moonda-tutorial-ghost { position: absolute; width: 30px; height: 30px; margin: -15px 0 0 -15px; border-radius: 50%; border: 2px solid rgba(255, 255, 255, .9); background: rgba(255, 255, 255, .14); box-shadow: 0 0 0 6px rgba(255, 255, 255, .07); }
+.moonda-tutorial-ghost-drag { animation: moonda-tutorial-drag 2.6s var(--ease) infinite; }
+.moonda-tutorial-ghost-click { animation: moonda-tutorial-press 1.8s ease-in-out infinite; }
+
+html.lang-km .moonda-tutorial-text span { line-height: 24px; }
+@keyframes moonda-tutorial-drop { from { opacity: 0; transform: translate(-50%, -14px); } to { opacity: 1; transform: translate(-50%, 0); } }
+@keyframes moonda-tutorial-swap { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: none; } }
+@keyframes moonda-tutorial-breathe { 0%, 100% { box-shadow: 0 0 0 2px rgba(255, 255, 255, .9), 0 0 0 6px rgba(255, 255, 255, .10); } 50% { box-shadow: 0 0 0 2px rgba(255, 255, 255, .9), 0 0 0 11px rgba(255, 255, 255, .04); } }
+@keyframes moonda-tutorial-drag { 0% { transform: translateX(-70px) scale(1.15); opacity: 0; } 12% { transform: translateX(-70px) scale(.9); opacity: 1; } 70% { transform: translateX(70px) scale(.9); opacity: 1; } 85%, 100% { transform: translateX(70px) scale(1.15); opacity: 0; } }
+@keyframes moonda-tutorial-press { 0%, 100% { transform: scale(1.1); opacity: .45; } 40% { transform: scale(.72); opacity: 1; } 60% { transform: scale(.72); opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .moonda-tutorial-banner, .moonda-tutorial-text, .moonda-tutorial-ghost, .moonda-tutorial-ring { animation: none; } .moonda-tutorial-ring, .moonda-tutorial-banner { transition: none; } }
+@media (max-width: 620px) { .moonda-tutorial-dots { display: none; } }

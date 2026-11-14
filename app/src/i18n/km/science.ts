@@ -69,7 +69,7 @@ export const science: Partial<Record<keyof typeof en, string>> = {
   'aitool.battery': 'ថ្ម',
   'aitool.radio': 'វិទ្យុ',
   'aitool.slope': 'ជម្រាល {deg}°',
-  'aitool.permShadow': 'ស្រមោលជានិច្ច',
+  'aitool.permShadow': 'PSR (តំបន់ក្នុងស្រមោលជានិច្ច)',
   'aitool.max': 'ក្ដៅបំផុត {c}°C',
   'aitool.where': 'ទីតាំង',
   'aitool.near': 'ជិត {name}',

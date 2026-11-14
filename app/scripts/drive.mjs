@@ -26,14 +26,16 @@
 // "measure" on drag/wheel records frames during the action plus 600 ms after it.
 // The result (frame-rate numbers, eval results, console errors) is printed as JSON and saved to <out>/result.json.
 
-import { mkdirSync, readFileSync, writeFileSync, existsSync, mkdtempSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync, existsSync, mkdtempSync, realpathSync, rmSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import puppeteer from 'puppeteer-core';
+import { acquireBrowserLease } from './browserLease.mjs';
 
 const args = process.argv.slice(2);
 const flag = (name, dflt) => { const i = args.indexOf(name); return i >= 0 ? args[i + 1] : dflt; };
-const VALUE_FLAGS = ['--out', '--url', '--profile', '--width', '--height'];
+const VALUE_FLAGS = ['--out', '--url', '--profile', '--width', '--height', '--modules'];
 const scenarioArg = args.find((a, i) => !a.startsWith('--') && !VALUE_FLAGS.includes(args[i - 1]));
 if (!scenarioArg) { console.error('usage: node scripts/drive.mjs <scenario.json | JSON> [--out dir] [--url url] [--headful]'); process.exit(2); }
 const steps = JSON.parse(existsSync(scenarioArg) ? readFileSync(scenarioArg, 'utf8') : scenarioArg);
@@ -43,17 +45,81 @@ const W = +flag('--width', 1440), H = +flag('--height', 900);
 mkdirSync(out, { recursive: true });
 
 const CHROME = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
-const browser = await puppeteer.launch({
+const lease = await acquireBrowserLease({script:'drive.mjs',noteDir:out});
+let browser, launchPromise, cleanupPromise, temporaryProfile;
+async function cleanupBrowser() {
+  cleanupPromise ??= (async () => {
+    let closeError;
+    try {
+      browser ??= await launchPromise?.catch(() => undefined);
+      await browser?.close();
+    } catch (error) { closeError = error; }
+    try {
+      if (temporaryProfile && existsSync(temporaryProfile)) {
+        const child = browser?.process?.();
+        let inUse = !!closeError || !!(child?.pid && child.exitCode == null && child.signalCode == null);
+        try {
+          const identity = realpathSync(temporaryProfile);
+          const commands = execFileSync('/bin/ps', ['-axo', 'command='], { encoding: 'utf8', maxBuffer: 8 << 20 });
+          inUse ||= commands.split('\n').some(command => {
+            const match = command.match(/(?:^|\s)--user-data-dir=(?:"([^"]+)"|'([^']+)'|(\S+))/);
+            const profile = match && (match[1] ?? match[2] ?? match[3]);
+            if (!profile) return false;
+            try { return realpathSync(profile) === identity; }
+            catch { return resolve(profile) === resolve(temporaryProfile); }
+          });
+        } catch { inUse = true; }
+        if (inUse) console.warn(`[profile cleanup] Kept ${temporaryProfile}: browser exit was not confirmed.`);
+        else rmSync(temporaryProfile, { recursive: true, force: true });
+      }
+    } finally {
+      process.removeListener('SIGINT', onSigint);
+      process.removeListener('SIGTERM', onSigterm);
+      lease.release();
+    }
+    if (closeError) throw closeError;
+  })();
+  return cleanupPromise;
+}
+function onSignal(code) {
+  void cleanupBrowser().catch(error => console.error(error)).finally(() => process.exit(code));
+}
+const onSigint = () => onSignal(130), onSigterm = () => onSignal(143);
+process.on('SIGINT', onSigint);
+process.on('SIGTERM', onSigterm);
+try {
+const explicitProfile = flag('--profile', null);
+const profile = explicitProfile ? resolve(explicitProfile) : (temporaryProfile = mkdtempSync(join(tmpdir(), 'moonda-chrome-')));
+launchPromise = puppeteer.launch({
   executablePath: CHROME, headless: !args.includes('--headful'),
-  userDataDir: flag('--profile', null) ? resolve(flag('--profile', '')) : mkdtempSync(join(tmpdir(), 'moonda-chrome-')),
+  handleSIGINT: false, handleSIGTERM: false,
+  userDataDir: profile,
   defaultViewport: { width: W, height: H, deviceScaleFactor: 2 },
   args: ['--enable-gpu', '--use-angle=metal', '--ignore-gpu-blocklist', '--no-first-run', '--hide-scrollbars', `--window-size=${W},${H}`,
     '--disable-background-timer-throttling', '--disable-renderer-backgrounding', '--disable-backgrounding-occluded-windows'],
 });
+browser = await launchPromise;
+await lease.afterLaunch(browser);
 const page = (await browser.pages())[0] ?? await browser.newPage();
 const result = { steps: [], measures: {}, evals: {}, errors: [], shots: [] };
 page.on('console', m => { if (m.type() === 'error') result.errors.push(m.text().slice(0, 300)); });
-page.on('pageerror', e => result.errors.push('PAGE ERROR: ' + String(e).slice(0, 300)));
+page.on('pageerror', e => {
+  const message = 'PAGE ERROR: ' + (e.stack || String(e)).slice(0, 1600);
+  if (!result.errors.includes(message)) result.errors.push(message);
+});
+
+// Keep a before/after run on the captured modules while other sessions edit the running app.
+// The folder holds Vite's already-transformed <module>.js responses, never a second server.
+const modules = flag('--modules', null);
+if (modules) {
+  await page.setRequestInterception(true);
+  page.on('request', request => {
+    const name = new URL(request.url()).pathname.match(/^\/src\/moon\/([\w]+)\.ts$/)?.[1];
+    const file = name && join(modules, `${name}.js`);
+    if (file && existsSync(file)) void request.respond({ status: 200, contentType: 'text/javascript', body: readFileSync(file) });
+    else void request.continue();
+  });
+}
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 let cdp = null;
@@ -176,6 +242,6 @@ for (const s of steps) {
   result.steps.push({ do: s.do, ms: Date.now() - t0, ...(note ? { note } : {}) });
 }
 result.gpu = await page.evaluate(() => { try { const c = document.createElement('canvas').getContext('webgl2'); const e = c.getExtension('WEBGL_debug_renderer_info'); return e ? c.getParameter(e.UNMASKED_RENDERER_WEBGL) : 'unknown'; } catch { return 'unknown'; } });
-await browser.close();
 writeFileSync(join(out, 'result.json'), JSON.stringify(result, null, 1));
 console.log(JSON.stringify(result, null, 1));
+} finally { await cleanupBrowser(); }

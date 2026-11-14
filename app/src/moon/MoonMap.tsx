@@ -6,6 +6,7 @@
 // Always convert with frame.ts: never feed true lat/lon straight into Cesium.
 
 import './ellipsoid';
+import * as Cesium from 'cesium';
 import {
   Cartesian2, Cartesian3, Color, DirectionalLight, EllipsoidTerrainProvider, Globe, ImageryLayer,
   ScreenSpaceEventType, VerticalOrigin, Viewer, type Entity,
@@ -15,14 +16,16 @@ import type { MoonName } from '../data/names';
 import { PLACES, type Place } from '../data/places';
 import type { Vec3 } from '../science/ephemeris';
 import { shareHeights } from '../science/client';
+import type { RouteResult } from '../science/route';
 import { MoonHeights } from '../science/heights';
 import { cameraStore } from '../ui/stores';
 import { MOON_ELLIPSOID } from './ellipsoid';
 import { toCartesian, toTrueLatLon, trueToDisplayVec } from './frame';
-import { createBaseMosaicProvider, createMoonTrekProvider, createPolarPyramidProvider, createPolarRasterProvider, createSeamFixProvider, imageryPending, imageryReloaded } from './imagery';
+import { cancelOffscreenImagery, createBaseMosaicProvider, createMoonTrekProvider, createPolarPyramidProvider, createPolarRasterProvider, createScienceRasterProvider, createSeamFixProvider, imageryPending, imageryReloaded, releaseScienceLayers, setScienceLayersActive, warmScienceRasters } from './imagery';
+import { createCraterLayer } from './craterLayer';
 import { NameLabels } from './labels';
 import { LanderView, type LanderSpec, type SkyState } from './lander';
-import { POLAR_EXTENT_M, type LayerDef } from './layers';
+import { POLAR_EXTENT_M, SHARP_POLAR_LAYERS, scienceToLayer, type LayerDef, type ScienceRasterSource } from './layers';
 import { LolaTerrainProvider } from './lolaTerrain';
 import { attachNavigation, cameraHeadingPitch, poseGlobe, poseLookingAt, type Navigation } from './navigation';
 import { runPreload, type LoadProgress } from './preload';
@@ -31,9 +34,15 @@ import { settings } from '../app/settings';
 import { t } from '../i18n';
 import { SpaceSky } from './sky';
 import { SkyMarkers } from './skyMarkers';
-import { FlatMap } from './flatMap';
+import { FlatMap, type FlatOverlay } from './flatMap';
+import { loadManifest } from '../science/layerValues';
 import { MapModes, type MapMode } from './mapMode';
 import { createDataDetailLayer } from './dataDetail';
+import { setExploreHeights } from '../explore/context';
+
+/** The Height colours layer's NASA Moon Trek map (globe, flat map and start-up preload use the same one).
+ *  North of minTrueLat only: the sharper south-pole height map (data/layers/height.png) is drawn below it. */
+const HEIGHT_TREK = { layer: 'LRO_LOLA_ClrShade_Global_256ppd_v06', ext: 'png', minTrueLat: -80.4 } as const;
 
 export type MapSelection =
   | { type: 'name'; name: MoonName }
@@ -52,6 +61,8 @@ export interface MoonMapHandle {
   look(azDeg: number, elDeg: number): void;
   /** Globe <-> flat map (with the choreographed move). */
   setMapMode(mode: MapMode): void;
+  /** Get the south-pole maps ready to show at once (called when the Layers box opens). */
+  warmLayers(): void;
 }
 export type { MapMode };
 
@@ -61,6 +72,10 @@ interface Props {
   scienceLayers: LayerDef[];
   names: MoonName[] | null;
   selectedPin: { lat: number; lon: number } | null;
+  overviewRoute?: RouteResult | null;
+  routeDestination?: { lat: number; lon: number } | null;
+  choosingDestination?: boolean;
+  onRouteDestination?(lat: number, lon: number): void;
   pins: MapPin[];
   /** Sun and Earth positions (TRUE frame, metres from the Moon's centre) at the time on the time bar. */
   bodies: { sun: Vec3; earth: Vec3 };
@@ -98,12 +113,30 @@ const BADGE_SVG = (symbol: string, ring: string) => svgUrl(
   '<svg xmlns="http://www.w3.org/2000/svg" width="44" height="44" viewBox="0 0 22 22">'
   + `<circle cx="11" cy="11" r="10" fill="#151619" fill-opacity="0.86" stroke="${ring}" stroke-width="1.1"/>`
   + `<g fill="none" stroke="#fff" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">${symbol}</g></svg>`);
-const ICON: Record<Place['kind'], string> = {
+/** A round marker with an ice crystal: ring colour, ring dashes ('' = solid) and crystal colour. */
+function ICE_SVG(ring: string, dash: string, ink: string): string {
+  return svgUrl('<svg xmlns="http://www.w3.org/2000/svg" width="44" height="44" viewBox="0 0 22 22">'
+    + `<circle cx="11" cy="11" r="10" fill="#151619" fill-opacity="0.86" stroke="${ring}" stroke-width="1.3"${dash ? ` stroke-dasharray="${dash}"` : ''}/>`
+    + `<g fill="none" stroke="${ink}" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5.4v11.2M6.2 8.2l9.6 5.6M15.8 8.2l-9.6 5.6"/><path d="M9.6 6.3 11 7.6l1.4-1.3M9.6 15.7 11 14.4l1.4 1.3"/></g></svg>`);
+}
+/** Pictures of the special places, by kind (ice evidence has one per strength of evidence: see labels.ts iconKeyOf). */
+const ICON: Record<string, string> = {
   // corner brackets around a dot: "a region picked as a landing target"
   artemis: BADGE_SVG('<path d="M6.5 9V6.5H9M13 6.5h2.5V9M15.5 13v2.5H13M9 15.5H6.5V13"/><circle cx="11" cy="11" r="1.2" fill="#fff" stroke="none"/>', '#7fcfa8'),
   spot: BADGE_SVG('<path d="M5.8 14.6 9.4 8.4l2.3 3.6 1.4-1.9 3.1 4.5Z" fill="#fff" stroke-width="1"/>', 'rgba(255,255,255,0.28)'),
-  // a small flag on a pole
+  // a small flag on a pole: something landed (or hit the ground) here
   mission: BADGE_SVG('<path d="M7.6 16.4V5.6"/><path d="M8.3 6.1h6.4l-1.7 2.3 1.7 2.3H8.3Z" fill="#fff" stroke-width="0.8"/>', 'rgba(255,255,255,0.28)'),
+  // the same flag with radio waves and a green ring: it may still be working
+  active: BADGE_SVG('<path d="M6.6 16.4V6.6"/><path d="M7.3 7.1h4.6l-1.3 1.8 1.3 1.8H7.3Z" fill="#fff" stroke-width="0.8"/><path d="M13.6 12.4a3 3 0 0 0 0-4.6M15.5 14.2a5.6 5.6 0 0 0 0-8.2"/>', '#6fcf9d'),
+  // an empty flag in a dashed ring: planned, not there yet
+  planned: svgUrl('<svg xmlns="http://www.w3.org/2000/svg" width="44" height="44" viewBox="0 0 22 22">'
+    + '<circle cx="11" cy="11" r="10" fill="#151619" fill-opacity="0.86" stroke="#a99ee8" stroke-width="1.2" stroke-dasharray="2.4 2"/>'
+    + '<g fill="none" stroke="#fff" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M7.6 16.4V5.6"/><path d="M8.3 6.1h6.4l-1.7 2.3 1.7 2.3H8.3Z"/></g></svg>'),
+  // water ice: a six-armed crystal. White ring = measured there, cyan = signs seen from orbit, dashed blue = only predicted
+  'ice-confirmed': ICE_SVG('#ffffff', '', '#ffffff'),
+  'ice-detected': ICE_SVG('#50d2ff', '', '#bfeeff'),
+  'ice-predicted': ICE_SVG('#6e96ff', '2.4 2', '#c9d6ff'),
+  ice: ICE_SVG('#50d2ff', '', '#bfeeff'),
 };
 /** A short drop-in when a pin is placed on a new spot: it falls the last few pixels onto it. */
 let lastDrop = '';
@@ -121,10 +154,32 @@ function dropIn(viewer: Viewer, e: Entity, spot: string) {
   step();
 }
 
+/** Pictures the ground shader of the surface view reads (lander.ts ensureMaterial: 7, and the Sun shadow map in sunShadow.ts). */
+const GROUND_SHADER_TEXTURES = 8;
+
 type Tag = { type: string; name?: MoonName; place?: Place } | undefined;
+/** Which kinds of special place show, from the layer switches (`on` = the globe is showing and you are not standing on it). */
+function placeFlags(on: boolean, l: Record<string, boolean>): Record<Place['kind'], boolean> {
+  return { artemis: on && !!l.artemis, spot: on && !!l.artemis, mission: on && !!l.missions, active: on && !!l.missions, planned: on && l.sitesPlanned !== false, ice: on && !!l.waterice };
+}
 const tagOf = (id: unknown): Tag => (id as { moonda?: Tag } | undefined)?.moonda;
 
 const WHOLE = { lat: -35, lon: 10, alt: 6_500_000 };
+
+const SCIENCE_SWITCHES = new Set(['psr', 'waterice', 'danger', 'slope', 'height']);
+const scienceSources = (def: LayerDef): ScienceRasterSource[] => def.rasterSources ?? [{
+  url: `./data/layers/${def.id}.png`, projection: 'polar', pole: 'south', extentM: POLAR_EXTENT_M, clipTrueLatDeg: -80.02,
+}];
+function prepareScienceLayers(viewer: Viewer, layers: Map<string, ImageryLayer>, defs: LayerDef[]) {
+  for (const def of defs) {
+    if (!SCIENCE_SWITCHES.has(def.id)) continue;
+    const id = def.id === 'height' ? 'heightPolar' : def.id;
+    if (layers.has(id)) continue;
+    const layer = new ImageryLayer(createScienceRasterProvider({ sources: scienceSources(def), credit: def.source?.name ?? 'NASA', maximumLevel: SHARP_POLAR_LAYERS.has(def.id) ? 10 : 9 }) as never, { show: false });
+    viewer.imageryLayers.add(layer);
+    layers.set(id, layer);
+  }
+}
 
 export const MoonMap = forwardRef<MoonMapHandle, Props>(function MoonMap(props, ref) {
   const host = useRef<HTMLDivElement>(null);
@@ -159,6 +214,13 @@ export const MoonMap = forwardRef<MoonMapHandle, Props>(function MoonMap(props, 
       creditContainer: document.getElementById('cesium-credits') ?? undefined,
     });
     viewerRef.current = viewer;
+    // Cesium draws as many map layers per ground tile as the graphics card has texture slots (16 on many), but it
+    // does not count the 8 pictures our own ground shader reads (lander.ts: hill shadows, heights, soil scans, rock
+    // shadows, the Sun shadow map). With 9 or more layers on one tile the shader then asked for more slots than
+    // exist and rendering stopped ("texture image units count exceeds MAX_TEXTURE_IMAGE_UNITS"). Tell Cesium the
+    // slots that are really left: it then draws a tile with many layers in two passes instead.
+    const limits = (Cesium as unknown as { ContextLimits: { _maximumTextureImageUnits: number } }).ContextLimits;
+    if (limits && typeof limits._maximumTextureImageUnits === 'number') limits._maximumTextureImageUnits = Math.max(4, limits._maximumTextureImageUnits - GROUND_SHADER_TEXTURES);
     // Small test/debug hook (used by scripts/drive.mjs): is the map finished loading what is on screen?
     (window as unknown as { __viewer: Viewer }).__viewer = viewer;
     // idle(): start-up loading is over and the map has nothing left to load for what is on screen
@@ -185,24 +247,43 @@ export const MoonMap = forwardRef<MoonMapHandle, Props>(function MoonMap(props, 
     globe.vertexShadowDarkness = 0.2; // the night side stays dim but readable, like Google Earth at night
     globe.lambertDiffuseMultiplier = 1.15;
     // Redraw only when something changes, but keep drawing while tiles are still arriving.
-    scene.postRender.addEventListener(() => { if (!globe.tilesLoaded) scene.requestRender(); });
+    let lastPhotoCull = 0;
+    let lastPhotoMove = -Infinity;
+    let photoCullTimer: ReturnType<typeof setTimeout> | undefined;
+    const offPhotoCull = viewer.camera.changed.addEventListener(() => {
+      lastPhotoMove = performance.now();
+      clearTimeout(photoCullTimer);
+      photoCullTimer = setTimeout(() => cancelOffscreenImagery(viewer), 400);
+    });
+    scene.postRender.addEventListener(() => {
+      if (!globe.tilesLoaded) scene.requestRender();
+      const now = performance.now();
+      // Cesium also prepares a rim of neighbouring terrain. Once the camera settles, let
+      // those jobs finish: repeatedly culling that rim would make it request them forever.
+      if (now - lastPhotoCull > 100 && (now - lastPhotoMove < 350 || !globe.tilesLoaded)) {
+        lastPhotoCull = now;
+        cancelOffscreenImagery(viewer, now - lastPhotoMove < 350);
+      }
+    });
     viewer.cesiumWidget.screenSpaceEventHandler.removeInputAction(ScreenSpaceEventType.LEFT_DOUBLE_CLICK);
 
     heights.ready.then(() => { if (!viewer.isDestroyed() && cb.current.layers.terrain !== false) viewer.terrainProvider = new LolaTerrainProvider(heights) as never; });
     heights.ready.then(() => shareHeights(heights)).catch(() => {}); // the background calculator reuses this download
+    setExploreHeights(heights); // the minimap and the trail read the same height maps
 
     // Photos and optional map layers (all re-projected into the rotated display frame).
     const add = (id: string, layer: ImageryLayer) => { viewer.imageryLayers.add(layer); imagery.current.set(id, layer); };
     // Bottom: a whole-Moon picture stored locally, so the Moon is never blank and works without internet.
     add('base', new ImageryLayer(createBaseMosaicProvider({ url: './data/base/v5/', credit: 'NASA Moon Trek · LRO WAC, LOLA; NASA SVS CGI Moon Kit; LROC WAC polar summer mosaics · NASA/GSFC/ASU' }) as never));
-    add('photo', new ImageryLayer(createMoonTrekProvider({ layer: 'LRO_WAC_Mosaic_Global_303ppd_v02', ext: 'jpg', maxSourceLevel: 8, minTrueLat: -81.5, credit: 'NASA Moon Trek · LRO WAC', overBase: true }) as never));
+    // Sharper sources are chosen inside this provider, so they use no extra texture slot.
+    add('photo', new ImageryLayer(createMoonTrekProvider({ layer: 'LRO_WAC_Mosaic_Global_303ppd_v02', ext: 'jpg', maxSourceLevel: 8, minTrueLat: -81.5, credit: 'NASA/GSFC/ASU · LRO WAC/NAC; ISAS/JAXA · Kaguya TC; Lunar QuickMap · NASA, Intuitive Machines, ACT', overBase: true, sharpPhoto: true }) as never));
     // Where NASA's WAC mosaic is lit from the other side (true lon -180..-90): albedo x hillshade instead, so no seam shows.
     add('photoFix', new ImageryLayer(createSeamFixProvider({ credit: 'NASA Moon Trek · LOLA / SLDEM2015 hillshade; NASA SVS CGI Moon Kit' }) as never));
     add('photoPolar', new ImageryLayer(createPolarRasterProvider({ url: './data/base/southpole4096.jpg', extentM: POLAR_EXTENT_M, credit: 'LROC WAC/NAC · Lunaserv', maximumLevel: 8 }) as never));
     // Sharp south-pole photos: read from the local store first (public/data/polar/t), the remote server only where nothing is stored.
     // The layer names must match the stored set exactly.
     add('polarPhoto', new ImageryLayer(createPolarPyramidProvider({ layers: 'luna_wac_roi_south_summer,luna_nac_pole_control_south', minK: 4, credit: 'LROC NAC south-pole mosaic · NASA/GSFC/ASU' }) as never, { show: false }));
-    add('height', new ImageryLayer(createMoonTrekProvider({ layer: 'LRO_LOLA_ClrShade_Global_256ppd_v06', ext: 'png', maxSourceLevel: 6, minTrueLat: -80.4, credit: 'NASA Moon Trek · LRO LOLA' }) as never, { show: false, alpha: 0.75 }));
+    add('height', new ImageryLayer(createMoonTrekProvider({ ...HEIGHT_TREK, maxSourceLevel: 6, credit: 'NASA Moon Trek · LRO LOLA' }) as never, { show: false, alpha: 0.75 }));
 
     // After a failed download is retried, draw once so the refilled tiles start loading.
     const offReload = imageryReloaded.addEventListener(() => { if (!viewer.isDestroyed()) scene.requestRender(); });
@@ -225,7 +306,7 @@ export const MoonMap = forwardRef<MoonMapHandle, Props>(function MoonMap(props, 
     heights.ready.then(() => {
       if (viewer.isDestroyed()) return;
       // Artemis regions, famous spots and past landings: icon + name, both placed by the label manager so nothing overlaps
-      labels.setPlaces(PLACES, heights, { artemis: { image: ICON.artemis, size: 22 }, spot: { image: ICON.spot, size: 22 }, mission: { image: ICON.mission, size: 20 } });
+      labels.setPlaces(PLACES, heights, Object.fromEntries(Object.entries(ICON).map(([k, image]) => [k, { image, size: k === 'mission' ? 20 : 22 }])));
       labels.update(); scene.requestRender();
     });
     // Names and icons keep clear of the pins and of the Sun/Earth spots.
@@ -327,6 +408,11 @@ export const MoonMap = forwardRef<MoonMapHandle, Props>(function MoonMap(props, 
       // Click: a name or marker first, then a pin, otherwise drop a new pin on the ground.
       onClick: (x, y) => {
         if (lander.active) return;
+        if (cb.current.choosingDestination) {
+          const g = groundAt(x, y);
+          if (g) cb.current.onRouteDestination?.(g.lat, g.lon);
+          return;
+        }
         const tag = tagAt(x, y);
         if (tag?.type === 'name' && tag.name) return cb.current.onSelect({ type: 'name', name: tag.name });
         if (tag?.type === 'place' && tag.place) return cb.current.onSelect({ type: 'place', place: tag.place });
@@ -344,6 +430,9 @@ export const MoonMap = forwardRef<MoonMapHandle, Props>(function MoonMap(props, 
     // The flat map (2D) and the move between it and the globe (flatMap.ts, mapMode.ts).
     const flat = new FlatMap(host.current!, {
       labels: () => labels.flatEntries(),
+      route: () => cb.current.overviewRoute ?? null,
+      destination: () => cb.current.routeDestination ?? null,
+      choosingDestination: () => !!cb.current.choosingDestination,
       icon: kind => labels.iconOf(kind),
       pins: () => {
         const out: { lat: number; lon: number; image: string }[] = cb.current.pins.map(p => ({ lat: p.lat, lon: p.lon, image: PIN_SVG(p.color, p.letter) }));
@@ -366,7 +455,10 @@ export const MoonMap = forwardRef<MoonMapHandle, Props>(function MoonMap(props, 
         if (tag?.type === 'name' && tag.name) cb.current.onSelect({ type: 'name', name: tag.name });
         else if (tag?.type === 'place' && tag.place) cb.current.onSelect({ type: 'place', place: tag.place });
       },
-      onClickGround: (lat, lon) => cb.current.onSelect({ type: 'pin', lat, lon }),
+      onClickGround: (lat, lon) => {
+        if (cb.current.choosingDestination) cb.current.onRouteDestination?.(lat, lon);
+        else cb.current.onSelect({ type: 'pin', lat, lon });
+      },
       onHover: pos => cb.current.onHover(pos),
       // the status line's eye height: the height a camera would need to see what the flat map shows
       onView: km => cameraStore.set({ km, heading: 0, pitch: -90 }),
@@ -381,7 +473,7 @@ export const MoonMap = forwardRef<MoonMapHandle, Props>(function MoonMap(props, 
       setGlobeExtras: on => {
         const p = cb.current;
         labels.visible = on && !!p.layers.names && !p.lander;
-        labels.placesVisible = { artemis: on && !!p.layers.artemis && !p.lander, spot: on && !!p.layers.artemis && !p.lander, mission: on && !!p.layers.missions && !p.lander };
+        labels.placesVisible = placeFlags(on && !p.lander, p.layers);
         labels.update();
         const m = markersRef.current;
         if (m) m.show = on && p.layers.realSun !== false && !p.lander;
@@ -409,6 +501,20 @@ export const MoonMap = forwardRef<MoonMapHandle, Props>(function MoonMap(props, 
       skyReady: sky.ready,
       imageryPending,
       lander: lander as { prewarm?: () => Promise<unknown> },
+      // Stored science bytes are downloaded once. Switching a map decodes only the blocks it needs.
+      layerFiles: async () => [
+        // the crater list behind the Craters layer and the route planner (1.4 MB)
+        new URL('./data/features/craters.bin', document.baseURI).href, new URL('./data/features/craters-small-south.bin', document.baseURI).href,
+      ],
+      warmLayers: async onFrac => {
+        const manifest = await loadManifest();
+        const defs = manifest.map(scienceToLayer).filter(d => SCIENCE_SWITCHES.has(d.id));
+        if (viewer.isDestroyed()) return false;
+        prepareScienceLayers(viewer, imagery.current, defs);
+        // The small value files also stay available for a new spot after going offline.
+        const values = manifest.flatMap(e => e.valueSources ?? []).filter(s => s.packed);
+        return warmScienceRasters([...defs.flatMap(scienceSources), ...values], onFrac);
+      },
       warmViews: () => {
         const ridge = { lat: -89.45, lon: -136.7 }; // Shackleton – de Gerlache connecting ridge
         const g = heights.heightAt(ridge.lat, ridge.lon, false);
@@ -428,7 +534,7 @@ export const MoonMap = forwardRef<MoonMapHandle, Props>(function MoonMap(props, 
       cancelled: () => skipPreload.current,
     });
 
-    return () => { flat.destroy(); offQuality(); offReload(); resizeObs.disconnect(); panelObs.disconnect(); clearTimeout(settle); navRef.current?.destroy(); lander.destroy(); markersRef.current?.destroy(); labels.destroy(); sky.destroy(); skyRef.current = null; viewer.destroy(); viewerRef.current = null; };
+    return () => { releaseScienceLayers(); flat.destroy(); offQuality(); offReload(); offPhotoCull(); clearTimeout(photoCullTimer); resizeObs.disconnect(); panelObs.disconnect(); clearTimeout(settle); navRef.current?.destroy(); lander.destroy(); markersRef.current?.destroy(); labels.destroy(); sky.destroy(); skyRef.current = null; viewer.destroy(); viewerRef.current = null; };
   }, []);
 
   // Names
@@ -455,34 +561,44 @@ export const MoonMap = forwardRef<MoonMapHandle, Props>(function MoonMap(props, 
       viewer.imageryLayers.add(layer);
       imagery.current.set('dataDetail', layer);
     }
-    for (const def of props.scienceLayers) {
-      const id = def.id === 'height' ? 'heightPolar' : def.id;
-      const on = def.id === 'height' ? !!props.layers.height : !!props.layers[def.id];
-      if (on && !imagery.current.get(id)) {
-        const layer = new ImageryLayer(createPolarRasterProvider({ url: `./data/layers/${def.id}.png`, extentM: POLAR_EXTENT_M, credit: def.source?.name ?? 'NASA', maximumLevel: 9, clipTrueLatDeg: -80.02 }) as never);
-        viewer.imageryLayers.add(layer);
-        imagery.current.set(id, layer);
-      }
-    }
+    createCraterLayer(viewer, () => flatRef.current,
+      (lat, lon) => heightsRef.current?.heightAt(lat, lon, false) ?? 0).show = !!props.layers.craters && !props.lander;
+    prepareScienceLayers(viewer, imagery.current, props.scienceLayers);
+    setScienceLayersActive(props.scienceLayers.filter(d => SCIENCE_SWITCHES.has(d.id) && props.layers[d.id]).flatMap(scienceSources));
     for (const [id, layer] of imagery.current) {
       layer.show = id === 'photoPolar' || id === 'base' || id === 'photoFix' ? !!props.layers.photo : id === 'heightPolar' ? !!props.layers.height : !!props.layers[id];
       const opKey = id === 'heightPolar' ? 'height' : id === 'base' || id === 'photoFix' ? 'photo' : id;
-      layer.alpha = id === 'dataDetail' ? 1 : props.opacity[opKey] ?? (id === 'photo' || id === 'base' || id === 'photoFix' || id === 'photoPolar' || id === 'polarPhoto' ? 1 : 0.7);
+      layer.alpha = id === 'dataDetail' ? 1 : id === 'craters' ? 1 : props.opacity[opKey] ?? (id === 'photo' || id === 'base' || id === 'photoFix' || id === 'photoPolar' || id === 'polarPhoto' ? 1 : 0.7);
     }
     for (const def of props.scienceLayers) { const l = imagery.current.get(def.id === 'height' ? 'heightPolar' : def.id); if (l) viewer.imageryLayers.raiseToTop(l); }
     const dd = imagery.current.get('dataDetail');
     if (dd) viewer.imageryLayers.raiseToTop(dd);
+    const cr = imagery.current.get('craters'); // outlines stay readable over every colour map
+    if (cr) viewer.imageryLayers.raiseToTop(cr);
     const labels = labelsRef.current;
     const onGlobe = (modesRef.current?.mode ?? 'globe') === 'globe' && !modesRef.current?.moving;
     if (labels) {
       labels.visible = onGlobe && !!props.layers.names && !props.lander;
-      labels.placesVisible = { artemis: onGlobe && !!props.layers.artemis && !props.lander, spot: onGlobe && !!props.layers.artemis && !props.lander, mission: onGlobe && !!props.layers.missions && !props.lander };
+      labels.placesVisible = placeFlags(onGlobe && !props.lander, props.layers);
       labels.flatNames = !!props.layers.names;
-      labels.flatPlaces = { artemis: !!props.layers.artemis, spot: !!props.layers.artemis, mission: !!props.layers.missions };
+      labels.flatPlaces = placeFlags(true, props.layers);
       labels.update();
     }
     const flat = flatRef.current;
-    if (flat) { flat.detail = props.layers.dataDetail ? 1 : 0; flat.refreshLabels(); }
+    if (flat) {
+      flat.detail = props.layers.dataDetail ? 1 : 0;
+      flat.photo = props.layers.photo !== false;
+      // the coloured layers, in the globe's order: Height colours first, then the south-pole maps
+      const over: FlatOverlay[] = [];
+      if (props.layers.height) {
+        const a = props.opacity.height ?? 0.7;
+        over.push({ id: 'height', kind: 'global', layer: HEIGHT_TREK.layer, ext: HEIGHT_TREK.ext, latMin: HEIGHT_TREK.minTrueLat, alpha: a });
+        if (props.scienceLayers.some(d => d.id === 'height')) over.push({ id: 'heightPolar', kind: 'polar', url: './data/layers/height.png', alpha: a });
+      }
+      for (const def of props.scienceLayers) if (def.id !== 'height' && props.layers[def.id]) over.push({ id: def.id, kind: 'polar', url: `./data/layers/${def.id}.png`, alpha: props.opacity[def.id] ?? 0.7 });
+      flat.setOverlays(over);
+      flat.refreshLabels();
+    }
     viewer.scene.requestRender();
   }, [props.layers, props.opacity, props.scienceLayers, props.lander]);
 
@@ -498,6 +614,69 @@ export const MoonMap = forwardRef<MoonMapHandle, Props>(function MoonMap(props, 
       if (!want3d && is3d) viewer.terrainProvider = new EllipsoidTerrainProvider({ ellipsoid: MOON_ELLIPSOID });
     });
   }, [props.layers.terrain]);
+
+  // A ground polyline uses the terrain's depth, including our rotated lunar tiles.
+  useEffect(() => {
+    const viewer = viewerRef.current;
+    if (!viewer) return;
+    const scene = viewer.scene;
+    let live = true, line: Cesium.GroundPolylinePrimitive | null = null;
+    let flag: Entity | null = null;
+    const route = props.overviewRoute, dest = props.routeDestination;
+    flatRef.current?.request();
+    if (dest && !props.lander) {
+      flag = viewer.entities.add({
+        id: 'overview-route-end', position: toCartesian(dest.lat, dest.lon),
+        billboard: {
+          image: svgUrl('<svg xmlns="http://www.w3.org/2000/svg" width="40" height="44" viewBox="0 0 40 44"><path d="M10 44V4M11 5h23l-6 8 6 8H11" fill="#acdfff" stroke="#182f43" stroke-width="3" stroke-linejoin="round"/><path d="M10 44V4" stroke="#acdfff" stroke-width="2"/></svg>'),
+          width: 27, height: 30, verticalOrigin: VerticalOrigin.BOTTOM,
+          horizontalOrigin: Cesium.HorizontalOrigin.LEFT,
+          pixelOffset: new Cartesian2(-7, 0), heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+        },
+      });
+    }
+    const off = scene.preRender.addEventListener(() => {
+      if (line) line.show = !cb.current.lander && viewer.entities.show;
+    });
+    if (route?.ok && route.path.length >= 4 && !props.lander) {
+      void Cesium.GroundPolylinePrimitive.initializeTerrainHeights().then(() => {
+        if (!live || viewer.isDestroyed()) return;
+        const positions: Cartesian3[] = [];
+        for (let i = 0; i < route.path.length; i += 2) positions.push(toCartesian(route.path[i], route.path[i + 1]));
+        line = new Cesium.GroundPolylinePrimitive({
+          geometryInstances: new Cesium.GeometryInstance({ geometry: new Cesium.GroundPolylineGeometry({ positions, width: 5 }) }),
+          appearance: new Cesium.PolylineMaterialAppearance({ material: Cesium.Material.fromType('PolylineOutline', {
+            color: Color.fromCssColorString('#acdfff').withAlpha(0.94), outlineColor: Color.fromCssColorString('#182f43').withAlpha(0.9), outlineWidth: 1,
+          }) }),
+          classificationType: Cesium.ClassificationType.TERRAIN, asynchronous: false, allowPicking: false,
+        });
+        // Cesium ships Earth's height bounds. Some are below the lunar ground, which clips
+        // the line away. Only while this synchronous primitive builds its volume, give it
+        // a generous lunar envelope; the visible line still clamps to the real terrain.
+        const bounds = (Cesium as unknown as { ApproximateTerrainHeights: { _defaultMaxTerrainHeight: number; getMinimumMaximumHeights: (...args: unknown[]) => { minimumTerrainHeight: number; maximumTerrainHeight: number } } }).ApproximateTerrainHeights;
+        const updating = line as unknown as { update(frame: unknown): void };
+        const update = updating.update.bind(line);
+        updating.update = frame => {
+          const saved = bounds.getMinimumMaximumHeights;
+          const savedMax = bounds._defaultMaxTerrainHeight;
+          bounds.getMinimumMaximumHeights = () => ({ minimumTerrainHeight: -15000, maximumTerrainHeight: 15000 });
+          bounds._defaultMaxTerrainHeight = 15000;
+          try { update(frame); } finally { bounds.getMinimumMaximumHeights = saved; bounds._defaultMaxTerrainHeight = savedMax; }
+        };
+        scene.groundPrimitives.add(line);
+        scene.requestRender();
+      }).catch(error => console.warn('Route line could not load:', error));
+    }
+    scene.requestRender();
+    return () => {
+      live = false; off();
+      if (!viewer.isDestroyed()) {
+        if (line) scene.groundPrimitives.remove(line);
+        if (flag) viewer.entities.remove(flag);
+        scene.requestRender();
+      }
+    };
+  }, [props.overviewRoute, props.routeDestination, props.lander]);
 
   // Selected pin + compare pins. Placed at the real ground height and drawn over everything:
   // "clamped to ground" pins get partly cut by nearby hills in Cesium, so we do not use that.
@@ -613,6 +792,9 @@ export const MoonMap = forwardRef<MoonMapHandle, Props>(function MoonMap(props, 
       if (m === 'flat') void modes.toFlat(); else void modes.toGlobe();
     },
     look(az, el) { landerRef.current?.look(az, el); },
+    warmLayers() {
+      void warmScienceRasters(cb.current.scienceLayers.filter(d => SCIENCE_SWITCHES.has(d.id)).flatMap(scienceSources));
+    },
   }), []);
 
   return <div ref={host} className="moon-canvas" />;

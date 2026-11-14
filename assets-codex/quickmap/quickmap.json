@@ -1,0 +1,424 @@
+{
+  "checkedOn": "2026-11-14",
+  "home": "https://quickmap.im-ldi.com/",
+  "linkTemplate": "https://quickmap.im-ldi.com/layers?camera={x},{y},{z},{dx},{dy},{dz},{ux},{uy},{uz},60&proj=22",
+  "linkNotes": "Use this confirmed 3D camera form. Inputs are {lat} and {lon} in degrees (planetocentric, east-positive Mean Earth frame), and {heightMeters} above the mean lunar sphere. Convert lat and lon to radians phi and lambda. Let R=1737400 m; n=(cos(phi)*cos(lambda),cos(phi)*sin(lambda),sin(phi)); position (x,y,z)=(R+heightMeters)*n; direction (dx,dy,dz)=-n; up (ux,uy,uz)=(-sin(phi)*cos(lambda),-sin(phi)*sin(lambda),cos(phi)). Serialize the nine numeric components followed by 60, comma-separated, into camera, preferably with encodeURIComponent. The final 60 is field of view in degrees; proj=22 selects the 3D lunar globe. Choose a positive height comfortably above local terrain; 100000 m was used in the tests. At the exact pole the longitude sets the north-up orientation. No stack or selectedFeature parameter is needed for a plain destination link. Do not use unconfirmed x/y/z query parameters merely because the SPA returns HTTP 200.",
+  "linkEvidence": {
+    "name": "LROC Rimae Hippalus image page; published QuickMap permalink uses this ten-number camera structure",
+    "url": "https://lroc.im-ldi.com/images/1403",
+    "method": "Published camera position, direction, and up vectors numerically match the nadir/local-north formula. Radius and projection id come from the supplied QuickMap catalogue."
+  },
+  "layers": {
+    "3314": "WAC+NAC+NAC_ROI_MOSAIC (LROC WAC Basemaps)",
+    "3122": "Craters > 20 km (Geologic Features & Maps)",
+    "2868": "Craters 5 to 20 km (Geologic Features & Maps)",
+    "3928": "Endurance-A Traverse (Future Missions Sites)",
+    "2867": "PSR (5 Km^2 or larger) (LRO: Permanently Shadowed Regions)",
+    "3570": "PSR (1 Km^2 or larger) (LRO: Permanently Shadowed Regions)",
+    "3489": "A3: Candidate Landing Regions 2022 (Future Missions Sites)",
+    "3927": "A3: Candidate Landing Regions 2024 (Future Missions Sites)",
+    "3998": "LGRS ACC 100m [Apollo] (Future Missions Sites)",
+    "4034": "LGRS ACC 100m [A3] (Future Missions Sites)"
+  },
+  "selectedFeature": {
+    "value": "3002,20",
+    "layerId": "3002",
+    "featureIndex": 20,
+    "name": "South Pole",
+    "lat": -89.3,
+    "lon": -130,
+    "meaning": "Feature index 20 (zero-based) in Constellation Program Targets. It is a historical region of interest, not an Artemis selection or a landed spacecraft.",
+    "source": {
+      "name": "LROC Constellation Targets shapefile and supplied cx_targets_180.geojson",
+      "url": "https://data.lroc.im-ldi.com/lroc/view_rdr/SHAPEFILE_CX_TARGETS"
+    }
+  },
+  "psrLayers": [
+    {
+      "id": "2867",
+      "name": "PSR (5 Km^2 or larger)",
+      "group": "LRO: Permanently Shadowed Regions",
+      "source": "Mazarico et al. (2011), LOLA modelled permanent shadow; digitized regions at least 5 square km.",
+      "url": "https://pgda.gsfc.nasa.gov/products/69",
+      "sourceId": "2345",
+      "dataPath": "lpsr_shp"
+    },
+    {
+      "id": "3570",
+      "name": "PSR (1 Km^2 or larger)",
+      "group": "LRO: Permanently Shadowed Regions",
+      "source": "Mazarico et al. (2011), LOLA modelled permanent shadow; digitized regions at least 1 square km.",
+      "url": "https://pgda.gsfc.nasa.gov/products/69",
+      "sourceId": "3025",
+      "dataPath": "lpsr_shp_1sqkm"
+    },
+    {
+      "id": "3840",
+      "name": "SPOLE PSRs (80S to 90S) (non-optimized outline)",
+      "group": "LRO: Permanently Shadowed Regions",
+      "source": "Barker et al. (2023), LPSR_80S_20MPP_ADJ, 20 m/pixel; original polygon outlines.",
+      "url": "https://pgda.gsfc.nasa.gov/products/90",
+      "sourceId": "3274",
+      "dataPath": "lpsr_shp_all"
+    },
+    {
+      "id": "3932",
+      "name": "SPOLE PSRs (80S to 90S) (non-optimized region filled)",
+      "group": "LRO: Permanently Shadowed Regions",
+      "source": "Barker et al. (2023), LPSR_80S_20MPP_ADJ, 20 m/pixel; original polygons filled.",
+      "url": "https://pgda.gsfc.nasa.gov/products/90",
+      "sourceId": "3363",
+      "dataPath": "lpsr_shp_all_bfill"
+    },
+    {
+      "id": "3877",
+      "name": "SPOLE PSRs (80S to 90S) (optimized region filled)",
+      "group": "LRO: Permanently Shadowed Regions",
+      "source": "Barker et al. (2023), LPSR_80S_20MPP_ADJ, 20 m/pixel; optimized filled raster rendering.",
+      "url": "https://pgda.gsfc.nasa.gov/products/90",
+      "sourceId": "3291",
+      "dataPath": "ispsr_all"
+    },
+    {
+      "id": "4048",
+      "name": "Doubly Permanently Shadowed Regions",
+      "group": "LRO: Permanently Shadowed Regions",
+      "source": "O’Brien and Byrne (2022), Double Shadows at the Lunar Poles; 30 m/pixel mapping poleward of 85 degrees.",
+      "url": "https://iopscience.iop.org/article/10.3847/PSJ/ac9e5b",
+      "sourceId": "3473",
+      "dataPath": "dpsr_shp",
+      "note": "A double shadow is permanently shadowed and has no direct view of any terrain receiving direct sunlight."
+    },
+    {
+      "id": "4127",
+      "name": "Permanently Shadowed Region (80S,20mpp)",
+      "group": "ACT: Temporal Illumination",
+      "source": "ACT Terrain Shadows product, TerrainHeight aggregated DEM; 720 selected illumination frames; 20 m/pixel, 80–90 degrees south.",
+      "url": "https://quickmap.im-ldi.com/layers?stack=4127",
+      "sourceId": "3546",
+      "dataPath": "qts_cloud_psr",
+      "note": "This is a separate model from the LOLA PSR products above. Binary 1 means shadowed in every selected frame; uses the centre of the Sun. No paper or external dataset URL is supplied by the catalogue."
+    },
+    {
+      "id": "2869",
+      "name": "NAC PSR Mosaics",
+      "group": "LROC NAC",
+      "source": "LROC long-exposure NAC image mosaic clipped to LOLA permanent-shadow boundaries; catalogue describes 20 m/pixel.",
+      "url": "https://data.lroc.im-ldi.com/lroc/view_rdr/NAC_POLE_PSR_SOUTH",
+      "sourceId": "2346",
+      "dataPath": "lnac_pole_psr",
+      "note": "Image mosaic, not a binary permanent-shadow map. Catalogue description refers to the earlier 20 m product; current product pages describe updated 10 m mosaics."
+    },
+    {
+      "id": "3469",
+      "name": "Buffered PSR Mosaics (v2)",
+      "group": "LROC NAC",
+      "source": "Brown et al. (2022), LROC NAC 10 m/pixel buffered polar PSR mosaics, version 2.",
+      "url": "https://data.lroc.im-ldi.com/lroc/view_rdr/NAC_POLE_PSR_SOUTH",
+      "sourceId": "2923",
+      "dataPath": "lnac_pole_bpsr",
+      "note": "Images include terrain up to 10 km outside PSRs larger than 10 square km. Buffered imagery is not a permanent-shadow mask."
+    },
+    {
+      "id": "3540",
+      "name": "Buffered PSR Mosaics (v2) [LIS]",
+      "group": "LROC NAC",
+      "source": "LROC NAC buffered PSR mosaic version 2; low instrument saturation mask.",
+      "url": "https://quickmap.im-ldi.com/layers?stack=3540",
+      "sourceId": "2998",
+      "dataPath": "lnac_pole_bpsr_lis",
+      "note": "Blue marks pixels below the NAC detection threshold; use with the imagery to identify unreliable values."
+    },
+    {
+      "id": "3553",
+      "name": "Buffered PSR Mosaics (v2) - North",
+      "group": "LROC NAC",
+      "source": "Brown et al. (2022), calibrated LROC NAC 10 m/pixel northern buffered PSR mosaic, version 2.",
+      "url": "https://data.lroc.im-ldi.com/lroc/view_rdr/NAC_POLE_PSR_NORTH",
+      "sourceId": "3010",
+      "dataPath": "bpsr_2022_np_dyn"
+    },
+    {
+      "id": "3554",
+      "name": "Buffered PSR Mosaics (v2) - South",
+      "group": "LROC NAC",
+      "source": "Brown et al. (2022), calibrated LROC NAC 10 m/pixel southern buffered PSR mosaic, version 2.",
+      "url": "https://data.lroc.im-ldi.com/lroc/view_rdr/NAC_POLE_PSR_SOUTH",
+      "sourceId": "3011",
+      "dataPath": "bpsr_2022_sp_dyn"
+    }
+  ],
+  "craterLayers": [
+    {
+      "id": "3122",
+      "name": "Craters > 20 km",
+      "group": "Geologic Features & Maps",
+      "source": "Head et al. (2010) and Kadish et al. (2011), global LOLA catalogue of craters at least 20 km across.",
+      "url": "https://lroc.im-ldi.com/images/988",
+      "sourceId": "2572",
+      "dataPath": "lcrat_gt20km"
+    },
+    {
+      "id": "2868",
+      "name": "Craters 5 to 20 km",
+      "group": "Geologic Features & Maps",
+      "source": "LROC WAC 100 m/pixel morphologic basemap; rims digitized at 1:250,000–1:500,000; Povilaitis et al. (2017).",
+      "url": "https://data.lroc.im-ldi.com/lroc/view_rdr/SHAPEFILE_LROC_5TO20KM_CRATERS_0TO90E",
+      "sourceId": "2344",
+      "dataPath": "lcrat_5to20km",
+      "note": "The primary source is a six-part global shapefile series. The linked product is the 0–90 degrees east part; QuickMap combines the series."
+    },
+    {
+      "id": "3000",
+      "name": "Copernican Craters",
+      "group": "Geologic Features & Maps",
+      "source": "Ravi et al. (2016), optically young Copernican craters larger than 10 km, between 60 degrees north and south.",
+      "url": "https://data.lroc.im-ldi.com/lroc/view_rdr/SHAPEFILE_COPERNICAN_CRATERS",
+      "sourceId": "2464",
+      "dataPath": "lcopcrat"
+    },
+    {
+      "id": "3003",
+      "name": "Hiesinger Mare Crater Count Areas",
+      "group": "Geologic Features & Maps",
+      "source": "Hiesinger et al. (2000–2011), mare crater-count polygons with model ages.",
+      "url": "https://data.lroc.im-ldi.com/lroc/view_rdr/SHAPEFILE_HIESINGER2011_MARE_CRATER_COUNT_AREAS",
+      "sourceId": "2467",
+      "dataPath": "/lunar/mare_crater_count_areas.colorized.geojson",
+      "note": "These are areas used to count craters and date lava plains, not individual crater rims."
+    }
+  ],
+  "siteLayers": [
+    {
+      "id": "3005",
+      "name": "Anthropogenic Features",
+      "group": "Past Mission Sites",
+      "source": "Wagner et al. (2017), with later additions; LROC NAC locations and laser-ranging reflector coordinates.",
+      "url": "https://data.lroc.im-ldi.com/lroc/view_rdr/SHAPEFILE_ANTHROPOGENIC_OBJECTS",
+      "sourceId": "3278",
+      "dataPath": "/lroc_features/anthropogenic_objects_180.elevation.geojson",
+      "note": "Surface hardware and impacts, not operating-status data. UNCERTAIN is metres; DATE is arrival at the lunar surface in UTC. Product page last updated 2026-08-14."
+    },
+    {
+      "id": "3787",
+      "name": "Apollo 11",
+      "group": "Apollo Sites",
+      "source": "LROC Apollo 11 vector map of surface features and exploration; supplied Apollo_11.geojson.",
+      "url": "https://quickmap.im-ldi.com/layers?stack=3787",
+      "sourceId": "3229",
+      "dataPath": "/apollo/Apollo_11.geojson"
+    },
+    {
+      "id": "3788",
+      "name": "Apollo 12",
+      "group": "Apollo Sites",
+      "source": "LROC Apollo 12 vector map of surface features and exploration; supplied Apollo_12.geojson.",
+      "url": "https://quickmap.im-ldi.com/layers?stack=3788",
+      "sourceId": "3230",
+      "dataPath": "/apollo/Apollo_12.geojson"
+    },
+    {
+      "id": "3789",
+      "name": "Apollo 14",
+      "group": "Apollo Sites",
+      "source": "LROC Apollo 14 vector map of surface features and exploration; supplied Apollo_14.geojson.",
+      "url": "https://quickmap.im-ldi.com/layers?stack=3789",
+      "sourceId": "3231",
+      "dataPath": "/apollo/Apollo_14.geojson"
+    },
+    {
+      "id": "3790",
+      "name": "Apollo 15",
+      "group": "Apollo Sites",
+      "source": "LROC Apollo 15 vector map of surface features and exploration; supplied Apollo_15.geojson.",
+      "url": "https://quickmap.im-ldi.com/layers?stack=3790",
+      "sourceId": "3232",
+      "dataPath": "/apollo/Apollo_15.geojson"
+    },
+    {
+      "id": "3791",
+      "name": "Apollo 16",
+      "group": "Apollo Sites",
+      "source": "LROC Apollo 16 vector map of surface features and exploration; supplied Apollo_16.geojson.",
+      "url": "https://quickmap.im-ldi.com/layers?stack=3791",
+      "sourceId": "3233",
+      "dataPath": "/apollo/Apollo_16.geojson"
+    },
+    {
+      "id": "3792",
+      "name": "Apollo 17",
+      "group": "Apollo Sites",
+      "source": "LROC Apollo 17 vector map of surface features and exploration; supplied Apollo_17.geojson.",
+      "url": "https://quickmap.im-ldi.com/layers?stack=3792",
+      "sourceId": "3234",
+      "dataPath": "/apollo/Apollo_17.geojson"
+    },
+    {
+      "id": "3927",
+      "name": "A3: Candidate Landing Regions 2024",
+      "group": "Future Missions Sites",
+      "source": "NASA October 2024 nine candidate-region polygons; supplied A3_9regions-lonlat-simplified.geojson.",
+      "url": "https://www.nasa.gov/news-release/nasa-provides-update-on-artemis-iii-moon-landing-regions/",
+      "sourceId": "3359",
+      "dataPath": "/lunar/A3_9regions-lonlat-simplified.geojson",
+      "note": "Layer label preserves the 2024 mission name. It does not establish the current Artemis mission sequence or schedule."
+    },
+    {
+      "id": "3489",
+      "name": "A3: Candidate Landing Regions 2022",
+      "group": "Future Missions Sites",
+      "source": "NASA August 2022 thirteen candidate-region polygons; supplied A3_Named_regions.geojson.",
+      "url": "https://quickmap.im-ldi.com/layers?stack=3489",
+      "sourceId": "2943",
+      "dataPath": "/lunar/A3_Named_regions.geojson",
+      "note": "Historical 2022 regions; do not display these as the newer nine-region set."
+    },
+    {
+      "id": "3002",
+      "name": "Constellation Program Targets",
+      "group": "Overlays",
+      "source": "Constellation Program Office regions of interest, Lucey et al. (2009); supplied cx_targets_180.geojson.",
+      "url": "https://data.lroc.im-ldi.com/lroc/view_rdr/SHAPEFILE_CX_TARGETS",
+      "sourceId": "2584",
+      "dataPath": "/lroc_features/cx_targets_180.geojson",
+      "note": "Historical study targets; Constellation is no longer active."
+    },
+    {
+      "id": "3541",
+      "name": "A3: ROI at Malapert",
+      "group": "Overlays",
+      "source": "NASA Artemis III geology EVA planning exercise over Malapert Massif; supplied a3gt.geojson.",
+      "url": "https://quickmap.im-ldi.com/layers?stack=3541",
+      "sourceId": "2999",
+      "dataPath": "/lunar/a3gt.geojson",
+      "note": "Approximately 4 km diameter planning-exercise region, not a selected landing site."
+    },
+    {
+      "id": "3928",
+      "name": "Endurance-A Traverse",
+      "group": "Future Missions Sites",
+      "source": "Endurance-A baseline traverse concept from the 2023–2032 decadal survey; supplied EnduranceTraverse_240129-v2.geojson.",
+      "url": "https://quickmap.im-ldi.com/layers?stack=3928",
+      "sourceId": "3360",
+      "dataPath": "/lunar/EnduranceTraverse_240129-v2.geojson",
+      "note": "A mission concept, not evidence of a funded or scheduled surface mission."
+    },
+    {
+      "id": "3998",
+      "name": "LGRS ACC 100m [Apollo]",
+      "group": "Future Missions Sites",
+      "source": "USGS Lunar Grid Reference System in Artemis Condensed Coordinates, Apollo subset.",
+      "url": "https://www.usgs.gov/data/lunar-grid-reference-system-lgrs-artemis-iii-candidate-landing-site-navigational-grids-artemis",
+      "sourceId": "3425",
+      "dataPath": "ApolloLGRS_ACC",
+      "note": "Navigation grid, not landing-site coordinates."
+    },
+    {
+      "id": "4034",
+      "name": "LGRS ACC 100m [A3]",
+      "group": "Future Missions Sites",
+      "source": "USGS Lunar Grid Reference System in Artemis Condensed Coordinates, Artemis candidate-site subset.",
+      "url": "https://www.usgs.gov/data/lunar-grid-reference-system-lgrs-artemis-iii-candidate-landing-site-navigational-grids-artemis",
+      "sourceId": "3457",
+      "dataPath": "PolarLGRS_ACC",
+      "note": "Navigation grid, not landing-site coordinates."
+    },
+    {
+      "id": "3760",
+      "name": "IM-1 landing sIte Orthomosaic",
+      "group": "LROC NAC CLPS Sites",
+      "source": "LROC NAC DTM MALAPERTA01 orthophoto from M1435274280 L/R, 0.85 m/pixel.",
+      "url": "https://data.lroc.im-ldi.com/lroc/view_rdr_product/NAC_DTM_MALAPERTA01_M1435274280_85CM",
+      "sourceId": "3203",
+      "dataPath": "clps_malaperta01",
+      "note": "IM-1 area imagery; its lander pin comes from layer 3005."
+    },
+    {
+      "id": "3780",
+      "name": "Apollo 12 LM 3D Models",
+      "group": "Apollo Sites",
+      "source": "QuickMap catalogue CZML visualization; file path given below.",
+      "url": "https://quickmap.im-ldi.com/layers?stack=3780",
+      "sourceId": "3222",
+      "dataPath": "/czml/apollo12lm.json",
+      "note": "Illustrative 3D model placement; use measured hardware coordinates rather than model geometry for site pins."
+    },
+    {
+      "id": "3784",
+      "name": "Apollo 17 LM 3D Models",
+      "group": "Apollo Sites",
+      "source": "QuickMap catalogue CZML visualization; file path given below.",
+      "url": "https://quickmap.im-ldi.com/layers?stack=3784",
+      "sourceId": "3225",
+      "dataPath": "/czml/apollo17.json",
+      "note": "Illustrative 3D model placement; use measured hardware coordinates rather than model geometry for site pins."
+    },
+    {
+      "id": "3781",
+      "name": "IM-1 3D Models",
+      "group": "Past Mission Sites",
+      "source": "QuickMap catalogue CZML visualization; file path given below.",
+      "url": "https://quickmap.im-ldi.com/layers?stack=3781",
+      "sourceId": "3223",
+      "dataPath": "/czml/im1-v3-closest.json",
+      "note": "Illustrative 3D model placement; use measured hardware coordinates rather than model geometry for site pins."
+    },
+    {
+      "id": "3584",
+      "name": "A3: 3D Models at Malapert",
+      "group": "Overlays",
+      "source": "QuickMap catalogue CZML visualization; file path given below.",
+      "url": "https://quickmap.im-ldi.com/layers?stack=3584",
+      "sourceId": "3039",
+      "dataPath": "/models/artemis3landingsite.json",
+      "note": "Illustrative 3D model placement; use measured hardware coordinates rather than model geometry for site pins."
+    }
+  ],
+  "credit": "Lunar QuickMap — NASA, Intuitive Machines & Applied Coherent Technology Corp. LROC imagery: NASA/GSFC/Arizona State University.",
+  "creditNotes": "The supplied current QuickMap catalogue requests “Lunar QuickMap” in image captions, with a direct link. The acknowledgement below preserves its named partners and omits the catalogue’s unreachable legacy hostname; link to home alongside it. The LROC terms page separately requests NASA/GSFC/Arizona State University (or NASA/GSFC/ASU) for educational image use. Cite each scientific data product as well; the QuickMap credit does not replace the underlying source citation.",
+  "journalAcknowledgement": "We acknowledge the use of imagery from Lunar QuickMap, a collaboration between NASA, Intuitive Machines & Applied Coherent Technology Corp.",
+  "creditSources": [
+    {
+      "name": "QuickMap citations field",
+      "file": "../quickmap-input/maps_lroc.json",
+      "field": "map.options.citations"
+    },
+    {
+      "name": "LROC terms and citation policy",
+      "url": "https://lroc.im-ldi.com/about/terms"
+    }
+  ],
+  "catalogue": {
+    "file": "../quickmap-input/maps_lroc.json",
+    "tree": "../quickmap-input/catalog_tree.txt",
+    "referenceSystem": "Mean Earth (ME); catalogue Moon is a sphere of radius 1737400 m. Layer/source ids are distinct; stack uses layer ids.",
+    "dataProvenance": "Vector dataPath values are copied from sourcesById. The catalogue identifies its own file CDN as the vector-data server; no new vector download was needed. PDS/LROC metadata pages are linked where available."
+  },
+  "limitations": [
+    "Tests establish HTTP response and a camera construction consistent with a published primary-source link; visible browser centering was not checked because the computer-use host was unavailable.",
+    "The catalogue’s labels preserve historical mission names and do not prove future mission status. ShadowCam mosaics and general illumination layers are not listed as binary PSR masks.",
+    "Do not copy stack from the team reference link: it combines both 2022 and 2024 Artemis region layers and two PSR thresholds."
+  ],
+  "linkTests": [
+    {
+      "name": "Apollo 11",
+      "lat": 0.674,
+      "lon": 23.473,
+      "heightMeters": 100000,
+      "url": "https://quickmap.im-ldi.com/layers?camera=1685234.64375629%2C731816.78000440%2C21613.79160621%2C-0.91718441%2C-0.39828931%2C-0.01176325%2C-0.01078981%2C-0.00468550%2C0.99993081%2C60.00000000&proj=22",
+      "httpStatus": 200,
+      "contentType": "text/html",
+      "visibleCenterChecked": false
+    },
+    {
+      "name": "South pole",
+      "lat": -90,
+      "lon": 0,
+      "heightMeters": 100000,
+      "url": "https://quickmap.im-ldi.com/layers?camera=0.00000000%2C0.00000000%2C-1837400.00000000%2C-0.00000000%2C-0.00000000%2C1.00000000%2C1.00000000%2C0.00000000%2C0.00000000%2C60.00000000&proj=22",
+      "httpStatus": 200,
+      "contentType": "text/html",
+      "visibleCenterChecked": false
+    }
+  ]
+}

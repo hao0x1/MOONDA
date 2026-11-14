@@ -1,10 +1,10 @@
-// English text for: the controls shown while standing on the Moon ("Stand here").
+// English text for: the controls shown after landing on the Moon ("Land here").
 // Keys are 'area.name'; {name} marks a value filled in by the code.
 export const hud = {
   'hud.back': 'Back to map',
   'hud.fromLander': '{dist} from the lander',
   'hud.eyes': 'eyes {m} m above the ground',
-  'hud.standingHere': 'Standing here',
+  'hud.standingHere': 'Landed here',
   'hud.compass': 'Compass. Facing {dir}.',
   'hud.facing': 'facing {dir}',
 
@@ -33,8 +33,8 @@ export const hud = {
   'hud.earth.noLink': 'No direct radio link to Earth',
   'hud.working': 'Working it out…',
 
-  'hud.note': 'Hills, shadows and sunlight: NASA data. Rocks, soil and the rover’s surroundings nearby: artist’s impression.',
-  'hud.note.tip': 'The hills, their shadows and how bright the ground is come from NASA laser heights and NASA’s photo of this spot, lit by the Sun for the time on the time bar. Orbiters cannot see anything smaller than about a metre, so the soil, small craters and loose rocks near you are scans of real moon-like material, laid out the way they are on the Moon. They show what the ground looks like, not where each rock really is. MOONDA, our little robot, is drawn with NASA’s Perseverance 3D model (NASA/JPL-Caltech, NASA 3D Resources, free of copyright) at half its true size; the real Perseverance works on Mars.',
+  'hud.note': 'Half real: NASA hills and sunlight; rover, rocks and soil are an artist’s impression.',
+  'hud.note.tip': 'NASA data shapes the hills; the rover, nearby rocks, soil and driving are an artist’s impression.',
   'hud.zoom': 'Zoom the view',
   'hud.zoomIn': 'Zoom in',
   'hud.zoomOut': 'Zoom out',

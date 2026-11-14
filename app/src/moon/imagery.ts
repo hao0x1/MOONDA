@@ -1,5 +1,48 @@
 // Imagery for the 3D Moon: NASA photos and map layers, re-projected into the rotated display frame.
 //
+// Live sources checked 14 Nov 2026 (curl: real images, 200, Access-Control-Allow-Origin: *):
+// - lroc-tiles.quickmap.io/tiles/kag_tc_e_7m/lunar-fulleqc/{z}/{x}/{y}.png?d_val=0,5000&d_opt=wcolut0:
+//   global Kaguya evening TC, native 7.4 m; z12 delivery grid 5.2 m (no claim of 5 m real
+//   detail). A fixed display range keeps the stretch consistent; WAC anchors broad tone.
+//   ISAS/JAXA observation data, credited reuse and display changes allowed; via Lunar QuickMap.
+// - trek.nasa.gov/tiles/Moon/EQ/{layer}/1.0.0/default/default028mm/{z}/{y}/{x}.png:
+//   Kaguya_TCortho_Mosaic_Global_4096ppd is native 7.4 m but the LIVE service stops at z10,
+//   about 20.8 m/pixel. z11/12 are 404: this is the fallback, not the primary global photo.
+//   NAC mosaics for all six Apollo sites, Tycho, Chang'e-4, SLIM, IM-1 and Blue Ghost's region
+//   reach about 0.3–2.6 m grid spacing; the source itself can be coarser. NASA/GSFC/ASU.
+// - lroc-tiles.quickmap.io/tiles/wac_nac_nacroi/lunar-fulleqc/{z}/{x}/{y}.jpg:
+//   QuickMap's WAC + NAC strips + ROI basemap. Requested only around recent landers, at close
+//   zoom; about 0.5–2 m real NAC detail, not a new global sub-metre survey. Lunar QuickMap
+//   (NASA, Intuitive Machines, ACT); live catalogue describes these data as public domain.
+// - lroc-tiles.quickmap.io/tiles/lnpole_avg/lunar-sterenp/{z}/{x}/{y}.png?d_val=0,0.5&d_opt=wcolut0:
+//   controlled north-pole NAC, 84–90°N, native 1 m, z12 grid 0.888 m. NASA/GSFC/ASU.
+//   The public WMS also has a 1 m uncontrolled north mosaic, but its measured 21 s cold renders
+//   lose to these cached polar tiles (3.2 s). WMS is tried only after a cached square fails.
+//   Existing south stays local first.
+// LROC permits credited educational use; do not call all non-PDS products public domain.
+// Full layer names, measured responses, terms and modification notice: CREDITS-imagery.md.
+//
+// Round 2: QuickMap's kag_tc_m_7m Morning product (same URL/grid/range as Evening) is also
+// live, public and CORS-enabled; JAXA's sln-l-tc-5-morning-map-v4.0 archive confirms the product.
+// Four paired histograms put detail-free shadows in the 0--2 DN spike. Those pixels have a
+// six-source-pixel feather BEFORE projection; Morning is requested only where an on-screen
+// Evening tile has >0.5% black. WAC fills where both lack ground. This mixes Sun directions;
+// it is a readable terrain composite, not a photograph of one moment (see imagery credits).
+// Tycho's two brightness boxes were reproduced directly in NASA's raw NAC z12--14 tiles:
+// they are joins inside that mosaic. We keep a fixed geographic exposure reference rather
+// than inventing per-request corrections that would move the joins as tiles load.
+// Sharp photos match exposure against a FIXED coarser source and WAC reference.
+// The same true-frame reference at every zoom avoids per-tile mean jumps.
+// The west-lit seam fix supplies the reference there. Polar and fallback photos add fine detail
+// to the existing broad picture. An NAC mosaic replaces TC inside its feathered footprint.
+// These choices happen INSIDE photo / photoFix, with no new ImageryLayer or UI switch. Sharp
+// requests only start beyond WAC's z8 and never run in start-up's existing south-pole views.
+// Close views keep WAC then request the visible target level, deferring intermediate levels
+// without discarding them (a later zoom-out can still use them). Requests nearer the screen
+// centre get the next server slot; cancelled consumers also leave that priority queue.
+// Retained decoded sources, including masks/local rasters, share an LRU budget per worker:
+// 128 + 64 + 32 MiB at most. This is a cache limit, not a bound on the whole browser/GPU.
+//
 // Cesium asks each imagery provider for 256x256 lon/lat tiles of the DISPLAY frame (see frame.ts:
 // the true south pole sits on Cesium's equator, so polar tiles are normal squares, not slivers).
 // The pictures themselves are in the TRUE Moon frame, so every tile is re-projected pixel by pixel.
@@ -25,19 +68,22 @@
 // failed download the layer asks Cesium to reload its tiles once the network works again (Cesium
 // itself never asks twice for a tile it has received).
 
-import { Credit, Event, GeographicTilingScheme, Rectangle } from 'cesium';
+import { Cartesian2, Cartesian3, Cartographic, Credit, Event, GeographicTilingScheme, Rectangle, RequestState, type Viewer } from 'cesium';
 import { MOON_ELLIPSOID } from './ellipsoid';
 import {
-  FIX_MIN_TRUE_LAT, FIX_NEAR_MAX_Z, POLAR_FEATHER_M, POLAR_LIMIT_DEG, PYRAMID_MAX_K, RETRY_MS, TILE, parsePyramidIndex, pixelDeg, pyramidLevelFor, pyramidParentIsEnough,
-  pyramidSurelyLocal, tileFixRange, tileTrueLatRange,
-  type BaseCut, type FixParams, type FromWorker, type Job, type PyramidIndex, type Rect, type ToWorker,
+  FIX_MIN_TRUE_LAT, NORTH_PHOTO_LAT, POLAR_FEATHER_M, POLAR_LIMIT_DEG, PYRAMID_MAX_K, RETRY_MS, TILE, parsePyramidIndex, pixelDeg, pyramidLevelFor, pyramidParentIsEnough,
+  pyramidSurelyLocal, tileFixRange, tileTrueLatRange, photoMaxLevel, pixelMetres,
+  type BaseCut, type FixParams, type FromWorker, type Job, type PyramidIndex, type Rect, type ToWorker, type ScienceRasterSource,
 } from './imageryWorker';
+export type { ScienceRasterSource } from './imageryWorker';
 
 // ---------------------------------------------------------------------------------------------
 // Worker pool. Worker 0 does every polar-raster job, so each big raster is decoded and held
 // once. Tiled sources are pinned to one of the other workers, so every source tile is downloaded
 // and cached exactly once: all Moon Trek layers share one worker (so its download limit covers
 // the whole trek.nasa.gov server), the polar pyramid has its own.
+// The science maps use one further worker and a separate memory budget, so preparing them
+// never makes the local Moon photo lose its decoded source.
 
 const RASTER_QUEUE = 48; // jobs waiting per worker before we tell Cesium "busy, ask again" (CPU only, fast)
 const TILED_QUEUE = 24; // tiled workers wait on the network, so keep their queues short and fresh
@@ -108,25 +154,31 @@ class ImageryWorkers {
   private readonly workers: (Worker | null)[] = [];
   private readonly busy: number[] = [];
   private readonly local: number[] = []; // jobs in flight that need no download from a remote server
-  private readonly jobs = new Map<number, { worker: number; owner: ReprojectedImageryProvider; done: (b: ImageBitmap) => void; at: number; kind: string; local: boolean }>();
+  private readonly jobs = new Map<number, { worker: number; owner: ReprojectedImageryProvider; done: (b: ImageBitmap) => void; reject: (reason: Error) => void; request?: ImageryRequest; at: number; kind: string; local: boolean; rect: Rect }>();
   /**
    * Counters for the loading screen and for tests. parents = tiles answered "keep the parent";
    * deepest = finest tile level asked of the workers per kind of layer; files/remote/failed =
    * downloads by the workers (files stored with the app / remote servers / failed).
    */
-  readonly stats = { asked: 0, answered: 0, refused: 0, parents: 0, slowestMs: 0, lastMs: 0, totalMs: 0, files: 0, remote: 0, failed: 0, deepest: {} as Record<string, number> };
+  readonly stats = { asked: 0, answered: 0, refused: 0, deferred: 0, cancelled: 0, parents: 0, slowestMs: 0, lastMs: 0, totalMs: 0, files: 0, remote: 0, failed: 0, decodedBytes: 0, decodedImages: 0, science: null as unknown, caches: [] as NonNullable<FromWorker['cache']>[], deepest: {} as Record<string, number>, traffic: {} as NonNullable<FromWorker['traffic']> };
   private readonly net: [number, number, number][] = [];
+  private readonly traffic: NonNullable<FromWorker['traffic']>[] = [];
   private readonly flip = detectBitmapFlip();
   private readonly routes = new Map<string, number>();
   /** Layers that drew tiles with holes and are waiting to reload them. */
   private readonly gapped = new Set<ReprojectedImageryProvider>();
   private nextId = 1;
+  private readonly scienceWarm = new Map<number, { resolve: (ok: boolean) => void; progress?: (frac: number) => void }>();
+  private readonly scienceValues = new Map<number, (value: number | null) => void>();
+  private readonly scienceControls = new Map<number, (value: unknown) => void>();
   readonly tiledCount: number;
+  readonly scienceWorker: number;
 
   constructor() {
     const cores = navigator.hardwareConcurrency || 4;
     this.tiledCount = cores >= 4 ? 2 : 1; // Moon Trek and the pyramid, plus the raster worker
-    for (let i = 0; i <= this.tiledCount; i++) {
+    this.scienceWorker = this.tiledCount + 1;
+    for (let i = 0; i <= this.scienceWorker; i++) {
       const w = new Worker(new URL('./imageryWorker.ts', import.meta.url), { type: 'module' });
       w.onmessage = (e: MessageEvent<FromWorker>) => this.finish(e.data, i);
       w.onerror = e => this.fail(i, e);
@@ -134,6 +186,8 @@ class ImageryWorkers {
       this.busy.push(0);
       this.local.push(0);
       this.net.push([0, 0, 0]);
+      // Science maps have their own worker so keeping them ready cannot evict the Moon photo.
+      w.postMessage({ cacheBudgetBytes: (i === this.scienceWorker ? 64 : i === 0 ? 128 : i === 1 ? 64 : 32) * 2 ** 20 } satisfies ToWorker);
     }
     addEventListener('online', () => {
       const msg: ToWorker = { forgetFailures: true };
@@ -154,7 +208,7 @@ class ImageryWorkers {
    * frame). `local` = the job needs no remote download: those have their own, longer queue so
    * they are never stuck behind tiles that wait for a slow server.
    */
-  run(worker: number, job: Job, owner: ReprojectedImageryProvider, local = false): Promise<ImageBitmap> | undefined {
+  run(worker: number, job: Job, owner: ReprojectedImageryProvider, local = false, request?: ImageryRequest): Promise<ImageBitmap> | undefined {
     const w = this.workers[worker];
     if (!w) return Promise.resolve(blankTile());
     const count = local ? this.local : this.busy;
@@ -163,16 +217,112 @@ class ImageryWorkers {
     this.stats.asked++;
     this.stats.deepest[job.kind] = Math.max(this.stats.deepest[job.kind] ?? 0, job.level);
     const id = this.nextId++;
-    return new Promise(done => {
-      this.jobs.set(id, { worker, owner, done, at: performance.now(), kind: job.kind, local });
-      void this.flip.then(flipRows => { const msg: ToWorker = { id, job, flipRows }; w.postMessage(msg); });
+    return new Promise((done, reject) => {
+      this.jobs.set(id, { worker, owner, done, reject, request, at: performance.now(), kind: job.kind, local, rect: job.rect });
+      if (request) {
+        const previous = request.cancelFunction;
+        request.cancelFunction = () => { previous?.(); this.cancel(id); };
+        // A custom provider does not enter Cesium's URL scheduler, which normally calls
+        // cancelFunction. Honour an explicit cancel immediately here too.
+        const cancel = request.cancel;
+        if (cancel) request.cancel = () => { cancel.call(request); this.cancel(id); };
+        if (request.cancelled) this.cancel(id);
+      }
+      void this.flip.then(flipRows => { if (this.jobs.has(id)) { const msg: ToWorker = { id, job, flipRows }; w.postMessage(msg); } });
     });
+  }
+
+  private cancel(id: number) {
+    const j = this.jobs.get(id);
+    if (!j) return;
+    this.jobs.delete(id);
+    (j.local ? this.local : this.busy)[j.worker]--;
+    this.stats.cancelled++;
+    this.workers[j.worker]?.postMessage({ cancel: id } satisfies ToWorker);
+    if (j.request) {
+      // Cesium then returns this tile to UNLOADED, ready to try when it is seen again.
+      j.request.state = RequestState.CANCELLED;
+      j.reject(new DOMException('Tile left the view', 'AbortError'));
+    } else j.done(parentMarkBitmap());
+  }
+
+  cancelOutside(rectangles: readonly Rect[]) {
+    const now = performance.now();
+    for (const [id, j] of this.jobs) {
+      if (j.kind !== 'photo' || now - j.at < 350) continue;
+      if (!rectangles.some(r => rectanglesOverlap(j.rect, r))) this.cancel(id);
+    }
   }
 
   /** Tell one worker something that is not a tile job (e.g. which pyramid squares are stored with the app). */
   tell(worker: number, msg: ToWorker) { this.workers[worker]?.postMessage(msg); }
 
-  private finish({ id, bitmap, gaps, recovered, parent, net }: FromWorker, worker: number) {
+  warmScience(sources: ScienceRasterSource[], progress?: (frac: number) => void): Promise<boolean> {
+    if (!this.workers[this.scienceWorker]) return Promise.resolve(false);
+    const warmId = this.nextId++;
+    return new Promise(resolve => {
+      this.scienceWarm.set(warmId, { resolve, progress });
+      this.tell(this.scienceWorker, { warmScience: sources, warmId });
+    });
+  }
+
+  scienceValue(source: ScienceRasterSource, lat: number, lon: number): Promise<number | null> {
+    if (!this.workers[this.scienceWorker]) return Promise.resolve(null);
+    const valueId = this.nextId++;
+    return new Promise(resolve => {
+      this.scienceValues.set(valueId, resolve);
+      this.tell(this.scienceWorker, { scienceValue: { source, lat, lon }, valueId });
+    });
+  }
+
+  scienceState(activeUrls: string[]) { this.tell(this.scienceWorker, { scienceState: { activeUrls } }); }
+
+  disposeScience() {
+    this.workers[this.scienceWorker]?.terminate(); this.workers[this.scienceWorker] = null;
+    for (const [id, job] of this.jobs) if (job.worker === this.scienceWorker) { this.jobs.delete(id); job.done(parentMarkBitmap()); }
+    this.busy[this.scienceWorker] = this.local[this.scienceWorker] = 0;
+    for (const job of this.scienceWarm.values()) job.resolve(false);
+    for (const resolve of this.scienceValues.values()) resolve(null);
+    for (const resolve of this.scienceControls.values()) resolve(null);
+    this.scienceWarm.clear(); this.scienceValues.clear(); this.scienceControls.clear(); this.stats.science = null;
+  }
+
+  scienceControl(trim?: { dropAll?: boolean; dropCompressed?: boolean }): Promise<unknown> {
+    if (!this.workers[this.scienceWorker]) return Promise.resolve(null);
+    const requestId = this.nextId++;
+    return new Promise(resolve => {
+      this.scienceControls.set(requestId, resolve);
+      this.tell(this.scienceWorker, trim ? { scienceTrim: trim, scienceRequestId: requestId } : { scienceStats: { requestId } });
+    });
+  }
+
+  private finish({ id, bitmap, gaps, recovered, parent, net, traffic, cache, warmed, warmFrac, warmOk, valueId, value, science, scienceRequestId, scienceReady }: FromWorker, worker: number) {
+    if (science) this.stats.science = science;
+    if (scienceReady) invalidateScienceSource(scienceReady);
+    if (scienceRequestId !== undefined) {
+      this.scienceControls.get(scienceRequestId)?.(science ?? null);
+      this.scienceControls.delete(scienceRequestId);
+    }
+    if (cache) {
+      this.stats.caches[worker] = cache;
+      this.stats.decodedBytes = this.stats.caches.reduce((n, c) => n + (c?.retainedBytes ?? 0), 0);
+      this.stats.decodedImages = this.stats.caches.reduce((n, c) => n + (c?.retainedCount ?? 0), 0);
+    }
+    if (warmed !== undefined) {
+      const job = this.scienceWarm.get(warmed);
+      job?.progress?.(warmFrac ?? 0);
+      if (warmFrac === 1) { this.scienceWarm.delete(warmed); job?.resolve(warmOk !== false); }
+      return;
+    }
+    if (valueId !== undefined) { this.scienceValues.get(valueId)?.(value ?? null); this.scienceValues.delete(valueId); return; }
+    if (traffic) {
+      this.traffic[worker] = traffic;
+      const totals: NonNullable<FromWorker['traffic']> = {};
+      for (const record of this.traffic) if (record) for (const [site, t] of Object.entries(record)) {
+        const s = totals[site] ??= { requests: 0, bytes: 0 }; s.requests += t.requests; s.bytes += t.bytes;
+      }
+      this.stats.traffic = totals;
+    }
     if (recovered) for (const p of this.gapped) if (p.worker === worker) p.networkBack();
     if (net) {
       this.net[worker] = net;
@@ -185,13 +335,21 @@ class ImageryWorkers {
     (j.local ? this.local : this.busy)[j.worker]--;
     const ms = performance.now() - j.at;
     this.stats.answered++; this.stats.lastMs = ms; this.stats.totalMs += ms; this.stats.slowestMs = Math.max(this.stats.slowestMs, ms);
-    if (gaps) { this.gapped.add(j.owner); j.owner.noteGaps(); if (j.kind === 'base') baseBroke(); }
+    if (gaps) {
+      this.gapped.add(j.owner); j.owner.noteGaps();
+      if (j.kind === 'base') baseBroke();
+      // Failed final tiles walk down their ancestor chain. Let that walk finish, too:
+      // deferring an intermediate ancestor offline would keep tilesLoaded false forever.
+      if (j.kind === 'photo') photoGateBackoffUntil = performance.now() + RETRY_MS;
+    }
     if (parent) this.stats.parents++;
     j.done(parent ? parentMarkBitmap() : bitmap ?? blankTile());
   }
 
   /** Jobs handed to the workers and not answered yet. */
   pending(): number { return this.jobs.size; }
+
+  pendingPhotos(): number { let n = 0; for (const j of this.jobs.values()) if (j.kind === 'photo') n++; return n; }
 
   /** For tests: what is waiting, per kind of job, and for how long (ms). */
   waiting(): { kind: string; worker: number; ms: number }[] {
@@ -215,6 +373,112 @@ class ImageryWorkers {
 let pool: ImageryWorkers | undefined;
 const workers = () => (pool ??= new ImageryWorkers());
 
+/** Rectangles here are ordinary display-grid tiles; none crosses the date line. */
+const rectanglesOverlap = (a: Rect, b: Rect) => a.west < b.east && a.east > b.west && a.south < b.north && a.north > b.south;
+
+interface PhotoView {
+  lon: number; lat: number; level: number;
+  cameraLon: number; cameraLat: number; groundHeight: number;
+  camera: Cartesian3; metresPerDistance: number; changedAt: number;
+}
+let photoView: PhotoView | undefined;
+let savedPreloads: { viewer: Viewer; ancestors: boolean; siblings: boolean } | undefined;
+let photoGateBackoffUntil = 0;
+const deferredPhotos = new Map<string, { rect: Rect; level: number; at: number }>();
+const admittedPhotos = new Set<string>();
+const viewTiling = new GeographicTilingScheme({ ellipsoid: MOON_ELLIPSOID });
+const viewPixel = new Cartesian2(), viewHit = new Cartesian3(), viewCartographic = new Cartographic(), distancePoint = new Cartesian3();
+const photoKey = (r: Rect, level: number) => `${level}/${r.west}/${r.south}`;
+const clampValue = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
+const levelAtSpacing = (metres: number) => clampValue(Math.round(Math.log2(pixelMetres(0) / Math.max(0.001, metres))), 8, 17);
+
+/** Estimate the photo pixels actually needed by this camera, rather than visiting every
+ * intermediate resolution on the way down. All coordinates here use Cesium's display frame. */
+function updatePhotoView(viewer: Viewer) {
+  const { scene, camera } = viewer, globe = scene.globe;
+  const frustum = camera.frustum as { fovy?: number; fov?: number };
+  const fovy = frustum.fovy ?? frustum.fov;
+  if (!fovy || !scene.drawingBufferHeight) return;
+  viewPixel.x = scene.canvas.clientWidth / 2; viewPixel.y = scene.canvas.clientHeight / 2;
+  const ray = camera.getPickRay(viewPixel), hit = ray && globe.pick(ray, scene, viewHit);
+  const cameraLL = camera.positionCartographic;
+  let lon = cameraLL.longitude, lat = cameraLL.latitude;
+  let groundHeight = globe.getHeight(cameraLL) ?? 0;
+  let distance = Math.max(1, Math.abs(cameraLL.height - groundHeight));
+  if (hit) {
+    const at = MOON_ELLIPSOID.cartesianToCartographic(hit, viewCartographic);
+    if (at) { lon = at.longitude; lat = at.latitude; groundHeight = at.height; }
+    distance = Math.max(1, Cartesian3.distance(camera.positionWC, hit));
+  }
+  const metresPerDistance = 2 * Math.tan(fovy / 2) * globe.maximumScreenSpaceError / scene.drawingBufferHeight;
+  let level = levelAtSpacing(distance * metresPerDistance);
+  const xy = viewTiling.positionToTileXY(new Cartographic(lon, lat), level);
+  if (xy) level = Math.min(level, photoMaxLevel(viewTiling.tileXYToRectangle(xy.x, xy.y, level)));
+  const old = photoView, now = performance.now();
+  const changed = !old || old.level !== level || Cartesian3.distanceSquared(old.camera, camera.positionWC) > Math.max(1, distance * distance * 0.000001)
+    || Math.abs(Math.atan2(Math.sin(lon - old.lon), Math.cos(lon - old.lon))) > pixelDeg(level) * Math.PI / 180
+    || Math.abs(lat - old.lat) > pixelDeg(level) * Math.PI / 180;
+  photoView = { lon, lat, level, cameraLon: cameraLL.longitude, cameraLat: cameraLL.latitude, groundHeight,
+    camera: Cartesian3.clone(camera.positionWC), metresPerDistance, changedAt: changed ? now : old.changedAt };
+  if (changed) { deferredPhotos.clear(); admittedPhotos.clear(); }
+  pool?.tell(pool.route('trek'), { photoView: { lon, lat, level } });
+  if (level > 10) {
+    if (!savedPreloads || savedPreloads.viewer !== viewer) savedPreloads = { viewer, ancestors: globe.preloadAncestors, siblings: globe.preloadSiblings };
+    // applyQuality can update these while this view is open: remember its new choice.
+    else if (globe.preloadAncestors || globe.preloadSiblings) { savedPreloads.ancestors = globe.preloadAncestors; savedPreloads.siblings = globe.preloadSiblings; }
+    globe.preloadAncestors = false; globe.preloadSiblings = false;
+  } else if (savedPreloads?.viewer === viewer) {
+    globe.preloadAncestors = savedPreloads.ancestors; globe.preloadSiblings = savedPreloads.siblings;
+    savedPreloads = undefined; deferredPhotos.clear(); admittedPhotos.clear();
+  }
+}
+
+/** Camera-dependent waits stay UNLOADED in Cesium, so a later zoom-out can request them.
+ * A discard marker would make the same useful tile INVALID until it left the cache. */
+function deferPhoto(rect: Rect, level: number): boolean {
+  const view = photoView;
+  if (!view || view.level <= 10 || level <= 8 || performance.now() < photoGateBackoffUntil) return false;
+  const key = photoKey(rect, level);
+  if (admittedPhotos.has(key)) return false;
+  const middle = (rect.west + rect.east) / 2;
+  const cameraLon = middle + Math.atan2(Math.sin(view.cameraLon - middle), Math.cos(view.cameraLon - middle));
+  const lon = clampValue(cameraLon, rect.west, rect.east), lat = clampValue(view.cameraLat, rect.south, rect.north);
+  Cartesian3.fromRadians(lon, lat, view.groundHeight, MOON_ELLIPSOID, distancePoint);
+  const distance = Math.max(1, Cartesian3.distance(view.camera, distancePoint));
+  const target = Math.min(view.level, photoMaxLevel(rect), levelAtSpacing(distance * view.metresPerDistance));
+  if (level >= target) return false;
+  if (!deferredPhotos.has(key)) deferredPhotos.set(key, { rect, level, at: performance.now() });
+  if (pool) pool.stats.deferred++;
+  return true;
+}
+
+/**
+ * Call after a frame while the camera moves. Cesium keeps old terrain tiles in memory,
+ * but only these tiles are on screen: sharp downloads outside them can stop. The short
+ * grace period lets the first terrain frame catch up after a camera jump.
+ */
+export function cancelOffscreenImagery(viewer: Viewer, cull = true) {
+  if (!pool || viewer.isDestroyed()) return;
+  updatePhotoView(viewer);
+  const surface = (viewer.scene.globe as unknown as { _surface?: { _tilesToRender?: { rectangle: Rect; data?: { imagery?: { loadingImagery?: { rectangle: Rect; level: number } }[] } }[] } })._surface;
+  const tiles = surface?._tilesToRender;
+  if (tiles?.length) {
+    if (cull) pool.cancelOutside(tiles.map(tile => tile.rectangle));
+    // Perspective views can genuinely need a coarser tile far from the rover. Once finer
+    // work is quiet, admit any such tile STILL being rendered. Ancestors alone stay skipped,
+    // so their queues cannot keep tilesLoaded false forever. No cache state is invalidated.
+    const now = performance.now();
+    if (photoView && now - photoView.changedAt > 400 && pool.pendingPhotos() === 0) {
+      for (const tile of tiles) for (const link of tile.data?.imagery ?? []) {
+        const loading = link.loadingImagery;
+        if (!loading?.rectangle) continue;
+        const key = photoKey(loading.rectangle, loading.level), deferred = deferredPhotos.get(key);
+        if (deferred && now - deferred.at > 400) { admittedPhotos.add(key); deferredPhotos.delete(key); viewer.scene.requestRender(); }
+      }
+    }
+  }
+}
+
 /** Map pictures asked for and not finished yet, across all layers (0 = nothing is loading). For the loading screen. */
 export function imageryPending(): number { return pool ? pool.pending() : 0; }
 
@@ -223,6 +487,7 @@ export function imageryPending(): number { return pool ? pool.pending() : 0; }
   pending: imageryPending,
   stats: () => (pool ? { ...pool.stats, deepest: { ...pool.stats.deepest } } : null),
   waiting: () => (pool ? pool.waiting() : []),
+  view: () => (photoView ? { lon: photoView.lon, lat: photoView.lat, level: photoView.level, deferred: deferredPhotos.size, admitted: admittedPhotos.size } : null),
 };
 
 // ---------------------------------------------------------------------------------------------
@@ -242,6 +507,8 @@ interface ProviderOptions {
   /** True for a job that surely needs no remote download (it then never waits behind slow downloads). */
   isLocal?: (job: Job) => boolean;
 }
+
+interface ImageryRequest { state?: number; cancelled?: boolean; cancelFunction?: () => void; cancel?: () => void }
 
 export class ReprojectedImageryProvider {
   readonly tilingScheme = new GeographicTilingScheme({ ellipsoid: MOON_ELLIPSOID }); // DISPLAY lon/lat
@@ -278,12 +545,13 @@ export class ReprojectedImageryProvider {
 
   getTileCredits(): Credit[] { return []; }
 
-  requestImage(x: number, y: number, level: number): Promise<ImageBitmap> | undefined {
+  requestImage(x: number, y: number, level: number, request?: ImageryRequest): Promise<ImageBitmap> | undefined {
     const r = this.tilingScheme.tileXYToRectangle(x, y, level);
     const job = this.jobFor({ west: r.west, south: r.south, east: r.east, north: r.north }, level, x, y);
     if (job === 'wait') return undefined;
     if (job === 'parent') { workers().stats.parents++; return Promise.resolve(parentMarkBitmap()); }
-    return job ? workers().run(this.worker, job, this, this.isLocal?.(job) ?? false) : Promise.resolve(blankTile());
+    if (job?.kind === 'photo' && deferPhoto(job.rect, level)) return undefined;
+    return job ? workers().run(this.worker, job, this, this.isLocal?.(job) ?? false, request) : Promise.resolve(blankTile());
   }
 
   /** Drop this layer's tiles and ask for them again now (used when what the layer should draw has changed). */
@@ -442,21 +710,33 @@ export function createBaseMosaicProvider(o: { url?: string; credit: string }): R
  * Pole" view need nothing from the internet. Needs a createBaseMosaicProvider layer underneath;
  * without one, or if its files are missing, every level is streamed as before.
  */
-export function createMoonTrekProvider(o: { layer: string; ext: string; maxSourceLevel: number; minTrueLat?: number; credit: string; overBase?: boolean }): ReprojectedImageryProvider {
+export function createMoonTrekProvider(o: { layer: string; ext: string; maxSourceLevel: number; minTrueLat?: number; credit: string; overBase?: boolean; sharpPhoto?: boolean }): ReprojectedImageryProvider {
   const minTrueLat = o.minTrueLat ?? -90;
   const p = new ReprojectedImageryProvider({
     rectangle: Rectangle.clone(Rectangle.MAX_VALUE),
-    maximumLevel: o.maxSourceLevel + 1,
+    maximumLevel: o.sharpPhoto ? 17 : o.maxSourceLevel + 1,
     credit: o.credit,
     worker: workers().route('trek'),
     jobFor: (rect, level, x, y) => {
+      let northBase: Extract<Job, { kind: 'photo' }>['northBase'];
       if (o.overBase && baseSet) {
         if (baseSet.state === 'loading') return 'wait';
         if (baseSet.state === 'ready' && baseCutFor(baseSet, x, y, level)) return null; // the local picture underneath shows exactly this
-        if (baseSet.state === 'ready' && baseSet.fix && seamFixOn && tileFixRange(rect).min >= 1) return null; // the seam fix covers this tile completely
+        if (baseSet.state === 'ready' && baseSet.fix && seamFixOn && tileFixRange(rect).min >= 1
+          && !(o.sharpPhoto && level > 8 && tileTrueLatRange(rect).minDeg > NORTH_PHOTO_LAT)) return null; // the north worker's local reference already includes the fix
+        if (o.sharpPhoto && level > 8 && tileTrueLatRange(rect).minDeg > NORTH_PHOTO_LAT) {
+          const scale = 2 ** Math.max(0, level - 6), px = Math.floor(x / scale), py = Math.floor(y / scale);
+          const cut = baseCutFor(baseSet, px, py, 6);
+          if (cut) {
+            const r = p.tilingScheme.tileXYToRectangle(px, py, 6);
+            northBase = { cut, rect: { west: r.west, east: r.east, south: r.south, north: r.north } };
+          }
+        }
       }
       return minTrueLat > -90 && tileTrueLatRange(rect).maxDeg < minTrueLat - pixelDeg(level)
         ? null // tile lies wholly inside the polar cap
+        : o.sharpPhoto && level > photoMaxLevel(rect) ? 'parent'
+        : o.sharpPhoto && level > 8 ? { kind: 'photo', rect, level, layer: o.layer, minTrueLat, northBase }
         : { kind: 'trek', rect, level, layer: o.layer, ext: o.ext, maxSourceLevel: o.maxSourceLevel, minTrueLat };
     },
   });
@@ -480,7 +760,7 @@ export function createSeamFixProvider(o: { credit: string }): ReprojectedImagery
   seamFixOn = true;
   return new ReprojectedImageryProvider({
     rectangle: Rectangle.clone(Rectangle.MAX_VALUE),
-    maximumLevel: FIX_NEAR_MAX_Z + 1,
+    maximumLevel: 17,
     credit: o.credit,
     worker: workers().route('trek'),
     jobFor: (rect, level, x, y) => {
@@ -490,9 +770,149 @@ export function createSeamFixProvider(o: { credit: string }): ReprojectedImagery
       if (baseCutFor(b, x, y, level)) return null; // the local pictures already show it
       if (tileTrueLatRange(rect).maxDeg < FIX_MIN_TRUE_LAT - pixelDeg(level)) return null; // inside the south-polar photos
       if (tileFixRange(rect).max <= 0) return null; // the photo is right here
+      // The local north-pole picture already includes the seam fix. The photo worker uses
+      // that as its brightness reference, avoiding a ring of remote EQ tiles at the pole.
+      if (level > 8 && tileTrueLatRange(rect).minDeg > NORTH_PHOTO_LAT) return null;
+      if (level > photoMaxLevel(rect)) return 'parent';
+      if (level > 8) return { kind: 'photo', rect, level, layer: 'LRO_WAC_Mosaic_Global_303ppd_v02', minTrueLat: FIX_MIN_TRUE_LAT, fix: b.fix };
       return { kind: 'synth', rect, level, fix: b.fix };
     },
   });
+}
+
+/**
+ * Get south-polar pictures ready before they are shown: the worker downloads (from the browser's cache, start-up put
+ * them there) and decodes them now, so the first time a layer is switched on its tiles appear at once.
+ */
+export function warmPolarRasters(urls: string[]) {
+  if (!urls.length) return;
+  workers().tell(0, { warmRasters: urls.map(u => new URL(u, document.baseURI).href) });
+}
+
+const absoluteScienceSource = (source: ScienceRasterSource): ScienceRasterSource => ({
+  ...source, url: new URL(source.url, document.baseURI).href,
+  packed: source.packed ? { ...source.packed, url: new URL(source.packed.url, document.baseURI).href } : undefined,
+  preview: source.preview ? { ...source.preview, url: new URL(source.preview.url, document.baseURI).href } : undefined,
+});
+
+/** Download compact bytes only. Decoding belongs to a switch, not to the Enter button. */
+export function warmScienceRasters(sources: ScienceRasterSource[], onProgress?: (frac: number) => void): Promise<boolean> {
+  const unique = [...new Map(sources.map(s => [new URL(s.url, document.baseURI).href, absoluteScienceSource(s)])).values()];
+  return workers().warmScience(unique, onProgress);
+}
+
+/** Raw byte under a spot; the left panel applies the product's published scale and offset. */
+export function scienceRasterValueAt(source: ScienceRasterSource, lat: number, lon: number): Promise<number | null> {
+  return workers().scienceValue(absoluteScienceSource(source), lat, lon);
+}
+
+const SCIENCE_TILE_BYTES = TILE * TILE * 4;
+const SCIENCE_TILE_BUDGET = 4 * 2 ** 20;
+const SCIENCE_IDLE_MS = 120_000;
+interface PreparedScienceTile {
+  owner: ScienceRasterProvider; key: string; promise: Promise<ImageBitmap>;
+  borrowers: number; removed: boolean; lastUsed: number;
+}
+const scienceProviders = new Set<ScienceRasterProvider>();
+const scienceTiles = new Map<PreparedScienceTile, true>();
+function removeScienceTile(tile: PreparedScienceTile) {
+  if (tile.removed) return;
+  tile.removed = true; scienceTiles.delete(tile); tile.owner.forget(tile.key, tile);
+  void tile.promise.then(b => { if (!tile.borrowers && b !== blank && b !== parentMark) b.close(); }).catch(() => {});
+}
+function trimScienceTiles() {
+  const now = performance.now();
+  for (const tile of scienceTiles.keys()) if (!tile.owner.active && now - tile.lastUsed > SCIENCE_IDLE_MS) removeScienceTile(tile);
+  while (scienceTiles.size * SCIENCE_TILE_BYTES > SCIENCE_TILE_BUDGET) removeScienceTile(scienceTiles.keys().next().value!);
+}
+const scienceReadyTimers = new Map<string, ReturnType<typeof setTimeout>>();
+function invalidateScienceSource(url: string) {
+  if (scienceReadyTimers.has(url)) return;
+  scienceReadyTimers.set(url, setTimeout(() => {
+    scienceReadyTimers.delete(url);
+    for (const p of scienceProviders) if (p.active && p.sourceUrls.has(url)) p.reloadNow();
+  }, 100));
+}
+
+/** A small shared tile cache avoids duplicating sixteen megabytes for every map. */
+class ScienceRasterProvider extends ReprojectedImageryProvider {
+  private readonly prepared = new Map<string, PreparedScienceTile>();
+  readonly sourceUrls: Set<string>;
+  active = false;
+
+  constructor(o: ProviderOptions, sources: ScienceRasterSource[]) {
+    super(o); this.sourceUrls = new Set(sources.map(s => s.url)); scienceProviders.add(this);
+  }
+
+  forget(key: string, tile: PreparedScienceTile) { if (this.prepared.get(key) === tile) this.prepared.delete(key); }
+  clearPrepared() { for (const tile of [...this.prepared.values()]) removeScienceTile(tile); }
+
+  override requestImage(x: number, y: number, level: number, request?: ImageryRequest): Promise<ImageBitmap> | undefined {
+    const key = `${level}/${x}/${y}`;
+    let tile = this.prepared.get(key);
+    if (!tile) {
+      const got = super.requestImage(x, y, level, request);
+      if (!got) return undefined;
+      tile = { owner: this, key, promise: got, borrowers: 0, removed: false, lastUsed: performance.now() };
+      this.prepared.set(key, tile); scienceTiles.set(tile, true);
+      const fresh = tile;
+      void got.catch(() => removeScienceTile(fresh));
+    } else { tile.lastUsed = performance.now(); scienceTiles.delete(tile); scienceTiles.set(tile, true); }
+    const borrowed = tile; borrowed.borrowers++;
+    trimScienceTiles();
+    return borrowed.promise.then(b => b === parentMark ? b : createImageBitmap(b)).finally(() => {
+      borrowed.borrowers--;
+      if (borrowed.removed && !borrowed.borrowers) void borrowed.promise.then(b => { if (b !== blank && b !== parentMark) b.close(); }).catch(() => {});
+    });
+  }
+
+  override noteGaps() { this.clearPrepared(); super.noteGaps(); }
+  override reloadNow() { this.clearPrepared(); super.reloadNow(); }
+}
+
+/** Only visible or recently used science blocks need decoded memory. */
+export function setScienceLayersActive(sources: ScienceRasterSource[]) {
+  const urls = new Set(sources.map(s => new URL(s.url, document.baseURI).href));
+  for (const p of scienceProviders) p.active = [...p.sourceUrls].some(url => urls.has(url));
+  workers().scienceState([...urls]); trimScienceTiles();
+}
+
+export function releaseScienceLayers() {
+  for (const p of scienceProviders) p.clearPrepared();
+  scienceProviders.clear(); pool?.scienceState([]);
+}
+
+const scienceTileSweep = setInterval(trimScienceTiles, 20_000);
+import.meta.hot?.dispose(() => {
+  clearInterval(scienceTileSweep);
+  for (const timer of scienceReadyTimers.values()) clearTimeout(timer);
+  scienceReadyTimers.clear(); releaseScienceLayers(); pool?.disposeScience();
+});
+const scienceMemory = () => ({ worker: pool?.stats.science ?? null, preparedBitmapBytes: scienceTiles.size * SCIENCE_TILE_BYTES, preparedBitmapBudget: SCIENCE_TILE_BUDGET });
+(globalThis as unknown as { __moondaScienceMemory: unknown }).__moondaScienceMemory = scienceMemory;
+(globalThis as unknown as { __moondaScienceSnapshot: unknown }).__moondaScienceSnapshot = async () => { await workers().scienceControl(); return scienceMemory(); };
+(globalThis as unknown as { __moondaScienceDropDecoded: unknown }).__moondaScienceDropDecoded = async (dropCompressed = false) => {
+  for (const p of scienceProviders) p.reloadNow();
+  await workers().scienceControl({ dropAll: true, dropCompressed }); return scienceMemory();
+};
+
+/** One switch can combine a global map and sharper maps near either pole. Later sources lie on top. */
+export function createScienceRasterProvider(o: { sources: ScienceRasterSource[]; credit: string; maximumLevel?: number }): ReprojectedImageryProvider {
+  const sources = o.sources.map(absoluteScienceSource);
+  return new ScienceRasterProvider({
+    rectangle: Rectangle.MAX_VALUE,
+    maximumLevel: o.maximumLevel ?? 10,
+    credit: o.credit,
+    worker: workers().scienceWorker,
+    isLocal: () => true,
+    jobFor: (rect, level) => {
+      const range = tileTrueLatRange(rect);
+      const touches = sources.some(s => s.projection === 'global' || (s.pole === 'north'
+        ? range.maxDeg >= (s.clipTrueLatDeg ?? 80) - pixelDeg(level)
+        : range.minDeg <= (s.clipTrueLatDeg ?? -80) + pixelDeg(level)));
+      return touches ? { kind: 'science', rect, level, sources } : null;
+    },
+  }, sources);
 }
 
 /**

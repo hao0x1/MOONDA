@@ -26,6 +26,7 @@ export interface SpotResult {
 /* ---------- small helpers ---------- */
 
 const fmtH = (h: number) => (!Number.isFinite(h) || h <= 0 ? t('aitool.none') : h < 48 ? t('aitool.hours', { n: Math.round(h) }) : t('aitool.daysShort', { n: (h / 24).toFixed(1) }));
+const fmtLimitH = (h: number) => `${h} ${t('unit.h')}`;
 const fmtMs = (ms: number) => (ms < 1000 ? `${Math.max(1, Math.round(ms))} ms` : ms < 10000 ? `${(ms / 1000).toFixed(1)} s` : `${Math.round(ms / 1000)} s`);
 const fmtLL = (lat: number, lon: number) => `${Math.abs(lat).toFixed(2)}°${lat < 0 ? 'S' : 'N'} ${Math.abs(lon).toFixed(2)}°${lon < 0 ? 'W' : 'E'}`;
 function coords(a: Record<string, unknown>) {
@@ -94,9 +95,9 @@ function SpotTiles({ r }: { r: SpotResult }) {
     <>
       <div className="ai-tiles">
         <div className="ai-tile"><small>{t('stat.sunlight')}</small><b>{r.sunlight_pct}%</b><Bar pct={r.sunlight_pct} /></div>
-        <div className="ai-tile"><small>{t('stat.dark')}</small><b>{fmtH(r.longest_dark_hours)}</b><span className="ai-tile-note">{t('aitool.batteryNeed', { time: typeof r.battery_need_hours === 'number' ? fmtH(r.battery_need_hours) : t('aitool.any') })}</span></div>
+        <div className="ai-tile"><small>{t('stat.dark')}</small><b>{fmtH(r.longest_dark_hours)}</b><span className="ai-tile-note">{t('aitool.batteryNeed', { time: typeof r.battery_need_hours === 'number' ? fmtLimitH(r.battery_need_hours) : t('aitool.any') })}</span></div>
         <div className="ai-tile"><small>{t('stat.earth')}</small><b>{r.earth_in_view_pct}%</b><Bar pct={r.earth_in_view_pct} /></div>
-        <div className="ai-tile"><small>{t('stat.noEarth')}</small><b>{fmtH(r.longest_without_earth_hours)}</b><span className="ai-tile-note">{t('aitool.radioNeed', { time: typeof r.contact_need_hours === 'number' ? fmtH(r.contact_need_hours) : t('aitool.any') })}</span></div>
+        <div className="ai-tile"><small>{t('stat.noEarth')}</small><b>{fmtH(r.longest_without_earth_hours)}</b><span className="ai-tile-note">{t('aitool.radioNeed', { time: typeof r.contact_need_hours === 'number' ? fmtLimitH(r.contact_need_hours) : t('aitool.any') })}</span></div>
       </div>
       <div className="ai-chips">
         <Need ok={r.meets_battery_need} label={t('aitool.battery')} />
@@ -170,8 +171,8 @@ function ToolOutput({ b }: { b: ToolBlock }) {
         <dl className="ai-kv">
           <dt>{t('aitool.arrive')}</dt><dd>{new Date(String(m.arrival_utc)).toUTCString().slice(5, 22)} UTC</dd>
           <dt>{t('aitool.mission')}</dt><dd>{t('aitool.missionLine', { days: String(m.mission_days), m: String(m.panel_height_m) })}</dd>
-          <dt>{t('aitool.battery')}</dt><dd>{typeof m.battery_survives_darkness_hours === 'number' ? t('aitool.batteryLasts', { time: fmtH(m.battery_survives_darkness_hours) }) : t('aitool.noLimit')}</dd>
-          <dt>{t('aitool.radio')}</dt><dd>{typeof m.ok_without_earth_hours === 'number' ? t('aitool.radioOk', { time: fmtH(m.ok_without_earth_hours) }) : t('aitool.noLimit')}</dd>
+          <dt>{t('aitool.battery')}</dt><dd>{typeof m.battery_survives_darkness_hours === 'number' ? t('aitool.batteryLasts', { time: fmtLimitH(m.battery_survives_darkness_hours) }) : t('aitool.noLimit')}</dd>
+          <dt>{t('aitool.radio')}</dt><dd>{typeof m.ok_without_earth_hours === 'number' ? t('aitool.radioOk', { time: fmtLimitH(m.ok_without_earth_hours) }) : t('aitool.noLimit')}</dd>
         </dl>
       );
     }
@@ -255,7 +256,7 @@ function ToolStep({ b, live }: { b: ToolBlock; live: boolean }) {
     <li className={`ai-step tool ${running ? 'run' : b.status}`}>
       <StepIcon b={b} live={live} />
       <div className="ai-step-main">
-        <button type="button" className="ai-step-head" onClick={() => expandable && setOpen(o => !o)} aria-expanded={expandable ? open : undefined} disabled={!expandable}>
+        <button type="button" className="ai-step-head" onClick={() => expandable && setOpen(o => !o)} aria-expanded={expandable ? open : undefined} data-tip={expandable ? t(open ? 'ai.tip.hideStep' : 'ai.tip.showStep') : undefined} disabled={!expandable}>
           <span className="ai-step-title">{L.verb(b.args, !running)}</span>
           {expandable && <CaretDown size={12} weight="bold" className={`ai-caret${open ? ' up' : ''}`} />}
           <span className="ai-step-meta">{fmtMs(ms)}</span>
@@ -301,7 +302,7 @@ function ThinkStep({ b, live }: { b: ThinkBlock; live: boolean }) {
     <li className={`ai-step think${thinking ? ' run' : ' ok'}`}>
       <StepIcon b={b} live={thinking} />
       <div className="ai-step-main">
-        <button type="button" className="ai-step-head" onClick={() => setOpen(o => !o)} aria-expanded={open} disabled={!b.text}>
+        <button type="button" className="ai-step-head" onClick={() => setOpen(o => !o)} aria-expanded={open} data-tip={b.text ? t(open ? 'ai.tip.hideThinking' : 'ai.tip.showThinking') : undefined} disabled={!b.text}>
           <span className={`ai-step-title${thinking ? ' ai-shimmer' : ''}`}>{title}</span>
           {b.text && <CaretDown size={12} weight="bold" className={`ai-caret${open ? ' up' : ''}`} />}
           {thinking && <span className="ai-step-meta">{fmtMs(ms)}</span>}
@@ -329,7 +330,7 @@ export function Trace({ steps, live, t0, end }: { steps: StepBlock[]; live: bool
   else title = <>{end ? t('ai.stoppedAfter', { time }) : t('ai.workedFor', { time })}<span className="ai-trace-now"> · {tools.length ? tn('ai.tools', tools.length) : t('ai.thinkingOnly')}{failed ? ` · ${tn('ai.problems', failed)}` : ''}</span></>;
   return (
     <div className={`ai-trace${live ? ' live' : ''}${open ? ' open' : ''}`}>
-      <button type="button" className="ai-trace-head" onClick={() => setPref(!open)} aria-expanded={open}>
+      <button type="button" className="ai-trace-head" onClick={() => setPref(!open)} aria-expanded={open} data-tip={t(open ? 'ai.tip.hideTrace' : 'ai.tip.showTrace')}>
         <span className="ai-trace-title">{title}</span>
         <CaretDown size={12} weight="bold" className={`ai-caret${open ? ' up' : ''}`} />
         {live && <span className="ai-step-meta">{time}</span>}
@@ -397,13 +398,13 @@ export function ResultsTable({ rows, quick, onShow, onCompare }: {
           {rows.map((r, i) => {
             const ok = r.meets_battery_need && r.meets_contact_need;
             return (
-              <tr key={i} onClick={() => onShow(r)} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onShow(r); } }} tabIndex={0} title={t('ai.rowHint')}>
+              <tr key={i} onClick={() => onShow(r)} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onShow(r); } }} tabIndex={0} data-tip={t('ai.tip.showOnMap')}>
                 <td className="site"><span className="ai-site-name"><b>{r.label}</b>{i === 0 && rows.length > 1 && <em className="ai-best">{t('ai.best')}</em>}</span><small>{fmtLL(r.lat, r.lon)}</small></td>
                 <td>{r.sunlight_pct}%</td>
                 <td>{fmtH(r.longest_dark_hours)}</td>
                 <td>{r.earth_in_view_pct}%</td>
                 <td>{fmtH(r.longest_without_earth_hours)}</td>
-                <td><span className={`ai-need ${ok ? 'good' : 'bad'}`} title={why(r)} aria-label={why(r)}>{ok ? <Check size={13} weight="bold" /> : <X size={13} weight="bold" />}</span></td>
+                <td><span className={`ai-need ${ok ? 'good' : 'bad'}`} data-tip={why(r)} aria-label={why(r)}>{ok ? <Check size={13} weight="bold" /> : <X size={13} weight="bold" />}</span></td>
               </tr>
             );
           })}
@@ -411,7 +412,7 @@ export function ResultsTable({ rows, quick, onShow, onCompare }: {
       </table>
       <div className="ai-results-foot">
         <span>{note || t('ai.rowHint')}</span>
-        {!quick && <button type="button" onClick={() => setNote(onCompare(rows.slice(0, 4)))}><Scales size={13} />{rows.length > 4 ? t('ai.compareTop') : rows.length > 1 ? t('ai.compareAll') : t('ai.compare')}<ArrowUpRight size={12} /></button>}
+        {!quick && <button type="button" onClick={() => setNote(onCompare(rows.slice(0, 4)))} data-tip={t('ai.tip.compare')}><Scales size={13} />{rows.length > 4 ? t('ai.compareTop') : rows.length > 1 ? t('ai.compareAll') : t('ai.compare')}<ArrowUpRight size={12} /></button>}
       </div>
     </div>
   );

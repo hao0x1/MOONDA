@@ -39,6 +39,28 @@ function aiRoute(env: Record<string, string>): Plugin {
   };
 }
 
+/**
+ * Production build only: the page downloads the app's code itself, showing a percentage on the start screen's
+ * "App" row (index.html, window.__bootLoad), and then starts it from the browser cache. Swaps the module
+ * <script> Vite writes for a call that also passes the code's size, so the percentage is real.
+ */
+function bootLoader(): Plugin {
+  return {
+    name: 'moonda-boot-loader',
+    apply: 'build',
+    transformIndexHtml: {
+      order: 'post',
+      handler(html, ctx) {
+        const m = html.match(/<script type="module" crossorigin src="([^"]+)"><\/script>/);
+        if (!m) return html;
+        const chunk = ctx.bundle?.[m[1].replace(/^\.\//, '')];
+        const size = chunk && chunk.type === 'chunk' ? Buffer.byteLength(chunk.code) : 0;
+        return html.replace(m[0], `<script>window.__bootLoad(${JSON.stringify(m[1])}, ${size})</script>`);
+      },
+    },
+  };
+}
+
 // CesiumJS's Workers / Assets / Widgets are copied into public/cesium by scripts/copy-cesium.mjs.
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), 'DEEPSEEK_');
@@ -46,7 +68,7 @@ export default defineConfig(({ mode }) => {
     base: './',
     // Parallel working copies (.v4/*) share node_modules through a symlink: give each its own cache.
     cacheDir: process.env.MOONDA_VITE_CACHE ?? 'node_modules/.vite',
-    plugins: [react(), aiRoute(env)],
+    plugins: [react(), aiRoute(env), bootLoader()],
     server: { host: '127.0.0.1', port: 5190, fs: { allow: ['/Volumes/CodexWork/Projects/MOONDA'] } },
     preview: { host: '127.0.0.1', port: 5191 },
     worker: { format: 'es' },

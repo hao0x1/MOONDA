@@ -1,0 +1,38 @@
+[
+  {
+    "path": "data-raw/pgda-lola-north-psr/LPSR_65N_240M_201608.TIF",
+    "url": "https://pgda.gsfc.nasa.gov/data/MoonIllumination/LPSR_65N_240M_201608.TIF",
+    "bytes": 613892,
+    "sha256": "8b01f452e1d79d5b59c0566f5f03caf061de92d83b875a582acbef4117f128bf"
+  },
+  {
+    "path": "data-raw/pgda-lola-north-psr/LPSR_75N_120M_201608.TIF",
+    "url": "https://pgda.gsfc.nasa.gov/data/MoonIllumination/LPSR_75N_120M_201608.TIF",
+    "bytes": 1105159,
+    "sha256": "0bdd5d00a6fe2614d742673e7a5c7a772995b449f5b52c64a6d637f6e882cc8e"
+  },
+  {
+    "path": "data-raw/pgda-lola-north-psr/LPSR_85N_060M_201608.TIF",
+    "url": "https://pgda.gsfc.nasa.gov/data/MoonIllumination/LPSR_85N_060M_201608.TIF",
+    "bytes": 824237,
+    "sha256": "c36d9d3d6072264509e7567e7057133f8ad6ce1efb1e449e13e149f6a961c60f"
+  },
+  {
+    "path": "data-raw/pgda-lola-south-wide-psr/LPSR_65S_240M_201608.TIF",
+    "url": "https://pgda.gsfc.nasa.gov/data/MoonIllumination/LPSR_65S_240M_201608.TIF",
+    "bytes": 582074,
+    "sha256": "3a90c9716c2f586306d6096cadc9a5a2986b9b7f175687ffa8096cdc25a01537"
+  },
+  {
+    "path": "data-raw/pds-lunar-prospector-hydrogen/hydrogenhd.dat",
+    "url": "https://pds-geosciences.wustl.edu/missions/lunarp/reduced/hydrogenhd.dat",
+    "bytes": 518400,
+    "sha256": "7b9708c95cf3648a6ca6df754648fa18dbcdd2ebd4ae6e8b12dbc18d1e3ad6d4"
+  },
+  {
+    "path": "data-raw/pds-diviner-prp-north/dlre_prp_north.zip",
+    "url": "https://pds-geosciences.wustl.edu/lro/urn-nasa-pds-lro_diviner_derived1/extras/prp/dlre_prp_north.zip",
+    "bytes": 115880233,
+    "sha256": "ecc3ea2613906ee89b38f254e9267e8abaef6b891a33f0d65400655bd5ce77f5"
+  }
+]

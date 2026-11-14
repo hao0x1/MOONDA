@@ -1,0 +1,25 @@
+{
+  "result": "PASS",
+  "sites": 85,
+  "status": {
+    "past": 65,
+    "planned": 20
+  },
+  "verify": [
+    "luna-2",
+    "ranger-4",
+    "luna-9",
+    "luna-13",
+    "hiten-impact",
+    "lunar-prospector-impact",
+    "chandrayaan-1-mip",
+    "change-1-impact",
+    "kaguya-impact",
+    "lcross-spacecraft",
+    "change-3",
+    "change-4-yutu-2",
+    "luna-25",
+    "griffin-mission-1"
+  ],
+  "artemisPolygons": 9
+}

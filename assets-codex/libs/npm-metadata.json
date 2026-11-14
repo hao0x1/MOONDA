@@ -1,0 +1,187 @@
+{
+  "checkedDate": "2026-11-14",
+  "method": "npm view metadata only; GitHub repository API via connected GitHub tool; pushedAt is not a release date",
+  "packages": [
+    {
+      "package": "easystarjs",
+      "command": "npm view easystarjs version license dist.unpackedSize types typings dependencies peerDependencies --json",
+      "metadata": {
+        "version": "0.4.4",
+        "license": "MIT",
+        "dist.unpackedSize": 879422,
+        "typings": "./index.d.ts",
+        "dependencies": {
+          "heap": "0.2.6"
+        }
+      }
+    },
+    {
+      "package": "ngraph.path",
+      "command": "npm view ngraph.path version license dist.unpackedSize types typings dependencies peerDependencies --json",
+      "metadata": {
+        "version": "1.6.1",
+        "license": "MIT",
+        "dist.unpackedSize": 2863901,
+        "types": "index.d.ts"
+      }
+    },
+    {
+      "package": "ngraph.graph",
+      "command": "npm view ngraph.graph version license dist.unpackedSize types typings dependencies peerDependencies --json",
+      "metadata": {
+        "version": "20.1.2",
+        "license": "BSD-3-Clause",
+        "dist.unpackedSize": 133816,
+        "types": "index.d.ts",
+        "dependencies": {
+          "ngraph.events": "^1.4.0"
+        }
+      }
+    },
+    {
+      "package": "flatqueue",
+      "command": "npm view flatqueue version license dist.unpackedSize types typings dependencies peerDependencies --json",
+      "metadata": {
+        "version": "3.1.0",
+        "license": "ISC",
+        "dist.unpackedSize": 13062,
+        "types": "./index.d.ts"
+      }
+    },
+    {
+      "package": "simplify-js",
+      "command": "npm view simplify-js version license dist.unpackedSize types typings dependencies peerDependencies --json",
+      "metadata": {
+        "version": "1.2.4",
+        "license": "BSD-2-Clause",
+        "dist.unpackedSize": 7105,
+        "types": "index.d.ts"
+      }
+    },
+    {
+      "package": "d3-contour",
+      "command": "npm view d3-contour version license dist.unpackedSize types typings dependencies peerDependencies --json",
+      "metadata": {
+        "version": "4.0.3",
+        "license": "ISC",
+        "dist.unpackedSize": 38680,
+        "dependencies": {
+          "d3-array": "^3.2.4"
+        }
+      }
+    },
+    {
+      "package": "@types/d3-contour",
+      "command": "npm view @types/d3-contour version license dist.unpackedSize types typings dependencies peerDependencies --json",
+      "metadata": {
+        "version": "3.0.6",
+        "license": "MIT",
+        "dist.unpackedSize": 13477,
+        "types": "index.d.ts",
+        "dependencies": {
+          "@types/geojson": "*",
+          "@types/d3-array": "*"
+        }
+      }
+    },
+    {
+      "package": "embla-carousel-react",
+      "command": "npm view embla-carousel-react version license dist.unpackedSize types typings dependencies peerDependencies --json",
+      "metadata": {
+        "version": "8.6.0",
+        "license": "MIT",
+        "dist.unpackedSize": 50629,
+        "types": "index.d.ts",
+        "dependencies": {
+          "embla-carousel": "8.6.0",
+          "embla-carousel-reactive-utils": "8.6.0"
+        },
+        "peerDependencies": {
+          "react": "^16.8.0 || ^17.0.1 || ^18.0.0 || ^19.0.0 || ^19.0.0-rc"
+        }
+      }
+    },
+    {
+      "package": "embla-carousel",
+      "command": "npm view embla-carousel version license dist.unpackedSize types typings dependencies peerDependencies --json",
+      "metadata": {
+        "version": "8.6.0",
+        "license": "MIT",
+        "dist.unpackedSize": 489743,
+        "types": "index.d.ts"
+      }
+    },
+    {
+      "package": "@ncdai/react-wheel-picker",
+      "command": "npm view @ncdai/react-wheel-picker version license dist.unpackedSize types typings dependencies peerDependencies --json",
+      "metadata": {
+        "version": "1.2.3",
+        "license": "MIT",
+        "dist.unpackedSize": 41936,
+        "types": "./dist/index.d.ts",
+        "peerDependencies": {
+          "react": "^16.8 || ^17.0 || ^18.0 || ^19.0.0 || ^19.0.0-rc"
+        }
+      }
+    },
+    {
+      "package": "cesium",
+      "command": "npm view cesium version license dist.unpackedSize types typings dependencies peerDependencies --json",
+      "metadata": {
+        "version": "1.147.0",
+        "license": "Apache-2.0",
+        "dist.unpackedSize": 80196017,
+        "types": "./Source/Cesium.d.ts",
+        "dependencies": {
+          "protobufjs": "^8.8.0",
+          "@cesium/core": "^0.1.1",
+          "@cesium/gltf": "^0.1.1",
+          "@cesium/engine": "^26.5.0",
+          "@cesium/widgets": "^16.3.1"
+        }
+      }
+    }
+  ],
+  "maintenance": [
+    {
+      "repository": "https://github.com/prettymuchbryce/easystarjs",
+      "pushedAt": "2024-01-23T23:07:02Z",
+      "archived": false
+    },
+    {
+      "repository": "https://github.com/anvaka/ngraph.path",
+      "pushedAt": "2026-07-27T05:08:44Z",
+      "archived": false
+    },
+    {
+      "repository": "https://github.com/mourner/flatqueue",
+      "pushedAt": "2026-07-21T11:18:57Z",
+      "archived": false
+    },
+    {
+      "repository": "https://github.com/mourner/simplify-js",
+      "pushedAt": "2022-11-14T20:13:23Z",
+      "archived": false
+    },
+    {
+      "repository": "https://github.com/d3/d3-contour",
+      "pushedAt": "2026-11-03T05:17:49Z",
+      "archived": false
+    },
+    {
+      "repository": "https://github.com/davidjerleke/embla-carousel",
+      "pushedAt": "2026-11-01T12:48:18Z",
+      "archived": false
+    },
+    {
+      "repository": "https://github.com/ncdai/react-wheel-picker",
+      "pushedAt": "2026-11-11T06:46:26Z",
+      "archived": false
+    },
+    {
+      "repository": "https://github.com/CesiumGS/cesium",
+      "pushedAt": "2026-11-13T23:42:43Z",
+      "archived": false
+    }
+  ]
+}

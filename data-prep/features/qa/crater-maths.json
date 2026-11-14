@@ -1,0 +1,15 @@
+{
+  "result": "PASS",
+  "cases": 24,
+  "rimPoints": 17304,
+  "screenKeyChecks": 3,
+  "worstRadiusErrorPercent": 8.970602038971265e-12,
+  "neighbourEdgeChecks": 200,
+  "worstNeighbourErrorPx": 2.2234303287405055e-10,
+  "drawingRecords": 1296796,
+  "drawingChunks": 385,
+  "largestChunkBytes": 286404,
+  "totalCraterBytes": 17165152,
+  "retainedDataUnchanged": true,
+  "drawingIndex": "/Volumes/CodexWork/Projects/MOONDA/app/public/data/features/craters-draw/index.json"
+}

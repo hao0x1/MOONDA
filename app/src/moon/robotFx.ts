@@ -114,6 +114,13 @@ export class Dust {
   private rnd = 1234567;
   private cap: number;
   private c = new Color();
+  private warmDone = false;
+  private warmPoint: Cesium.PointPrimitive | null = null;
+  private warmColour = new Color();
+  private warmSize = 2;
+  private warmAnchor = new Cartesian3();
+  private offWarmPrepare: (() => void) | null = null;
+  private offWarm: (() => void) | null = null;
 
   private scene: Scene;
 
@@ -130,10 +137,49 @@ export class Dust {
 
   get count(): number { return this.live.length; }
 
+  /** Bind the dust shader once under the curtain; this is not an emitted grain. */
+  warmGpu(at: Cartesian3): void {
+    if (this.warmDone || this.warmPoint) return;
+    this.ensureGlows();
+    // Unused points start at the Moon's centre. Seating the pool here also avoids an enormous
+    // bounding sphere stretching from the centre to the rover when its first grain appears.
+    for (const point of this.free) point.position = at;
+    for (const point of this.glows) if (!point.show) point.position = at;
+    const point = this.free.pop();
+    if (!point) return;
+    this.warmPoint = point;
+    Cartesian3.clone(at, this.warmAnchor);
+    Color.clone(point.color, this.warmColour); this.warmSize = point.pixelSize;
+    point.position = at; point.pixelSize = 1; point.color = new Color(1, 1, 1, 0.001); point.show = true;
+    // Use the final camera for this frame. A point at the wheels could be outside its view and
+    // get culled before its shader is ever bound. The curtain hides this one faint warm-up pixel.
+    this.offWarmPrepare = this.scene.preRender.addEventListener(() => {
+      const camera = this.scene.camera;
+      point.position = Cartesian3.add(camera.positionWC, Cartesian3.multiplyByScalar(camera.directionWC, 2, s1), s1);
+    });
+    this.offWarm = this.scene.postRender.addEventListener(() => this.finishWarm(true));
+    this.scene.requestRender();
+  }
+
+  get gpuWarm(): boolean { return this.warmDone; }
+
+  private finishWarm(drawn: boolean): void {
+    this.offWarm?.(); this.offWarm = null;
+    this.offWarmPrepare?.(); this.offWarmPrepare = null;
+    const point = this.warmPoint;
+    if (!point) return;
+    point.show = false; point.color = this.warmColour; point.pixelSize = this.warmSize; point.position = this.warmAnchor;
+    this.free.push(point); this.warmPoint = null;
+    if (drawn) this.warmDone = true;
+  }
+
   /** The two lamps on the camera head: a small hot core and a soft halo each, brightness k (0..1). */
   private glows: Cesium.PointPrimitive[] = [];
-  glow(a: Cartesian3, b: Cartesian3, k: number) {
+  private ensureGlows() {
     if (!this.glows.length) for (let i = 0; i < 4; i++) this.glows.push(this.pts.add({ show: false, pixelSize: 4, color: Color.WHITE, scaleByDistance: new Cesium.NearFarScalar(1, 1.4, 30, 0.35) }));
+  }
+  glow(a: Cartesian3, b: Cartesian3, k: number) {
+    this.ensureGlows();
     const on = k > 0.01;
     this.glows.forEach((p, i) => {
       if (p.show !== on) p.show = on;
@@ -236,7 +282,7 @@ export class Dust {
     }
   }
 
-  clear() { for (const { p } of this.live) { p.show = false; this.free.push(p); } this.live.length = 0; }
+  clear() { this.finishWarm(false); for (const { p } of this.live) { p.show = false; this.free.push(p); } this.live.length = 0; }
   destroy() { this.clear(); this.scene.primitives.remove(this.pts); }
 }
 /** + = the wheel is on the right side (grains fan outwards a little) */

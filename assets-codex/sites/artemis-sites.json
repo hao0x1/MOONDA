@@ -1,0 +1,236 @@
+[
+  {
+    "id": "artemis-nobile-rim-2",
+    "name": "Nobile Rim 2",
+    "status": "planned",
+    "kind": "region",
+    "operator": "NASA",
+    "country": "United States",
+    "date": "2028",
+    "lat": -83.954051,
+    "lon": 58.821546,
+    "precisionKm": 20,
+    "outcome": "planned",
+    "short": "Candidate region for the first Artemis crewed Moon landing",
+    "detail": "NASA is studying this south-pole region for a crewed landing. The pin marks the middle of an area, not a chosen touchdown point.",
+    "source": {
+      "name": "NASA Artemis IV, current surface-landing plan",
+      "url": "https://www.nasa.gov/mission/artemis-iv/"
+    },
+    "coordSource": {
+      "name": "LROC QuickMap layer 3927, A3_9regions-lonlat-simplified.geojson",
+      "url": "https://quickmap.im-ldi.com/layers?stack=3927"
+    },
+    "inQuickMap": true,
+    "verify": false,
+    "note": "One of nine alternative regions announced in October 2024, when the first landing was called Artemis III. NASA now targets Artemis IV in early 2028; this is not nine separate missions. Polar stereographic area centroid computed from the supplied four-corner outline; precisionKm covers the outline, not a navigation error."
+  },
+  {
+    "id": "artemis-mons-mouton",
+    "name": "Mons Mouton",
+    "status": "planned",
+    "kind": "region",
+    "operator": "NASA",
+    "country": "United States",
+    "date": "2028",
+    "lat": -85.426577,
+    "lon": 31.742761,
+    "precisionKm": 20,
+    "outcome": "planned",
+    "short": "Candidate region for the first Artemis crewed Moon landing",
+    "detail": "NASA is studying this south-pole region for a crewed landing. The pin marks the middle of an area, not a chosen touchdown point.",
+    "source": {
+      "name": "NASA Artemis IV, current surface-landing plan",
+      "url": "https://www.nasa.gov/mission/artemis-iv/"
+    },
+    "coordSource": {
+      "name": "LROC QuickMap layer 3927, A3_9regions-lonlat-simplified.geojson",
+      "url": "https://quickmap.im-ldi.com/layers?stack=3927"
+    },
+    "inQuickMap": true,
+    "verify": false,
+    "note": "One of nine alternative regions announced in October 2024, when the first landing was called Artemis III. NASA now targets Artemis IV in early 2028; this is not nine separate missions. Polar stereographic area centroid computed from the supplied four-corner outline; precisionKm covers the outline, not a navigation error."
+  },
+  {
+    "id": "artemis-malapert-massif",
+    "name": "Malapert Massif",
+    "status": "planned",
+    "kind": "region",
+    "operator": "NASA",
+    "country": "United States",
+    "date": "2028",
+    "lat": -85.994785,
+    "lon": -0.235784,
+    "precisionKm": 20,
+    "outcome": "planned",
+    "short": "Candidate region for the first Artemis crewed Moon landing",
+    "detail": "NASA is studying this south-pole region for a crewed landing. The pin marks the middle of an area, not a chosen touchdown point.",
+    "source": {
+      "name": "NASA Artemis IV, current surface-landing plan",
+      "url": "https://www.nasa.gov/mission/artemis-iv/"
+    },
+    "coordSource": {
+      "name": "LROC QuickMap layer 3927, A3_9regions-lonlat-simplified.geojson",
+      "url": "https://quickmap.im-ldi.com/layers?stack=3927"
+    },
+    "inQuickMap": true,
+    "verify": false,
+    "note": "One of nine alternative regions announced in October 2024, when the first landing was called Artemis III. NASA now targets Artemis IV in early 2028; this is not nine separate missions. Polar stereographic area centroid computed from the supplied four-corner outline; precisionKm covers the outline, not a navigation error."
+  },
+  {
+    "id": "artemis-de-gerlache-rim-2",
+    "name": "de Gerlache Rim 2",
+    "status": "planned",
+    "kind": "region",
+    "operator": "NASA",
+    "country": "United States",
+    "date": "2028",
+    "lat": -88.229978,
+    "lon": -64.628438,
+    "precisionKm": 20,
+    "outcome": "planned",
+    "short": "Candidate region for the first Artemis crewed Moon landing",
+    "detail": "NASA is studying this south-pole region for a crewed landing. The pin marks the middle of an area, not a chosen touchdown point.",
+    "source": {
+      "name": "NASA Artemis IV, current surface-landing plan",
+      "url": "https://www.nasa.gov/mission/artemis-iv/"
+    },
+    "coordSource": {
+      "name": "LROC QuickMap layer 3927, A3_9regions-lonlat-simplified.geojson",
+      "url": "https://quickmap.im-ldi.com/layers?stack=3927"
+    },
+    "inQuickMap": true,
+    "verify": false,
+    "note": "One of nine alternative regions announced in October 2024, when the first landing was called Artemis III. NASA now targets Artemis IV in early 2028; this is not nine separate missions. Polar stereographic area centroid computed from the supplied four-corner outline; precisionKm covers the outline, not a navigation error."
+  },
+  {
+    "id": "artemis-mons-mouton-plateau",
+    "name": "Mons Mouton Plateau",
+    "status": "planned",
+    "kind": "region",
+    "operator": "NASA",
+    "country": "United States",
+    "date": "2028",
+    "lat": -84.334701,
+    "lon": 30.592268,
+    "precisionKm": 50,
+    "outcome": "planned",
+    "short": "Candidate region for the first Artemis crewed Moon landing",
+    "detail": "NASA is studying this south-pole region for a crewed landing. The pin marks the middle of an area, not a chosen touchdown point.",
+    "source": {
+      "name": "NASA Artemis IV, current surface-landing plan",
+      "url": "https://www.nasa.gov/mission/artemis-iv/"
+    },
+    "coordSource": {
+      "name": "LROC QuickMap layer 3927, A3_9regions-lonlat-simplified.geojson",
+      "url": "https://quickmap.im-ldi.com/layers?stack=3927"
+    },
+    "inQuickMap": true,
+    "verify": false,
+    "note": "One of nine alternative regions announced in October 2024, when the first landing was called Artemis III. NASA now targets Artemis IV in early 2028; this is not nine separate missions. Polar stereographic area centroid computed from the supplied four-corner outline; precisionKm covers the outline, not a navigation error."
+  },
+  {
+    "id": "artemis-slater-plain",
+    "name": "Slater Plain",
+    "status": "planned",
+    "kind": "region",
+    "operator": "NASA",
+    "country": "United States",
+    "date": "2028",
+    "lat": -87.163714,
+    "lon": 125.537678,
+    "precisionKm": 20,
+    "outcome": "planned",
+    "short": "Candidate region for the first Artemis crewed Moon landing",
+    "detail": "NASA is studying this south-pole region for a crewed landing. The pin marks the middle of an area, not a chosen touchdown point.",
+    "source": {
+      "name": "NASA Artemis IV, current surface-landing plan",
+      "url": "https://www.nasa.gov/mission/artemis-iv/"
+    },
+    "coordSource": {
+      "name": "LROC QuickMap layer 3927, A3_9regions-lonlat-simplified.geojson",
+      "url": "https://quickmap.im-ldi.com/layers?stack=3927"
+    },
+    "inQuickMap": true,
+    "verify": false,
+    "note": "One of nine alternative regions announced in October 2024, when the first landing was called Artemis III. NASA now targets Artemis IV in early 2028; this is not nine separate missions. Polar stereographic area centroid computed from the supplied four-corner outline; precisionKm covers the outline, not a navigation error."
+  },
+  {
+    "id": "artemis-peak-near-cabeus-b",
+    "name": "Peak Near Cabeus B",
+    "status": "planned",
+    "kind": "region",
+    "operator": "NASA",
+    "country": "United States",
+    "date": "2028",
+    "lat": -83.637459,
+    "lon": -68.749495,
+    "precisionKm": 20,
+    "outcome": "planned",
+    "short": "Candidate region for the first Artemis crewed Moon landing",
+    "detail": "NASA is studying this south-pole region for a crewed landing. The pin marks the middle of an area, not a chosen touchdown point.",
+    "source": {
+      "name": "NASA Artemis IV, current surface-landing plan",
+      "url": "https://www.nasa.gov/mission/artemis-iv/"
+    },
+    "coordSource": {
+      "name": "LROC QuickMap layer 3927, A3_9regions-lonlat-simplified.geojson",
+      "url": "https://quickmap.im-ldi.com/layers?stack=3927"
+    },
+    "inQuickMap": true,
+    "verify": false,
+    "note": "One of nine alternative regions announced in October 2024, when the first landing was called Artemis III. NASA now targets Artemis IV in early 2028; this is not nine separate missions. Polar stereographic area centroid computed from the supplied four-corner outline; precisionKm covers the outline, not a navigation error."
+  },
+  {
+    "id": "artemis-nobile-rim-1",
+    "name": "Nobile Rim 1",
+    "status": "planned",
+    "kind": "region",
+    "operator": "NASA",
+    "country": "United States",
+    "date": "2028",
+    "lat": -85.436397,
+    "lon": 37.347042,
+    "precisionKm": 20,
+    "outcome": "planned",
+    "short": "Candidate region for the first Artemis crewed Moon landing",
+    "detail": "NASA is studying this south-pole region for a crewed landing. The pin marks the middle of an area, not a chosen touchdown point.",
+    "source": {
+      "name": "NASA Artemis IV, current surface-landing plan",
+      "url": "https://www.nasa.gov/mission/artemis-iv/"
+    },
+    "coordSource": {
+      "name": "LROC QuickMap layer 3927, A3_9regions-lonlat-simplified.geojson",
+      "url": "https://quickmap.im-ldi.com/layers?stack=3927"
+    },
+    "inQuickMap": true,
+    "verify": false,
+    "note": "One of nine alternative regions announced in October 2024, when the first landing was called Artemis III. NASA now targets Artemis IV in early 2028; this is not nine separate missions. Polar stereographic area centroid computed from the supplied four-corner outline; precisionKm covers the outline, not a navigation error."
+  },
+  {
+    "id": "artemis-haworth",
+    "name": "Haworth",
+    "status": "planned",
+    "kind": "region",
+    "operator": "NASA",
+    "country": "United States",
+    "date": "2028",
+    "lat": -86.763942,
+    "lon": -22.777024,
+    "precisionKm": 30,
+    "outcome": "planned",
+    "short": "Candidate region for the first Artemis crewed Moon landing",
+    "detail": "NASA is studying this south-pole region for a crewed landing. The pin marks the middle of an area, not a chosen touchdown point.",
+    "source": {
+      "name": "NASA Artemis IV, current surface-landing plan",
+      "url": "https://www.nasa.gov/mission/artemis-iv/"
+    },
+    "coordSource": {
+      "name": "LROC QuickMap layer 3927, A3_9regions-lonlat-simplified.geojson",
+      "url": "https://quickmap.im-ldi.com/layers?stack=3927"
+    },
+    "inQuickMap": true,
+    "verify": false,
+    "note": "One of nine alternative regions announced in October 2024, when the first landing was called Artemis III. NASA now targets Artemis IV in early 2028; this is not nine separate missions. Polar stereographic area centroid computed from the supplied four-corner outline; precisionKm covers the outline, not a navigation error."
+  }
+]
