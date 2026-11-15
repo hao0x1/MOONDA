@@ -61,12 +61,15 @@ export function createHandler({ reserve = admit, proxy = proxyChat } = {}) {
     const common = { clientId: admission.clientId, inputBytes: parsed.bytes, reservedUnits: admission.tokenUnits, model: env('DEEPSEEK_MODEL') || 'deepseek-v4-pro' };
     log('admitted', common);
     let released = false;
+    let endLifecycle;
+    // Register before returning headers: late waitUntil calls can lose stream-end logs.
+    const lifecycle = new Promise(resolve => { endLifecycle = resolve; });
+    context.waitUntil?.(lifecycle);
     const finish = detail => {
       if (released) return;
       released = true;
       log('finished', { ...common, ...detail });
-      const pending = admission.release().catch(() => log('release-failed', { clientId: admission.clientId }));
-      context.waitUntil?.(pending);
+      const pending = admission.release().catch(() => log('release-failed', { clientId: admission.clientId })).finally(endLifecycle);
       return pending;
     };
     try {
