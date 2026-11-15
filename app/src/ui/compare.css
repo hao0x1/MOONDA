@@ -120,3 +120,36 @@ html.lang-km .cmp-days-input { font-family: var(--mono), var(--sans); }
   .cmp-detail { animation: none; }
   .cmp-row, .cmp-more, .cmp-days-tick, .cmp-days-comb, .cmp-days-labels span { transition: none; }
 }
+
+@media (max-width: 720px), (max-height: 520px) and (pointer: coarse) {
+  .cmp.phone-sheet .drawer-body { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 0 16px 24px; }
+  .cmp.phone-sheet-peek .drawer-body { display: none; }
+  .cmp.phone-sheet-expanded .phone-sheet-summary:has(> .btn:not(.primary)) { display: none; }
+  .cmp.phone-sheet .cmp-needs { padding-top: 14px; }
+  .cmp.phone-sheet .cmp-table { flex: none; min-height: auto; padding-top: 16px; }
+  .cmp.phone-sheet .cmp-thead { display: none; }
+  .cmp.phone-sheet .cmp-rows { flex: none; overflow: visible; margin-top: 12px; gap: 12px; }
+  .cmp.phone-sheet .cmp-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); padding: 0 12px 10px; border: 1px solid var(--line-2); border-radius: 16px; background: var(--fill-1); }
+  .cmp.phone-sheet .cmp-who { grid-column: 1 / -1; min-height: 64px; padding: 6px 44px 6px 0; }
+  .cmp.phone-sheet .cmp-who-toggle { min-height: 44px; }
+  .cmp.phone-sheet .cmp-name { font-size: 15px; line-height: 21px; }
+  .cmp.phone-sheet .cmp-badge { width: 28px; height: 28px; }
+  .cmp.phone-sheet .cmp-when { min-height: 44px; display: flex; align-items: center; }
+  .cmp.phone-sheet .cmp-cell-hit { min-height: 70px; border-top: 1px solid var(--line); border-left: 0; padding: 10px 4px; }
+  .cmp.phone-sheet .cmp-cell-hit + .cmp-cell-hit { border-left: 1px solid var(--line); }
+  .cmp.phone-sheet .cmp-cell::before { content: attr(data-phone-label); display: block; margin-bottom: 6px; color: var(--text-3); font-size: 11px; line-height: 16px; text-align: center; }
+  .cmp.phone-sheet .cmp-val { font-size: 20px; line-height: 26px; }
+  .cmp.phone-sheet .cmp-val small { font-size: 12px; }
+  .cmp.phone-sheet .cmp-more { opacity: 1; pointer-events: auto; top: 8px; right: 6px; width: 44px; height: 44px; }
+  .cmp.phone-sheet .cmp-msg { grid-column: 1 / -1; border-left: 0; min-height: 56px; }
+  .cmp.phone-sheet .cmp-detail { padding: 12px 0 0; }
+  .cmp.phone-sheet .cmp-line { margin-left: 0; font-size: 14px; line-height: 21px; }
+  .cmp.phone-sheet .cmp-acts { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin: 12px 0 0; }
+  .cmp.phone-sheet .cmp-acts .btn { min-width: 0; margin: 0; white-space: normal; font-size: 12px; line-height: 18px; padding: 7px; }
+  .cmp.phone-sheet .cmp-days-scale { height: 48px; }
+  .cmp.phone-sheet .cmp-need-controls { grid-template-columns: minmax(0, 1fr) 48px; align-items: center; }
+  .cmp.phone-sheet .cmp-days-input { width: 48px; height: 44px; margin: 0; font-size: 16px; }
+  .cmp.phone-sheet .cmp-add { width: 100%; margin: 10px 0 0; padding: 0; }
+  .cmp.phone-sheet .cmp-add span { white-space: normal; line-height: 19px; }
+  .cmp-date-picker .btn { min-height: 44px; }
+}

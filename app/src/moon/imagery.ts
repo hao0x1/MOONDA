@@ -189,7 +189,7 @@ class ImageryWorkers {
       this.local.push(0);
       this.net.push([0, 0, 0]);
       // Science maps have their own worker so keeping them ready cannot evict the Moon photo.
-      const budget = phone ? (i === this.scienceWorker ? 16 : i === 0 ? 16 : 12)
+      const budget = phone ? (i === this.scienceWorker ? 8 : i === 0 ? 16 : 6)
         : i === this.scienceWorker ? 64 : i === 0 ? 128 : i === 1 ? 64 : 32;
       w.postMessage({ cacheBudgetBytes: budget * 2 ** 20, phone } satisfies ToWorker);
     }
@@ -216,7 +216,8 @@ class ImageryWorkers {
     const w = this.workers[worker];
     if (!w) return Promise.resolve(blankTile());
     const count = local ? this.local : this.busy;
-    if (count[worker] >= (local ? LOCAL_QUEUE : worker === 0 ? RASTER_QUEUE : TILED_QUEUE)) { this.stats.refused++; return undefined; }
+    const limit = isPhoneGraphics() ? (local ? 12 : 8) : local ? LOCAL_QUEUE : worker === 0 ? RASTER_QUEUE : TILED_QUEUE;
+    if (count[worker] >= limit) { this.stats.refused++; return undefined; }
     count[worker]++;
     this.stats.asked++;
     this.stats.deepest[job.kind] = Math.max(this.stats.deepest[job.kind] ?? 0, job.level);
@@ -818,7 +819,7 @@ export function scienceRasterValueAt(source: ScienceRasterSource, lat: number, l
 }
 
 const SCIENCE_TILE_BYTES = TILE * TILE * 4;
-const scienceTileBudget = () => (isPhoneGraphics() ? 12 : 96) * 2 ** 20;
+const scienceTileBudget = () => (isPhoneGraphics() ? 4 : 96) * 2 ** 20;
 const SCIENCE_IDLE_MS = 5 * 60_000;
 interface PreparedScienceTile {
   owner: PreparedLayerProvider; key: string; promise: Promise<ImageBitmap>;

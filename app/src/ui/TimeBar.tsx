@@ -4,13 +4,14 @@
 //            selected, two hairlines on top show when it sees the Sun (warm) and Earth (blue)
 //   right  — the big clock: the projected time in UTC, the date, and Cambodia time + mission day
 
-import { CaretDown, Pause, Play } from '@phosphor-icons/react';
+import { CaretDown, CaretUp, Clock, Pause, Play } from '@phosphor-icons/react';
 import { useEffect, useRef, useState } from 'react';
 import { monthShort, useT } from '../i18n';
 import { runs, type SpotTimeline } from '../science/analysis';
 import { DateTimePicker } from './DateTimePicker';
 import { fmtCambodia, fmtClockUtc, fmtDay, fmtUtc } from './format';
 import { MenuButton, Popover } from './kit';
+import { usePhoneLayout } from './PhoneSheet';
 
 interface Props {
   arrival: number;
@@ -57,6 +58,8 @@ const ticksPerDay = (days: number) => (days <= 7 ? 8 : days <= 14 ? 4 : 2);
 
 export function TimeBar(p: Props) {
   const t = useT();
+  const phone = usePhoneLayout();
+  const [phoneExpanded, setPhoneExpanded] = useState(false);
   const [calOpen, setCalOpen] = useState(false);
   const [trackW, setTrackW] = useState(0);
   const dateBtn = useRef<HTMLButtonElement>(null);
@@ -76,9 +79,10 @@ export function TimeBar(p: Props) {
       const h = window.innerHeight;
       // (a part that is not shown, as the menus and the clock are in Land here on a phone, takes no room)
       const top = (el: HTMLElement | null) => (el && el.getClientRects().length ? Math.round(h - el.getBoundingClientRect().top) : 0);
-      const dock = top(menus.current);
+      const sheet = phone ? document.querySelector<HTMLElement>('.app:not(.standing) .phone-sheet:not([hidden])') : null;
+      const dock = sheet ? top(sheet) : phone ? Math.max(top(menus.current), top(bar.current)) : top(menus.current);
       const left = Math.max(dock, top(mid.current));
-      const right = top(clock.current);
+      const right = phone ? dock : top(clock.current);
       root.style.setProperty('--dock', `${dock}px`);
       root.style.setProperty('--dock-r', `${right}px`);
       root.style.setProperty('--tb', `${left - 16}px`);
@@ -89,7 +93,7 @@ export function TimeBar(p: Props) {
     for (const el of [bar.current, menus.current, mid.current, clock.current, track.current]) if (el) ro.observe(el);
     window.addEventListener('resize', apply);
     return () => { ro.disconnect(); window.removeEventListener('resize', apply); };
-  }, []);
+  }, [phone]);
   const span = p.days * 86400000;
   const frac = Math.min(1, Math.max(0, (p.cursor - p.arrival) / span));
 
@@ -130,7 +134,11 @@ export function TimeBar(p: Props) {
   return (
     <>
       <div className="tb-shade" aria-hidden="true" />
-      <div ref={bar} className="timebar" role="region" aria-label={t('tb.region')}>
+      <div ref={bar} className={`timebar${phone && !phoneExpanded ? ' phone-time-collapsed' : ''}`} role="region" aria-label={t('tb.region')}>
+        {phone && <button type="button" className="phone-time-toggle panel" aria-expanded={phoneExpanded}
+          aria-label={`${t('tb.region')}: ${fmtUtc(p.cursor)}`} onClick={() => setPhoneExpanded(v => !v)}>
+          <Clock size={17} /><span>{fmtDay(p.cursor)} · {fmtClockUtc(p.cursor)}</span>{phoneExpanded ? <CaretDown size={14} /> : <CaretUp size={14} />}
+        </button>}
         <div ref={menus} className="tbar-menus">
           <button ref={dateBtn} type="button" className="mbtn" aria-haspopup="dialog" aria-expanded={calOpen} data-tip={calOpen ? undefined : t('tb.arrives.tip')} onClick={() => setCalOpen(o => !o)}>
             <span className="mbtn-cap">{t('tb.arrives')}</span>

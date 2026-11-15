@@ -1,12 +1,13 @@
 // The overview keeps the same route when the map changes between globe and flat.
 // These controls use the shared tokens; their position does not change the map's click frame.
-import { Path } from '@phosphor-icons/react';
-import { useEffect, useState } from 'react';
+import { Path, X } from '@phosphor-icons/react';
+import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useT } from '../i18n';
 import type { RoutePrefer, RouteResult } from '../science/route';
 import { IconButton } from './kit';
 import { RouteCard } from './RouteCard';
+import { PhoneSheetHandle, usePhoneSheet } from './PhoneSheet';
 import './routeTool.css';
 
 interface ButtonProps {
@@ -55,6 +56,8 @@ interface Props {
 export function RouteTool({ route, busy, failed = false, prefer, onPrefer, onClear, armed = false }: Props) {
   const t = useT();
   const hasRoute = !!route || busy || failed;
+  const sheetRoot = useRef<HTMLDivElement>(null);
+  const sheet = usePhoneSheet(sheetRoot, hasRoute || armed);
   if (!hasRoute && !armed) return null;
   const metres = route?.lengthM ?? 0;
   const distance = metres < 995 ? t('route.metres', { n: Math.round(metres) })
@@ -69,7 +72,10 @@ export function RouteTool({ route, busy, failed = false, prefer, onPrefer, onCle
     : route?.reason === 'same' ? 'route.reason.same' : 'route.reason.blocked';
   const state = busy ? 'working' : !hasRoute ? 'pick' : failed || !route?.ok ? 'failed' : 'ready';
 
-  return <div className="oroute-dock" data-overview-route-bar data-route-state={state}>
+  return <div ref={sheetRoot} className={`oroute-dock${sheet.className}${sheet.phone ? ' panel' : ''}`} data-overview-route-bar data-route-state={state}>
+    <PhoneSheetHandle sheet={sheet} />
+    {sheet.phone && <header className="drawer-head"><h2>{t('route.title')}</h2><span className="drawer-gap" />
+      <IconButton label={t('common.close')} onClick={onClear}><X size={18} /></IconButton></header>}
     <RouteCard state={state} hint={t('route.hint')} distance={distance} duration={duration} slope={slope}
       failTitle={t('route.unsafe')} failWhy={t(reason)} prefer={prefer} onPrefer={onPrefer} onClear={hasRoute ? onClear : undefined} />
     {/* while the tool is armed and a route is already shown, say that another click moves the destination */}

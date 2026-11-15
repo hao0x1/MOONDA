@@ -21,7 +21,7 @@ import { isPhoneGraphics } from '../app/quality';
 
 export const SUN_SHADOW = {
   /** depth-picture size (texels per side) and half its width on the ground (m): Full detail / Smooth */
-  full: { size: 4096, half: 34 }, light: { size: 2048, half: 26 },
+  full: { size: 2048, half: 34 }, light: { size: 2048, half: 26 },
   /** the picture is centred this share of its half-width ahead of the camera (so more of it is where you look) */
   ahead: 0.45,
   /** depth range along the sunbeam (m): casters up to half of it towards the Sun still count */

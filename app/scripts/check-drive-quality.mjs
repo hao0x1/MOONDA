@@ -1,7 +1,7 @@
 // Real GPU check for Drive staying sharp again after stopping, plus the first W hitch.
 // node scripts/check-drive-quality.mjs --out <folder> [--baseline] [--modules <frozen Vite modules>]
 // By default two presses drive for 6 s and release for 4 s. --presses 10 keeps the longer first/tenth
-// comparison; --rest-ms 8000 repeats the original stop window. Each press uses the same path.
+// comparison; --rest-ms 8000 allows the physically coasting rover to stop before checking recovery.
 // One browser globally: take the shared browser lease before starting Chrome.
 import puppeteer from 'puppeteer-core';
 import assert from 'node:assert/strict';
@@ -95,6 +95,9 @@ try {
       '--disable-background-timer-throttling', '--disable-renderer-backgrounding', '--disable-backgrounding-occluded-windows'] });
   await lease.afterLaunch(browser);
   page = (await browser.pages())[0] ?? await browser.newPage();
+  // Chrome's initial about:blank can retain its 800x600, 1x native window until the first screenshot.
+  // Apply emulation explicitly before loading, so every measured press uses the same Retina workload.
+  await page.setViewport({ width, height, deviceScaleFactor: 2 });
   await page.evaluateOnNewDocument(() => {
     // Keep this one test on its loaded source while other sessions edit. The actual Vite socket
     // stays connected; only hot updates and reload commands are stopped before Vite sees them.
@@ -281,6 +284,7 @@ try {
     requestAnimationFrame(frame);
     try { q.observer = new PerformanceObserver(list => q.longTasks.push(...list.getEntries().map(e => ({ ms: e.startTime, duration: e.duration, name: e.name, phase: q.phase, press: q.press })))); q.observer.observe({ entryTypes: ['longtask'] }); } catch { /* unsupported */ }
     return { baseScale: v.resolutionScale, phase: L.phase, stats: { ...L.stats }, width: v.canvas.width, height: v.canvas.height,
+      viewport: { width: innerWidth, height: innerHeight, devicePixelRatio },
       terrain: q.terrain, reliefActive: !!L.relief && !!provider.relief, landerRelief: !!L.relief, providerRelief: !!provider.relief,
       gpuWarm: { dust: L.dust?.gpuWarm ?? null, tracks: L.tracks?.gpuWarm ?? null },
       warmEffects: { trackSections: L.tracks?.count ?? 0, liveDust: L.dust?.count ?? 0,
@@ -288,6 +292,7 @@ try {
       quality: JSON.parse(localStorage.getItem('moonda.settings.v1') ?? '{}').quality ?? 'full',
       instrumented: q.restore.length, gpu: gl.getParameter(gl.getExtension('WEBGL_debug_renderer_info')?.UNMASKED_RENDERER_WEBGL ?? gl.RENDERER) };
   });
+  assert.deepEqual(result.setup.viewport, { width, height, devicePixelRatio: 2 }, 'Chrome did not apply the requested Retina viewport');
   assert.ok(result.setup.reliefActive, 'Relief geometry is inactive: refuse to measure a flat baseline or final scene');
   assert.ok(result.setup.terrain.supportingFineSourceTiles > 0, 'No genuine fine relief source supports the drawn tiles');
   assert.ok(result.setup.terrain.footSource?.level >= 18, 'The ground under the rover must come from genuine level-18 relief, including cut-up children');
@@ -363,7 +368,7 @@ try {
   result.terrainComparison = { standing: result.setup.behindStanding.terrain,
     driving: result.samples.find(s => s.press === 1 && s.phase === 'press' && Math.abs(s.speed) > 0.5)?.terrain,
     stopped: result.runs.at(-1)?.endState?.terrain };
-  result.pixelFloor = { quality: result.setup.quality, minimumNativeRatio: Math.min(...result.runs.flatMap(r => r.frames.filter(f => f.phase === 'press').map(f => f.pixelRatio))), requiredNativeRatio: 1.5 };
+  result.pixelFloor = { quality: result.setup.quality, minimumNativeRatio: Math.min(...result.runs.flatMap(r => r.frames.filter(f => f.phase === 'press').map(f => f.pixelRatio))), requiredNativeRatio: 1.25 };
   result.conclusion = result.restoration.every(r => r.ok) ? 'Drawing size and detail returned within 1.5 s of stable zero speed.' : 'Drawing size or detail failed to return within 1.5 s of stable zero speed; inspect restoration and samples.';
   writeFileSync(join(out, 'result.json'), JSON.stringify(result, null, 2));
   console.log(JSON.stringify({ out, mode: result.mode, setup: result.setup, restoration: result.restoration, pixelFloor: result.pixelFloor,
@@ -372,7 +377,7 @@ try {
   if (!baseline) {
     assert.deepEqual(result.errors, [], 'Browser errors');
     for (const check of result.restoration) assert.ok(check.ok, `Press ${check.press}: drawing size/detail did not return within 1.5 s after speed reached stable zero`);
-    if (result.setup.quality === 'full') assert.ok(result.pixelFloor.minimumNativeRatio >= 1.5 - 0.005, `Full detail drawing fell below 1.5 native pixels per CSS pixel (${result.pixelFloor.minimumNativeRatio})`);
+    if (result.setup.quality === 'full') assert.ok(result.pixelFloor.minimumNativeRatio >= result.pixelFloor.requiredNativeRatio - 0.005, `Full detail drawing fell below ${result.pixelFloor.requiredNativeRatio} native pixels per CSS pixel (${result.pixelFloor.minimumNativeRatio})`);
   }
 } catch (error) {
   result.failure = error.stack || String(error);

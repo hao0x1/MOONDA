@@ -14,6 +14,8 @@ export const shell: Partial<Record<keyof typeof en, string>> = {
   'top.langTip': 'ប្ដូរភាសា៖ English / ខ្មែរ',
   'top.soundOn': 'តន្ត្រីកំពុងបើក។ ចុចដើម្បីបិទ',
   'top.soundOff': 'តន្ត្រីបិទហើយ។ ចុចដើម្បីបើក',
+  'top.gfxFull': 'ក្រាហ្វិក៖ លម្អិតពេញ។ ចុចដើម្បីប្ដូរទៅ រលូន (លឿនជាងលើកុំព្យូទ័រចាស់)',
+  'top.gfxLight': 'ក្រាហ្វិក៖ រលូន។ ចុចដើម្បីប្ដូរទៅ លម្អិតពេញ',
 
   'place.kind.pin': 'ចំណុចដែលបានដៅ',
   'place.kind.artemis': 'តំបន់ Artemis',
@@ -108,6 +110,8 @@ export const shell: Partial<Record<keyof typeof en, string>> = {
   'render.stopped.light': 'ប្រើក្រាហ្វិកស្រាលជាង រួចផ្ទុកឡើងវិញ',
   'render.stopped.reload': 'ផ្ទុកឡើងវិញ',
   'render.stopped.detail': 'អ្វីដែលខុស',
+  'render.context.title': 'កំពុងស្ដារផែនទី',
+  'render.context.body': 'ក្រាហ្វិកបានផ្អាក។ ទំព័រនឹងផ្ទុកឡើងវិញ ហើយត្រឡប់ទៅទីតាំងរបស់អ្នក។',
 
   'status.standing': 'បានចុះចតនៅ {name}',
   'status.move': 'រំកិលព្រួញកណ្ដុរលើព្រះច័ន្ទ ដើម្បីដឹងថាវានៅត្រង់ណា',

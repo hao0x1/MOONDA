@@ -71,3 +71,11 @@ html.lang-km .rcard-about, html.lang-km .rcard-hint { line-height:24px; }
 /* on the busy Moon photo the card is nearly solid, so its small text stays easy to read */
 .oroute-dock .rcard { background:rgba(21,22,25,.93); box-shadow:0 0 0 1px rgba(255,255,255,.1),0 14px 40px rgba(0,0,0,.5); }
 .oroute-dock::before { background:rgba(21,22,25,.93); -webkit-backdrop-filter:none; backdrop-filter:none; }
+
+@media (max-width: 720px), (max-height: 520px) and (pointer: coarse) {
+  .oroute-dock.phone-sheet > .rcard { flex: 1; min-height: 0; width: 100%; overflow-y: auto; border: 0; border-radius: 0; box-shadow: none; background: transparent; padding: 12px 16px; }
+  .oroute-dock.phone-sheet .rcard-head { display: none; }
+  .oroute-dock.phone-sheet .rcard-kind { min-height: 52px; }
+  .oroute-dock.phone-sheet .rcard-kinds button { min-height: 48px; }
+  .oroute-dock.phone-sheet .oroute-again { padding: 0 16px 8px; }
+}

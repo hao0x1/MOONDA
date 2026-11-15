@@ -174,7 +174,13 @@ export class FarRocks {
   /** You are at (we, wn): make a new batch round you when you have gone far enough (built off the main thread). */
   update(we: number, wn: number, force = false) {
     // (the landing spot's frame moved, see lander.ts RECENTRE_M: the stones' places are relative to it)
-    if (!Cartesian3.equals(this.builtOrigin, this.env.origin)) force = true;
+    if (!Cartesian3.equals(this.builtOrigin, this.env.origin)) {
+      force = true;
+      // A worker may still be building the previous landing spot. Its seats and relative
+      // centres belong to that old frame and must never appear in the new landing view.
+      if (this.next) { this.viewer.scene.primitives.remove(this.next); this.next = null; }
+      if (this.prim) this.prim.show = false;
+    }
     if (!force && this.at && Math.hypot(we - this.at[0], wn - this.at[1]) < FAR_ROCKS.rebuildM) return;
     if (this.next) return; // one at a time
     const E = this.env;
@@ -309,7 +315,11 @@ export class FarRocks {
 
   show(on: boolean) {
     if (this.prim) this.prim.show = on;
-    if (!on) { this.at = null; this.reseatLeft = 0; this.reseatAgain = false; }
+    if (!on) {
+      // Leaving during an asynchronous build must not let swapIn show the old batch later.
+      if (this.next) { this.viewer.scene.primitives.remove(this.next); this.next = null; }
+      this.at = null; this.reseatLeft = 0; this.reseatAgain = false;
+    }
   }
 
   destroy() {

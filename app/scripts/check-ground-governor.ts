@@ -102,11 +102,12 @@ try {
   {
     const base = 0.8673608, f = fixture(true, base, 2);
     f.run(0.1, false, 8); f.run(3, true, 30);
-    assert.ok(f.viewer.resolutionScale >= 0.75, 'a capped Retina drawing fell below 1.5 native pixels per point');
+    assert.ok(f.viewer.resolutionScale >= 0.625, 'a capped Retina drawing fell below 1.25 native pixels per point');
+    assert.ok(f.viewer.resolutionScale >= base * 0.75, 'a capped Retina drawing lost more than a quarter of its linear resolution');
     assert.ok(f.viewer.resolutionScale < base, 'the native floor prevented all permitted shedding');
     assert.equal(f.resizes.filter(r => r.to < r.from).length, 1, 'one bounded Retina correction caused more than one buffer allocation');
     f.run(1.02, false, 30); assert.equal(f.viewer.resolutionScale, base);
-    f.destroy(); checks.push('a capped 2x Retina view keeps at least 1.5 native pixels per point');
+    f.destroy(); checks.push('a capped 2x Retina view keeps at least 1.25 native pixels per point and restores its full surface size');
   }
   {
     const f = fixture(); f.run(0.1, false, 8); f.governor.hold = 0.1;

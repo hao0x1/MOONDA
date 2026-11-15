@@ -13,6 +13,8 @@ export const shell = {
   'top.langTip': 'Switch language: English / Khmer',
   'top.soundOn': 'Music is on. Click to turn it off',
   'top.soundOff': 'Music is off. Click to turn it on',
+  'top.gfxFull': 'Graphics: Full detail. Click for Smooth, faster on older computers',
+  'top.gfxLight': 'Graphics: Smooth. Click for Full detail, the sharpest Moon',
 
   'place.kind.pin': 'Dropped pin',
   'place.kind.artemis': 'Artemis region',
@@ -107,6 +109,8 @@ export const shell = {
   'render.stopped.light': 'Use lighter graphics and reload',
   'render.stopped.reload': 'Reload',
   'render.stopped.detail': 'What went wrong',
+  'render.context.title': 'Restoring the map',
+  'render.context.body': 'Graphics were interrupted. The page will reload and return to your place.',
 
   'status.standing': 'Landed at {name}',
   'status.move': 'Move the pointer over the Moon to see where it is',

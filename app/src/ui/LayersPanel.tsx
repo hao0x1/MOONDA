@@ -5,6 +5,7 @@ import type { CSSProperties } from 'react';
 import { useT, type Key } from '../i18n';
 import { CLASS_LAYERS, layerCoverage, layerHelp, layerSource, layerTitle, type LayerDef, type LayerGroup, type LegendStop } from '../moon/layers';
 import { Help } from './Help';
+import { PhoneSheetHandle, usePhoneSheet } from './PhoneSheet';
 import { IconButton, useReachesControls } from './kit';
 
 interface Props {
@@ -65,8 +66,10 @@ export function LayerLegend({ layer }: { layer: Pick<LayerDef, 'id' | 'legend' |
 export function LayersPanel({ groups, state, opacity, onToggle, onOpacity, onClose, onReach, className, helpSide = 'left' }: Props) {
   const root = useReachesControls(r => onReach?.(r));
   const t = useT();
+  const sheet = usePhoneSheet(root);
   return (
-    <section ref={root} className={`layers panel${className ? ` ${className}` : ''}`} role="dialog" aria-label={t('layers.aria')}>
+    <section ref={root} className={`layers panel${className ? ` ${className}` : ''}${sheet.className}`} role="dialog" aria-label={t('layers.aria')}>
+      <PhoneSheetHandle sheet={sheet} />
       <header className="drawer-head">
         <h2>{t('layers.title')}</h2>
         <span className="drawer-gap" />

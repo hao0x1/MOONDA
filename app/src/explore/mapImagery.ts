@@ -25,7 +25,7 @@ const TIMEOUT_MS = 20000;
 const RETRY_MS = 30000;
 const SCIENCE_BYTES = 24 * 1024 * 1024;
 const photoCacheLimits = () => isPhoneGraphics()
-  ? { items: 96, bytes: 32 * 1024 * 1024, scienceBytes: 8 * 1024 * 1024 }
+  ? { items: 48, bytes: 16 * 1024 * 1024, scienceBytes: 4 * 1024 * 1024 }
   : { items: MAX_ITEMS, bytes: MAX_BYTES, scienceBytes: SCIENCE_BYTES };
 export const SCIENCE_TILE_SIZE = 256;
 const heightParts = new WeakMap<LayerDef, { global: LayerDef; polar: LayerDef }>();
@@ -270,17 +270,16 @@ async function normaliseSciencePixels(bitmaps: ImageBitmap[], flip: boolean): Pr
   return createImageBitmap(context.getImageData(0, 0, 256, 256), { premultiplyAlpha: 'none', colorSpaceConversion: 'none' });
 }
 
-/** Reproject once on the GPU; every far-map frame then needs only ordinary image blits.
- * The true-to-display transform matches moon/flatMap.ts. Canvas bitmaps have north at the top,
- * whereas flatMap's intermediate GL texture has its first row at the bottom. */
-function flatBitmap(bitmap: ImageBitmap): ImageBitmap {
+// ONE graphics context does every projection. It used to be a new context per photo, never closed: zooming the
+// big map opened dozens, and past the browser's limit (about 16) the browser kills its OLDEST context, which is
+// the Moon view itself; the page then reloaded to recover (the owner's "it suddenly just reloads").
+let projector: { canvas: OffscreenCanvas; gl: WebGL2RenderingContext; program: WebGLProgram; vao: WebGLVertexArrayObject; vertices: WebGLBuffer } | null = null;
+function photoProjector() {
+  if (projector && !projector.gl.isContextLost()) return projector;
+  projector = null;
   const canvas = new OffscreenCanvas(1, 1);
   const gl = canvas.getContext('webgl2', { alpha: false, antialias: false, depth: false, stencil: false });
   if (!gl) throw new Error('Photo projection unavailable');
-  const maxTexture = gl.getParameter(gl.MAX_TEXTURE_SIZE) as number;
-  const viewport = gl.getParameter(gl.MAX_VIEWPORT_DIMS) as Int32Array;
-  const width = Math.min(2048, bitmap.width, maxTexture, gl.getParameter(gl.MAX_RENDERBUFFER_SIZE) as number, viewport[0], viewport[1] * 2), height = width / 2;
-  canvas.width = width; canvas.height = height;
   const program = gl.createProgram();
   if (!program) throw new Error('Photo projection unavailable');
   const sources = [
@@ -310,35 +309,52 @@ function flatBitmap(bitmap: ImageBitmap): ImageBitmap {
   }
   gl.bindAttribLocation(program, 0, 'p'); gl.linkProgram(program);
   if (!gl.getProgramParameter(program, gl.LINK_STATUS)) { gl.deleteProgram(program); throw new Error('Photo projection unavailable'); }
-  const vertices = gl.createBuffer(), texture = gl.createTexture(), vao = gl.createVertexArray();
+  const vertices = gl.createBuffer(), vao = gl.createVertexArray();
+  if (!vertices || !vao) throw new Error('Photo projection unavailable');
   gl.bindVertexArray(vao); gl.bindBuffer(gl.ARRAY_BUFFER, vertices);
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
   gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+  gl.useProgram(program); gl.uniform1i(gl.getUniformLocation(program, 'photo'), 0);
+  return (projector = { canvas, gl, program, vao, vertices });
+}
+
+/** Reproject once on the GPU; every far-map frame then needs only ordinary image blits.
+ * The true-to-display transform matches moon/flatMap.ts. Canvas bitmaps have north at the top,
+ * whereas flatMap's intermediate GL texture has its first row at the bottom. */
+function flatBitmap(bitmap: ImageBitmap): ImageBitmap {
+  const { canvas, gl, program, vao } = photoProjector();
+  const maxTexture = gl.getParameter(gl.MAX_TEXTURE_SIZE) as number;
+  const viewport = gl.getParameter(gl.MAX_VIEWPORT_DIMS) as Int32Array;
+  const width = Math.min(2048, bitmap.width, maxTexture, gl.getParameter(gl.MAX_RENDERBUFFER_SIZE) as number, viewport[0], viewport[1] * 2), height = width / 2;
+  canvas.width = width; canvas.height = height;
+  const texture = gl.createTexture();
+  gl.useProgram(program); gl.bindVertexArray(vao);
   gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, texture);
   gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
   gl.pixelStorei(gl.UNPACK_COLORSPACE_CONVERSION_WEBGL, gl.NONE);
-  // The smaller output does not make an oversized input texture legal on a phone.
-  let source: ImageBitmap | OffscreenCanvas = bitmap;
-  if (Math.max(bitmap.width, bitmap.height) > maxTexture) {
-    const scale = maxTexture / Math.max(bitmap.width, bitmap.height);
-    const small = new OffscreenCanvas(Math.max(1, Math.floor(bitmap.width * scale)), Math.max(1, Math.floor(bitmap.height * scale)));
-    const context = small.getContext('2d');
-    if (!context) throw new Error('Photo resizing unavailable');
-    context.drawImage(bitmap, 0, 0, small.width, small.height); source = small;
+  try {
+    // The smaller output does not make an oversized input texture legal on a phone.
+    let source: ImageBitmap | OffscreenCanvas = bitmap;
+    if (Math.max(bitmap.width, bitmap.height) > maxTexture) {
+      const scale = maxTexture / Math.max(bitmap.width, bitmap.height);
+      const small = new OffscreenCanvas(Math.max(1, Math.floor(bitmap.width * scale)), Math.max(1, Math.floor(bitmap.height * scale)));
+      const context = small.getContext('2d');
+      if (!context) throw new Error('Photo resizing unavailable');
+      context.drawImage(bitmap, 0, 0, small.width, small.height); source = small;
+    }
+    try { gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, source); }
+    finally { if (source instanceof OffscreenCanvas) { source.width = 1; source.height = 1; } }
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.uniform2f(gl.getUniformLocation(program, 'size'), width, height);
+    gl.viewport(0, 0, width, height); gl.drawArrays(gl.TRIANGLES, 0, 3);
+    return canvas.transferToImageBitmap();
+  } finally {
+    gl.deleteTexture(texture);
+    canvas.width = 1; canvas.height = 1;
   }
-  try { gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, source); }
-  finally { if (source instanceof OffscreenCanvas) { source.width = 1; source.height = 1; } }
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-  gl.useProgram(program); gl.uniform1i(gl.getUniformLocation(program, 'photo'), 0);
-  gl.uniform2f(gl.getUniformLocation(program, 'size'), width, height);
-  gl.viewport(0, 0, width, height); gl.drawArrays(gl.TRIANGLES, 0, 3);
-  const result = canvas.transferToImageBitmap();
-  gl.deleteTexture(texture); gl.deleteBuffer(vertices); gl.deleteVertexArray(vao); gl.deleteProgram(program);
-  canvas.width = 1; canvas.height = 1;
-  return result;
 }
 
 interface DecodeJob { kind: 'decode' | 'crop' | 'science'; resolve: (bitmap: ImageBitmap) => void; reject: (reason: Error) => void }
@@ -735,7 +751,8 @@ export class MapImagery {
 
   /** Call once after drawing. Moving the map drops downloads for ground no view needs any more. */
   retain(owner: object, keys: Set<string>): void {
-    this.owners.set(owner, keys);
+    if (isPhoneGraphics() && !keys.size) this.owners.delete(owner);
+    else this.owners.set(owner, keys);
     this.cancelUnused();
     this.evict();
     this.schedule();
@@ -744,6 +761,11 @@ export class MapImagery {
   release(owner: object): void {
     this.owners.delete(owner);
     this.cancelUnused();
+    if (isPhoneGraphics() && !this.owners.size) {
+      for (const entry of this.cached.values()) closeCachedPhoto(entry.bitmap);
+      this.cached.clear(); this.bytes = 0;
+      if (!decodeJobs.size) { photoWorker?.terminate(); photoWorker = null; decodeStats.workerSourceCache = 0; }
+    }
     this.evict();
   }
 

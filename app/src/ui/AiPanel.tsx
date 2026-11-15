@@ -15,6 +15,7 @@ import { makeRunner, SYSTEM_PROMPT, TOOLS, type AppBridge } from '../ai/tools';
 import { t as tr, tMaybe, tn, useT } from '../i18n';
 import { ResultsTable, spotRows, Trace, type StepBlock } from './AiTrace';
 import './ai.css';
+import { PhoneSheetHandle, usePhoneSheet } from './PhoneSheet';
 
 const SUGGESTIONS = [
   'Find the best landing spot near Shackleton crater for my mission',
@@ -198,6 +199,9 @@ function finish(turn: Turn, end?: 'stopped' | 'interrupted'): Turn {
 
 export function AiPanel({ bridge, hidden, onClose, onBusy }: { bridge: AppBridge; hidden: boolean; onClose(): void; onBusy?(busy: boolean): void }) {
   const t = useT();
+  const sheetRoot = useRef<HTMLElement>(null);
+  // (on a phone the AI opens as a full page, like a tab of its own)
+  const sheet = usePhoneSheet(sheetRoot, !hidden, undefined, true);
   const bridgeRef = useRef(bridge);
   bridgeRef.current = bridge;
   const makeAgent = () => new Agent(SYSTEM_PROMPT, TOOLS, makeRunner(new Proxy({} as AppBridge, { get: (_t, k) => (bridgeRef.current as never)[k] })));
@@ -222,7 +226,7 @@ export function AiPanel({ bridge, hidden, onClose, onBusy }: { bridge: AppBridge
   const chatIdRef = useRef(chatId);
   useEffect(() => { turnsRef.current = turns; chatIdRef.current = chatId; }, [turns, chatId]);
 
-  useEffect(() => { if (!hidden && view === 'chat') field.current?.focus(); }, [hidden, view]);
+  useEffect(() => { if (!sheet.phone && !hidden && view === 'chat') field.current?.focus(); }, [hidden, view, sheet.phone]);
   useEffect(() => { const el = scroller.current; if (el && stick.current && view === 'chat') el.scrollTop = el.scrollHeight; }, [turns, view, hidden]);
   useEffect(() => { onBusy?.(busy); }, [busy, onBusy]);
   useEffect(() => { saveActiveId(chatId); }, [chatId]);
@@ -364,16 +368,17 @@ export function AiPanel({ bridge, hidden, onClose, onBusy }: { bridge: AppBridge
   }
 
   return (
-    <section className="ai-panel panel" aria-label={t('ai.panelLabel')} hidden={hidden}>
+    <section ref={sheetRoot} className={`ai-panel panel${sheet.className}`} aria-label={t('ai.panelLabel')} hidden={hidden}>
+      <PhoneSheetHandle sheet={sheet} />
       <header className="ai-head">
         <span className="ai-head-mark"><AiMark size={18} /></span>
         <div className="ai-head-text">
           <h2>{view === 'history' ? t('ai.chats') : t('ai.title')}</h2>
           <span>{view === 'history' ? t('ai.chatsNote') : turns.length ? chatTitle(turns) : t('ai.subtitle')}</span>
         </div>
-        <button type="button" className={`ai-icon-btn${view === 'history' ? ' on' : ''}`} onClick={() => setView(v => (v === 'history' ? 'chat' : 'history'))}
+        <button type="button" className={`ai-icon-btn${view === 'history' ? ' on' : ''}`} onClick={() => { if (sheet.phone) sheet.setExpanded(true); setView(v => (v === 'history' ? 'chat' : 'history')); }}
           data-tip={t(view === 'history' ? 'ai.tip.backToChat' : 'ai.tip.history')} aria-label={t('ai.history')} aria-pressed={view === 'history'}><ClockCounterClockwise size={18} /></button>
-        <button type="button" className="ai-icon-btn" onClick={startFresh} data-tip={t('ai.tip.newChat')} aria-label={t('ai.newChat')} disabled={!turns.length && view === 'chat'}><NotePencil size={18} /></button>
+        <button type="button" className="ai-icon-btn" onClick={() => { if (sheet.phone) sheet.setExpanded(true); startFresh(); }} data-tip={t('ai.tip.newChat')} aria-label={t('ai.newChat')} disabled={!turns.length && view === 'chat'}><NotePencil size={18} /></button>
         <button type="button" className="ai-icon-btn" onClick={onClose} aria-label={t('ai.close')} data-tip={t('ai.tip.close')}><X size={18} /></button>
       </header>
       <div ref={scroller} className="ai-body" onScroll={e => { const el = e.currentTarget; stick.current = el.scrollHeight - el.scrollTop - el.clientHeight < 40; }}>
@@ -382,7 +387,7 @@ export function AiPanel({ bridge, hidden, onClose, onBusy }: { bridge: AppBridge
       {view === 'chat' && (
         <div className="ai-compose">
           <form className="ai-input" onSubmit={e => { e.preventDefault(); void send(input); }}>
-            <textarea ref={field} value={input} rows={1} aria-label={t('ai.placeholder')} placeholder={busy ? t('ai.placeholderBusy') : turns.length ? t('ai.placeholderFollow') : t('ai.placeholder')} onChange={e => setInput(e.target.value)}
+            <textarea ref={field} value={input} rows={1} aria-label={t('ai.placeholder')} placeholder={busy ? t('ai.placeholderBusy') : turns.length ? t('ai.placeholderFollow') : t('ai.placeholder')} onChange={e => setInput(e.target.value)} onFocus={() => { if (sheet.phone) sheet.setExpanded(true); }}
               onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void send(input); } }} />
             {busy
               ? <button type="button" className="ai-send stop" onClick={() => agent.current.stop()} aria-label={t('ai.stop')} data-tip={t('ai.tip.stop')}><Stop size={12} weight="fill" /><span>{t('ai.stop')}</span></button>

@@ -1,0 +1,143 @@
+/* Surface controls stay at the edges, with a separate row for the timeline. */
+@media (max-width: 720px), (max-height: 520px) and (pointer: coarse) {
+  .app.standing {
+    --pd-top: calc(12px + env(safe-area-inset-top, 0px));
+    --pd-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+    --pd-left: calc(12px + env(safe-area-inset-left, 0px));
+    --pd-right: calc(12px + env(safe-area-inset-right, 0px));
+  }
+  .lv-hud button { touch-action: manipulation; }
+  .lv-top { top: var(--pd-top); left: var(--pd-left); right: calc(var(--pd-right) + 100px); width: auto; max-width: none; height: 52px; gap: 8px; padding: 4px 12px 4px 4px; border-radius: 28px; }
+  .lv-back { width: 44px; height: 44px; padding: 0; flex: none; justify-content: center; gap: 0; border-radius: 50%; font-size: 0 !important; }
+  .lv-back svg { width: 20px; height: 20px; }
+  .lv-name { font-size: 14px; line-height: 18px; }
+  .lv-sub { font-size: 11px; line-height: 16px; }
+  .lv-compass { top: calc(var(--pd-top) + 60px); left: var(--pd-left); right: calc(var(--pd-right) + 100px); width: auto; height: 48px; margin-left: 0; }
+  .lv-tape-clip { bottom: 16px; }
+  .lv-tape { height: 32px; background-position: 0 9px, 0 9px; }
+  .lv-tape span { top: 19px; }
+  .lv-tape .card, .lv-tape .inter, .lv-tape .num { font-size: 10px; line-height: 12px; }
+  .lv-tape i { top: -5px; }
+  .lv-caret { top: 8px; height: 13px; }
+  .lv-facing { font-size: 11px; line-height: 14px; }
+  .lv-facing b { margin-right: 4px; }
+
+  .lv-hud .sm-mini { --sm-size: 84px; top: var(--pd-top); right: var(--pd-right); }
+  .lv-hud .sm-mini-place { display: none; }
+  .lv-hud .sm-mini-control { width: 48px; height: 48px; right: 0; bottom: auto; background: var(--glass); border-color: var(--line-2); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
+  .lv-hud .sm-mini-control svg { width: 19px; height: 19px; }
+  .lv-hud .sm-mini-zoom-in { top: calc(var(--sm-size) + 12px); }
+  .lv-hud .sm-mini-zoom-out { top: calc(var(--sm-size) + 68px); }
+  .lv-hud .sm-mini-expand { top: calc(var(--sm-size) + 124px); }
+  .lv-hud .lv-lens, .lv-hud .lv-zoom { display: none; }
+
+  .lv-notes-toggle { position: absolute; z-index: 13; top: calc(var(--pd-top) + 120px); left: var(--pd-left); display: flex; align-items: center; justify-content: center; gap: 10px; min-width: 124px; height: 48px; padding: 0 12px; border: 1px solid var(--line-2); border-radius: 24px; touch-action: manipulation; }
+  .lv-notes-toggle > svg:last-child { color: var(--text-2); transition: rotate 160ms ease-out; }
+  .lv-notes-toggle[aria-expanded='true'] > svg:last-child { rotate: 180deg; }
+  .lv-notes-toggle:active { background: var(--surface-3); }
+  .lv-notes-toggle:focus-visible { outline: 2px solid #a2dfff; outline-offset: 3px; }
+  .lv-status.lv-notes-folded { display: none; }
+  .lv-status.lv-notes-open { top: calc(var(--pd-top) + 176px); bottom: auto; left: var(--pd-left); right: calc(var(--pd-right) + 72px); width: auto; max-width: 320px; max-height: calc(100dvh - var(--pd-top) - var(--pd-bottom) - 460px); overflow-y: auto; overscroll-behavior: contain; padding: 6px; border-radius: 20px; border: 1px solid var(--line-2); animation: none; }
+  .lv-status.lv-notes-open .lv-row { min-height: 48px; padding: 8px; column-gap: 10px; }
+  .lv-status.lv-notes-open .lv-verdict { font-size: 13px; line-height: 18px; }
+  .lv-status.lv-notes-open .lv-note { display: block; font-size: 12px; line-height: 17px; }
+  .lv-status.lv-notes-open .lv-foot { display: flex; margin: 4px 8px 6px; font-size: 11px; line-height: 16px; }
+
+  html.lang-km .lv-status.lv-notes-open .lv-verdict { line-height: 24px; }
+  html.lang-km .lv-status.lv-notes-open .lv-note, html.lang-km .lv-status.lv-notes-open .lv-foot { line-height: 21px; }
+
+  .lv-drive { left: 50%; bottom: calc(var(--pd-bottom) + 204px); width: max-content; max-width: calc(100vw - var(--pd-left) - var(--pd-right)); gap: 8px; }
+  .lv-walkbar { height: 56px; max-width: 100%; padding: 6px; gap: 4px; border-radius: 30px; }
+  .lv-walk { flex: none; width: 44px; height: 44px; padding: 0; justify-content: center; gap: 0; border-radius: 50%; font-size: 0 !important; }
+  .lv-walk svg { width: 21px; height: 21px; }
+  .lv-seg { min-width: 0; height: 44px; padding: 0; border-radius: 23px; }
+  .lv-seg button { min-width: 44px; height: 44px; padding: 0 9px; border-radius: 23px; font-size: 13px; overflow: hidden; text-overflow: ellipsis; }
+  .lv-light, .lv-reset { flex: none; width: 44px; height: 44px; border-radius: 50%; }
+  .lv-touch .lv-keys:has(em) { display: block; }
+  .lv-keys { max-width: calc(100vw - 32px); white-space: normal; text-align: center; }
+  .lv-pad { left: var(--pd-left); bottom: calc(var(--pd-bottom) + 80px); width: 112px; height: 112px; }
+  .lv-pad-knob { width: 48px; height: 48px; margin: -24px 0 0 -24px; }
+  .lv-hud .lv-fast { right: var(--pd-right); bottom: calc(var(--pd-bottom) + 80px); width: 56px; height: 56px; font-size: 10px; line-height: 13px; touch-action: none; }
+  .lv-fast svg { width: 20px; height: 20px; }
+  .lv-hint { top: auto; bottom: calc(var(--pd-bottom) + 268px); left: var(--pd-left); right: var(--pd-right); width: max-content; max-width: calc(100vw - var(--pd-left) - var(--pd-right)); margin: 0 auto; padding: 7px 12px; border-radius: 16px; transform: none; font-size: 11px; line-height: 16px; text-align: center; white-space: normal; animation-duration: 4s; }
+  .lv-hint svg { flex: none; }
+
+  .app.standing .tbar-menus, .app.standing .tbar-clock, .app.standing .tbar-cap { display: none; }
+  .app.standing .timebar { left: var(--pd-left); right: var(--pd-right); bottom: var(--pd-bottom); width: auto; max-width: none; height: 64px; padding: 10px 12px; display: block; scale: 1; border-radius: 24px; background: var(--glass); box-shadow: var(--shadow); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
+  .app.standing .tbar-mid { width: 100%; padding: 0; }
+  .app.standing .tbar-row { height: 44px; gap: 12px; }
+  .app.standing .tbar-play { width: 44px; height: 44px; margin-bottom: 0; }
+  .app.standing .track { height: 44px; }
+  @media (prefers-reduced-motion: reduce) {
+    .lv-notes-toggle > svg:last-child { transition: none; }
+  }
+}
+
+@media (max-height: 520px) and (pointer: coarse) {
+  .lv-top { right: auto; width: 320px; max-width: calc(100vw - var(--pd-left) - var(--pd-right) - 108px); }
+  .lv-compass { right: auto; width: 300px; max-width: calc(100vw - var(--pd-left) - var(--pd-right) - 108px); }
+  .lv-hud .sm-mini { --sm-size: 72px; }
+  .lv-notes-toggle { top: calc(var(--pd-top) + 120px); }
+  .lv-status.lv-notes-open { top: calc(var(--pd-top) + 120px); left: calc(var(--pd-left) + 140px); right: calc(var(--pd-right) + 72px); max-width: 480px; max-height: calc(100dvh - var(--pd-top) - var(--pd-bottom) - 264px); }
+  .lv-pad { bottom: var(--pd-bottom); }
+  .lv-hud .lv-fast { bottom: var(--pd-bottom); }
+  .lv-drive { bottom: calc(var(--pd-bottom) + 76px); max-width: calc(100vw - var(--pd-left) - var(--pd-right) - 264px); }
+  .lv-hint { display: none; }
+  .app.standing .timebar { left: calc(var(--pd-left) + 128px); right: calc(var(--pd-right) + 128px); }
+}
+
+/* Wide phones have room for both pills along the bottom edge. */
+@media (max-height: 520px) and (pointer: coarse) and (min-width: 800px) {
+  .lv-drive { left: calc(var(--pd-left) + 128px); bottom: var(--pd-bottom); translate: none; max-width: 324px; }
+  .app.standing .timebar { left: calc(var(--pd-left) + 464px); right: calc(var(--pd-right) + 72px); }
+  .lv-status.lv-notes-open { max-height: calc(100dvh - var(--pd-top) - var(--pd-bottom) - 196px); }
+}
+
+/* ---- Final pass on a real iPhone (15 Nov, by the lead). The owner: "there's too much on the screen, but on PC
+   it's so clean"; the Sun and Earth chip "vertical at the right side, with that panel"; the Lander / Behind / Mast
+   bar "somewhere else ... at the bottom"; and "some buttons should be big, some smaller; right now it's all big".
+   Upright phones only (on its side the layout above already fits).
+   Size follows use: the thumb pad is the biggest thing, then Fast and the camera views; the way back, the round
+   map's button, the notes, the lamp and play are small and quiet.
+   Right column: the round map, the Sun / Earth / notes pill, the big-map button. Bottom: the timeline, the drive
+   bar on it, the pad and Fast above. The middle, where the rover is, stays clear. ---- */
+@media (max-width: 720px) {
+  /* top: a slim pill, its back arrow a quiet round button */
+  .lv-top { right: calc(var(--pd-right) + 84px); width: max-content; max-width: calc(100vw - var(--pd-left) - var(--pd-right) - 84px); height: 44px; gap: 10px; padding: 4px 16px 4px 4px; border-radius: 22px; }
+  .lv-back { width: 36px; height: 36px; background: var(--fill-2); color: var(--text) !important; border: 1px solid var(--line-2); }
+  .lv-back:hover { background: var(--fill-2); }
+  .lv-back svg { width: 18px; height: 18px; }
+  .lv-name { font-size: 14px; line-height: 18px; }
+  .lv-sub { font-size: 11px; line-height: 15px; }
+  .lv-compass { top: calc(var(--pd-top) + 50px); right: calc(var(--pd-right) + 84px); height: 44px; opacity: .9; }
+
+  /* right column */
+  .lv-hud .sm-mini { --sm-size: 72px; }
+  .lv-hud .sm-mini-zoom-in, .lv-hud .sm-mini-zoom-out { display: none; }
+  .lv-hud .sm-mini-expand { top: calc(var(--sm-size) + 112px); right: 18px; width: 36px; height: 36px; }
+  .lv-hud .sm-mini-expand svg { width: 16px; height: 16px; }
+  .lv-notes-toggle { top: calc(var(--pd-top) + 82px); left: auto; right: calc(var(--pd-right) + 18px); flex-direction: column; gap: 10px; width: 36px; min-width: 0; height: auto; padding: 9px 0; border-radius: 18px; }
+  .lv-notes-toggle > svg { width: 18px; height: 18px; }
+  .lv-notes-toggle > svg:last-child { display: none; }
+  .lv-status.lv-notes-open { top: calc(var(--pd-top) + 104px); left: var(--pd-left); right: calc(var(--pd-right) + 64px); max-width: none; max-height: calc(100dvh - var(--pd-top) - var(--pd-bottom) - 400px); }
+
+  /* bottom: timeline, then the drive bar on it */
+  .app.standing .timebar { height: 52px; padding: 4px 12px 4px 6px; border-radius: 26px; }
+  .app.standing .tbar-row { height: 44px; gap: 8px; }
+  .app.standing .tbar-play { width: 36px; height: 36px; border-width: 1.5px; }
+  .app.standing .track { height: 44px; }
+  .lv-drive { left: var(--pd-left); right: var(--pd-right); bottom: calc(var(--pd-bottom) + 60px); width: auto; max-width: none; translate: none; gap: 6px; }
+  .lv-walkbar { width: 100%; height: 48px; justify-content: space-between; padding: 4px; gap: 4px; border-radius: 24px; }
+  .lv-walk { width: 40px; height: 40px; }
+  .lv-walk svg { width: 19px; height: 19px; }
+  .lv-seg { flex: 1 1 auto; height: 40px; justify-content: center; border-radius: 20px; }
+  .lv-seg button { flex: 1 1 0; height: 40px; padding: 0 6px; border-radius: 20px; font-size: 13px; }
+  .lv-light, .lv-reset { width: 36px; height: 36px; }
+  .lv-light svg, .lv-reset svg { width: 18px; height: 18px; }
+
+  /* the two driving controls, the biggest things on screen */
+  .lv-pad { bottom: calc(var(--pd-bottom) + 122px); width: 116px; height: 116px; }
+  .lv-pad-knob { width: 48px; height: 48px; margin: -24px 0 0 -24px; }
+  .lv-hud .lv-fast { bottom: calc(var(--pd-bottom) + 150px); width: 60px; height: 60px; }
+  .lv-hint { bottom: calc(var(--pd-bottom) + 250px); }
+}

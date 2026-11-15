@@ -229,3 +229,35 @@
 
 @media (max-width: 900px) { .ai-panel { right: var(--m); left: auto; width: calc((100% - var(--m) * 2) / var(--z, 1)); } }
 @media (prefers-reduced-motion: reduce) { .ai-panel, .ai-trace, .ai-step, .ai-results, .ai-shimmer, .ai-spin, .ai-node.think.run, .ai-bar.indet i, .ai-caret-blink { animation: none; } .ai-shimmer { color: var(--text); background: none; } }
+
+@media (max-width: 720px), (max-height: 520px) and (pointer: coarse) {
+  .ai-panel.phone-sheet .ai-head { height: 64px; min-height: 64px; gap: 2px; padding: 0 8px 8px 16px; }
+  .ai-panel.phone-sheet .ai-head-mark { display: none; }
+  .ai-panel.phone-sheet .ai-head-text h2 { font-size: 20px; font-weight: 500; letter-spacing: -.02em; }
+  .ai-panel.phone-sheet .ai-head-text span { font-size: 11px; }
+  .ai-panel.phone-sheet .ai-body { padding: 16px; }
+  .ai-panel.phone-sheet .ai-empty { padding: 0; margin: 0; }
+  .ai-panel.phone-sheet .ai-empty h3 { font-size: 20px; }
+  .ai-panel.phone-sheet .ai-empty p { font-size: 14px; line-height: 21px; }
+  .ai-panel.phone-sheet .ai-suggest button, .ai-panel.phone-sheet .ai-related button { min-height: 52px; font-size: 14px; }
+  .ai-panel.phone-sheet .ai-suggest button svg, .ai-panel.phone-sheet .ai-related button svg { opacity: 1; transform: none; }
+  .ai-panel.phone-sheet-peek .ai-body { display: none; }
+  .ai-panel.phone-sheet-peek .ai-empty-mark, .ai-panel.phone-sheet-peek .ai-suggest { display: none; }
+  .ai-panel.phone-sheet-peek .ai-empty h3 { font-size: 16px; }
+  .ai-panel.phone-sheet-peek .ai-empty p { font-size: 12px; line-height: 18px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .ai-panel.phone-sheet .ai-compose { padding: 8px 12px 0; }
+  .ai-panel.phone-sheet .ai-input { padding: 6px 6px 6px 12px; }
+  .ai-panel.phone-sheet .ai-input textarea { font-size: 16px; min-height: 44px; padding: 10px 0; }
+  .ai-panel.phone-sheet .ai-send { min-width: 44px; height: 44px; border-radius: 12px; }
+  .ai-panel.phone-sheet .ai-foot { padding-top: 6px; font-size: 10px; }
+  .ai-panel.phone-sheet .ai-mini-btn, .ai-panel.phone-sheet .ai-note-btn, .ai-panel.phone-sheet .ai-hist-new { min-height: 44px; }
+  .ai-panel.phone-sheet .ai-hist-del { opacity: 1; width: 44px; height: 44px; }
+  .ai-panel.phone-sheet .ai-hist-item { min-height: 52px; }
+  .ai-panel.phone-sheet .ai-results { min-width: 0; }
+  .ai-panel.phone-sheet .ai-rt { table-layout: fixed; font-size: 11px; }
+  .ai-panel.phone-sheet .ai-rt tbody tr { height: 48px; }
+  .ai-panel.phone-sheet .ai-rt th, .ai-panel.phone-sheet .ai-rt td { padding: 8px 3px; white-space: normal; overflow-wrap: anywhere; }
+  .ai-panel.phone-sheet .ai-rt .site { min-width: 0; width: 35%; }
+  .ai-panel.phone-sheet .ai-rt .site small { font-size: 10px; }
+  .ai-panel.phone-sheet .ai-md-table { max-width: 100%; }
+}

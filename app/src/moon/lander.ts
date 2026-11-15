@@ -1429,6 +1429,8 @@ export class LanderView {
   private groundCoverageAt = 0;
   private groundFine = false;
   private groundCovered = false;
+  private rockGroundTiles = new Map<DrawnTile, unknown>();
+  private rockGroundChanged: DrawnTile[] = [];
 
   // where the camera looks
   private az = 0;
@@ -1761,7 +1763,7 @@ export class LanderView {
     this.stats.loadTimedOut = false;
     this.groundCoveredFrames = this.groundFineFrames = 0; this.groundCovered = this.groundFine = false;
     this.groundCoverageAt = 0;
-    this.groundGuardFrame = -1; this.roverGroundTiles.clear(); this.selectedSupport = null;
+    this.groundGuardFrame = -1; this.roverGroundTiles.clear(); this.rockGroundTiles.clear(); this.selectedSupport = null;
     this.stats.cameraMinClearanceM = this.stats.cameraMinBeforeM = Infinity;
     this.stats.cameraGuardLifts = this.stats.cameraGuardMissing = this.stats.cameraGuardReselects = this.stats.roverGroundReseats = 0;
     this.stats.cameraBoomClips = 0;
@@ -2298,7 +2300,7 @@ export class LanderView {
         if (this.driver && this.roverParked && this.roverSelectionChanged()) {
           terrainChanged = true;
           // Wheel support includes small rocks. Seat them on this selection before resampling it.
-          this.seatRocks(frame);
+          this.seatRocks(frame, true);
           if (this.driver.syncGround(this.walkEnv)) {
             roverReseated = true;
             this.stats.roverGroundReseats++;
@@ -2336,6 +2338,12 @@ export class LanderView {
         (this.viewer.scene.globe as unknown as { _surface?: { _tilesRenderedThisFrame?: Set<DrawnTile> } })._surface?._tilesRenderedThisFrame?.clear();
         this.stats.cameraGuardReselects++;
         original.call(globe, frame);
+      }
+      if (this.rocksShown && this.rockSelectionChanged()) {
+        // Models were updated before globe.render selected this frame's terrain. Correct their
+        // commands on a changed selection, before old seats can float above the new terrain.
+        this.seatRocks(frame, true, this.rockGroundChanged);
+        this.farRocks?.reseat();
       }
       if (roverReseated) this.publishPose(performance.now(), false, true);
       if (this.phase === 'load' || this.phase === 'in' || terrainChanged || performance.now() - this.groundCoverageAt > 250) this.checkSurfaceCoverage(frame.frameNumber);
@@ -3963,8 +3971,12 @@ export class LanderView {
    */
   private drawnHeight(c: Cartographic, found?: { tile: DrawnTile | null }): number | undefined {
     const probe: GroundHit | undefined = found ? { tile: null, source: 'none' } : undefined;
-    const height = this.selectedHeight(c, probe);
-    if (found) found.tile = probe?.tile ?? null; // a failed ray never makes a fallback look like a drawn hit
+    // An off-screen point uses a parent of the currently drawn terrain first. An unrelated
+    // deeper loaded tile can be metres higher and leave stones suspended when the eye turns.
+    const height = this.selectedHeight(c, probe, true);
+    // Ancestor support is a safe initial seat, but is not a tile drawn at this point. Keep that
+    // distinction so an existing off-screen stone stays put until its own terrain is selected.
+    if (found) found.tile = probe?.source === 'selected' ? probe.tile : null;
     return height ?? this.loadedRockHeight(c) ?? this.viewer.scene.globe.getHeight(c);
   }
 
@@ -3986,6 +3998,26 @@ export class LanderView {
 
   private currentGroundTiles(): DrawnTile[] {
     return (this.viewer.scene.globe as unknown as { _surface?: { _tilesToRender?: DrawnTile[] } })._surface?._tilesToRender ?? [];
+  }
+
+  /** Camera turns can change terrain LOD without completing any network request. */
+  private rockSelectionChanged(): boolean {
+    const tiles = this.currentGroundTiles();
+    let count = 0, changed = false;
+    this.rockGroundChanged.length = 0;
+    for (const tile of tiles) if (tile.data?.renderedMesh) {
+      count++;
+      if (this.rockGroundTiles.get(tile) !== tile.data.renderedMesh) {
+        changed = true;
+        this.rockGroundChanged.push(tile);
+      }
+    }
+    if (!changed && count === this.rockGroundTiles.size) return false;
+    const selected = new Set(tiles);
+    for (const tile of this.rockGroundTiles.keys()) if (!selected.has(tile) || !tile.data?.renderedMesh) this.rockGroundChanged.push(tile);
+    this.rockGroundTiles.clear();
+    for (const tile of tiles) if (tile.data?.renderedMesh) this.rockGroundTiles.set(tile, tile.data.renderedMesh);
+    return true;
   }
 
   /** Nearby off-screen points use a parent of the selected ground, not an unrelated finer tile. */
@@ -4043,7 +4075,7 @@ export class LanderView {
    * whose first tiles were 54 m below the final ground) and a turn of the head brings other tiles on screen.
    * A rock is only looked at again when the tile under it is no longer the one drawn (well under 1 ms).
    */
-  private seatRocks(frame?: GroundFrame) {
+  private seatRocks(frame?: GroundFrame, selectionChanged = false, changedTiles?: readonly DrawnTile[]) {
     // The probes and each stone's yaw belong to the fixed landing frame too.
     const E = this.rockE, N = this.rockN, U = this.up;
     let changed = false, firstSeat = false;
@@ -4052,12 +4084,18 @@ export class LanderView {
     for (const rock of this.rocks) {
       const sp = rock.spot, pr = rock.probe;
       if (!sp || !pr) continue;
-      // nothing to do while the tile under the rock is still drawn with the same mesh as when we seated it
-      if (!rock.resize && rock.tile && drawn.has(rock.tile) && rock.tile.data?.renderedMesh === rock.mesh) continue;
+      const cachedSeat = !rock.resize && rock.tile && drawn.has(rock.tile) && rock.tile.data?.renderedMesh === rock.mesh;
+      if (cachedSeat && !selectionChanged) continue;
+      // Only changed support under this rock needs a new height, including removed tiles.
+      if (!rock.resize && Number.isFinite(rock.ground) && changedTiles
+        && !changedTiles.some(tile => Cesium.Rectangle.contains(tile.rectangle, pr[0]))) continue;
       const g0 = this.drawnHeight(pr[0], found);
       if (g0 === undefined) { if (Number.isNaN(rock.ground)) rock.model.show = false; continue; }
       // out of view (its tile is not drawn): keep it where it is until it comes back on screen
       if (!found.tile && !Number.isNaN(rock.ground)) continue;
+      // A selected parent may remain in the set for a different part of the view. Recheck the
+      // centre after selection changes, then avoid four slope probes if its actual support stayed.
+      if (cachedSeat && found.tile === rock.tile && found.tile?.data?.renderedMesh === rock.mesh && Math.abs(g0 - rock.ground) < 0.003) continue;
       rock.tile = found.tile; rock.mesh = found.tile?.data?.renderedMesh;
       const hs = [1, 2, 3, 4].map(i => this.drawnHeight(pr[i]));
       const a = rock.probeM;

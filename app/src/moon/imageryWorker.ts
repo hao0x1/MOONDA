@@ -1375,6 +1375,7 @@ const TILE_CACHE_BYTES = 48 * 2 ** 20; // decoded source tiles kept per worker (
 // raster worker. Pictures still being sampled are temporary job memory, not retained cache.
 let decodedBudgetBytes = 64 * 2 ** 20, decodedBytes = 0, decodedEvictions = 0;
 let rasterMaxEdge = Infinity;
+let phoneMemory = false;
 let decodesActive = 0, decodesQueued = 0;
 const decoded = new Map<string, { bytes: number; kind: DecodedKind; evict: () => void }>();
 
@@ -2074,6 +2075,18 @@ function startWorker() {
   interface EncodedScience { bytes: Uint8Array | null; pending: Promise<Uint8Array | null> | null }
   const scienceEntries = new Map<string, ScienceEntry>();
   const scienceEncoded = new Map<string, EncodedScience>();
+  function trimScienceEncoded() {
+    if (!phoneMemory) return;
+    // The browser cache keeps the files; only a small working set needs RAM.
+    let bytes = [...scienceEncoded.values()].reduce((n, e) => n + (e.bytes?.byteLength ?? 0), 0);
+    for (const [url, entry] of scienceEncoded) {
+      if (bytes <= 8 * 2 ** 20) break;
+      if (!entry.bytes) continue;
+      bytes -= entry.bytes.byteLength;
+      entry.bytes = null;
+      if (!entry.pending) scienceEncoded.delete(url);
+    }
+  }
   const scienceFailures = new Set<string>();
   const scienceFailureReasons = new Map<string, string>();
   let scienceDrawTail: Promise<void> = Promise.resolve();
@@ -2091,7 +2104,10 @@ function startWorker() {
   async function encodedScience(url: string): Promise<Uint8Array | null> {
     let entry = scienceEncoded.get(url);
     if (!entry) { entry = { bytes: null, pending: null }; scienceEncoded.set(url, entry); }
-    if (entry.bytes) return entry.bytes;
+    if (entry.bytes) {
+      if (phoneMemory) { scienceEncoded.delete(url); scienceEncoded.set(url, entry); }
+      return entry.bytes;
+    }
     if (entry.pending) return entry.pending;
     const record = entry, began = performance.now();
     scienceTiming.reads++;
@@ -2116,6 +2132,7 @@ function startWorker() {
       return bytes;
     })().then(bytes => {
       record.bytes = bytes;
+      trimScienceEncoded();
       if (bytes) { scienceFailures.delete(url); scienceFailureReasons.delete(url); }
       else { scienceFailures.add(url); scienceFailureReasons.set(url, 'Science file was not available'); }
       return bytes;
@@ -2356,8 +2373,9 @@ function startWorker() {
     if ('cacheBudgetBytes' in m) {
       if (Number.isFinite(m.cacheBudgetBytes) && m.cacheBudgetBytes >= 2 ** 20) { decodedBudgetBytes = m.cacheBudgetBytes; trimDecoded(); }
       if (m.phone) {
+        phoneMemory = true;
         rasterMaxEdge = 2048;
-        scienceBlocks.setBudget(16 * 2 ** 20); sciencePreviews.setBudget(4 * 2 ** 20);
+        scienceBlocks.setBudget(8 * 2 ** 20); sciencePreviews.setBudget(2 * 2 ** 20);
       }
     }
     else if ('cancel' in m) jobs.get(m.cancel)?.abort();

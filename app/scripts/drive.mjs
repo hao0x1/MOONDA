@@ -102,6 +102,7 @@ launchPromise = puppeteer.launch({
 browser = await launchPromise;
 await lease.afterLaunch(browser);
 const page = (await browser.pages())[0] ?? await browser.newPage();
+await page.setViewport({ width: W, height: H, deviceScaleFactor: 2 });
 // --mobile: a phone stand-in for layout checks (touch only, a phone's pixel density and user agent, so the page's
 // own "is this a phone" tests answer yes). It is still this computer's graphics card: it proves nothing about
 // a phone's graphics driver.

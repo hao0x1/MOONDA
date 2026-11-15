@@ -48,11 +48,15 @@ export function isPhoneGraphics(q: Quality = settings.get().quality): boolean {
 }
 
 const PHONE_QUALITY: QualityKnobs = {
-  ...QUALITY.light, maxSSE: 3, maxPixelRatio: 1, tileCacheSize: 192, loadingDescendantLimit: 4,
+  // Keep the same photo detail per CSS pixel while drawing names and flags at twice the density.
+  ...QUALITY.light, maxSSE: 6, maxPixelRatio: 2, tileCacheSize: 80, loadingDescendantLimit: 2, fxaa: false,
 };
+let phoneSurface = false;
+const PHONE_SURFACE_QUALITY = { ...PHONE_QUALITY, maxPixelRatio: 1.5 };
+export function setPhoneSurfaceGraphics(on: boolean): void { phoneSurface = on; }
 
 /** The knobs for the mode chosen right now. */
-export const knobs = (q: Quality = settings.get().quality): QualityKnobs => isPhoneGraphics(q) ? PHONE_QUALITY : QUALITY[q];
+export const knobs = (q: Quality = settings.get().quality): QualityKnobs => isPhoneGraphics(q) ? phoneSurface ? PHONE_SURFACE_QUALITY : PHONE_QUALITY : QUALITY[q];
 
 /** A canvas and its offscreen targets must both fit the actual driver's drawing limits. */
 const drawingLimits = new WeakMap<WebGLRenderingContext | WebGL2RenderingContext, { edge: number; width: number; height: number }>();
@@ -146,14 +150,12 @@ export function applyQuality(viewer: Viewer, q: Quality = settings.get().quality
  * Edge smoothing and drawing size while standing on the surface ("Stand here"), where the robot's thin parts
  * (mast, camera head, wheels) sit right in front of you and stair-step easily, and where every ground pixel runs
  * the expensive ground shader (craters, regolith scans, little shadows: ~12 ms of a frame at 2880 x 1800).
- * Full detail: the drawing is at most LANDER_MAX_PX pixels (a Retina laptop panel drops from 2x to ~1.7x its CSS
- * pixels, which with MSAA looks the same on a moving 3D scene but saves ~30 % of the ground's cost; an external
- * screen at 1x is not touched), then 4 MSAA samples when the drawing is at most LANDER_MSAA4_PX pixels, else 2
- * (measured on the M5 at 2880 x 1800: MSAA 2 -> 4 adds ~1.5 ms to a ~17 ms frame). Smooth: unchanged (FXAA).
+ * Full detail: the drawing is at most LANDER_MAX_PX pixels with 2 MSAA samples. The surface shader runs for
+ * every ground pixel, so this modest surface-only cap saves work while preserving terrain and photo detail.
+ * An external screen at 1x is unchanged unless it exceeds the cap. Smooth: unchanged (FXAA).
  * on = false puts back the map's own setting. Both are set once, while the view fades in or out.
  */
-export const LANDER_MSAA4_PX = 3.7e6;
-export const LANDER_MAX_PX = 3.9e6;
+export const LANDER_MAX_PX = 2.1e6;
 export function landerAntialias(viewer: Viewer, on: boolean, q: Quality = settings.get().quality): void {
   if (viewer.isDestroyed()) return;
   const scene = viewer.scene, k = knobs(q);
@@ -169,6 +171,6 @@ export function landerAntialias(viewer: Viewer, on: boolean, q: Quality = settin
   if (Math.abs(viewer.resolutionScale - res) > 1e-3) viewer.resolutionScale = res;
   if (!scene.msaaSupported) return;
   let samples = k.msaaSamples;
-  if (on && q === 'full') samples = css * (dpr * res) ** 2 <= LANDER_MSAA4_PX ? 4 : 2;
+  if (on && q === 'full') samples = 2;
   if (scene.msaaSamples !== samples) { try { scene.msaaSamples = samples; } catch { /* keep what works */ } }
 }

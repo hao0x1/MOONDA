@@ -4,7 +4,7 @@
 // horizon), and the Drive bar for MOONDA, our rover (W A S D / arrows also start driving).
 // Kept small and at the edges so the rover and the middle of the view stay free.
 
-import { ArrowCounterClockwise, ArrowLeft, HandGrabbing, Headlights, Info, Minus, Plus, SteeringWheel } from '@phosphor-icons/react';
+import { ArrowCounterClockwise, ArrowLeft, CaretDown, HandGrabbing, Headlights, Info, Minus, Plus, SteeringWheel } from '@phosphor-icons/react';
 import { useEffect, useRef, useState } from 'react';
 import { t as tr, tn, useT } from '../i18n';
 import type { MoonName } from '../data/names';
@@ -18,7 +18,7 @@ import type { RouteResult } from '../science/route';
 import type { SpotTimeline } from '../science/analysis';
 import { compassName, type BodyNow } from './describe';
 import { EarthGlyph, SunGlyph } from './glyphs';
-import { isTouch } from './device';
+import { isPhone, isTouch } from './device';
 import { TouchDrive } from './TouchDrive';
 import './lander.css';
 
@@ -110,6 +110,33 @@ export function LanderHud({ name, sun, earth, earthNeverRises, mastM, timeline, 
   const t = useT();
   // a finger and no keyboard: the drive pad is shown, and the hint speaks of touch
   const [touch] = useState(isTouch);
+  const [phone, setPhone] = useState(() => isPhone() || (isTouch() && matchMedia('(max-height: 520px)').matches));
+  const [notesOpen, setNotesOpen] = useState(false);
+  const [hintVisible, setHintVisible] = useState(true);
+  useEffect(() => {
+    if (!phone) return;
+    let hide = 0;
+    const ready = () => {
+      if (!hide && landerLink.phase === 'ready') hide = window.setTimeout(() => setHintVisible(false), 4000);
+    };
+    ready();
+    const off = landerLink.subscribe(ready);
+    return () => { off(); clearTimeout(hide); };
+  }, [phone]);
+  useEffect(() => {
+    const screen = matchMedia('(max-width: 720px), (max-height: 520px) and (pointer: coarse)');
+    const update = () => { setPhone(isPhone() || (isTouch() && matchMedia('(max-height: 520px)').matches)); setNotesOpen(false); };
+    screen.addEventListener('change', update);
+    return () => screen.removeEventListener('change', update);
+  }, []);
+  useEffect(() => {
+    if (!phone || !notesOpen) return;
+    const close = (ev: PointerEvent) => {
+      if (ev.target instanceof Element && !ev.target.closest('.lv-status, .lv-notes-toggle')) setNotesOpen(false);
+    };
+    document.addEventListener('pointerdown', close, true);
+    return () => document.removeEventListener('pointerdown', close, true);
+  }, [phone, notesOpen]);
   const tape = useRef<HTMLDivElement>(null);
   const degText = useRef<HTMLElement>(null);
   const zoomTip = useRef<HTMLDivElement>(null);
@@ -129,6 +156,7 @@ export function LanderHud({ name, sun, earth, earthNeverRises, mastM, timeline, 
   useEffect(() => {
     const k = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return;
+      if (phone && notesOpen) { setNotesOpen(false); return; }
       // Esc first gives the captured mouse back, then stops driving, then goes back to the lander, and only then leaves the view
       if (landerLink.mouseLocked || performance.now() - landerLink.unlockedAt < 500) return;
       if (landerLink.walking) landerLink.setWalk(false);
@@ -137,7 +165,7 @@ export function LanderHud({ name, sun, earth, earthNeverRises, mastM, timeline, 
     };
     window.addEventListener('keydown', k);
     return () => window.removeEventListener('keydown', k);
-  }, [onExit]);
+  }, [onExit, phone, notesOpen]);
 
   useEffect(() => {
     const apply = () => setDrive(w => {
@@ -189,7 +217,7 @@ export function LanderHud({ name, sun, earth, earthNeverRises, mastM, timeline, 
   const blur = (ev: { currentTarget: HTMLElement }) => ev.currentTarget.blur();
 
   return (
-    <div className={`lv-hud${touch ? ' lv-touch' : ''}`}>
+    <div className={`lv-hud${touch ? ' lv-touch' : ''}${phone ? ' lv-phone' : ''}`}>
       <div className="lv-scrim" aria-hidden="true" />
       <div className="lv-top lv-glass">
         <button className="lv-back" onClick={onExit} data-tip={t('ex.back.tip')}><ArrowLeft size={16} weight="bold" /> {t('hud.back')}</button>
@@ -217,12 +245,16 @@ export function LanderHud({ name, sun, earth, earthNeverRises, mastM, timeline, 
         <div className="lv-facing"><b ref={degText} className="mono">000°</b> {t('hud.facing', { dir: facing })}</div>
       </div>
 
-      <div className="lv-status lv-glass">
-        <button className={`lv-row${s.on ? '' : ' off'}`} disabled={!sun} onClick={ev => { blur(ev); turnTo(sun); }} data-tip={t('hud.turnSun')}>
+      {phone && <button type="button" className="lv-notes-toggle lv-glass" aria-expanded={notesOpen} aria-controls="lv-surface-notes"
+        aria-label={`${s.verdict}. ${e.verdict}. ${t('hud.note.tip')}`} onClick={() => setNotesOpen(open => !open)}>
+        <SunGlyph size={18} off={!s.on} /><EarthGlyph size={18} off={!e.on} /><Info size={18} /><CaretDown size={12} weight="bold" />
+      </button>}
+      <div id={phone ? 'lv-surface-notes' : undefined} className={`lv-status lv-glass${phone ? notesOpen ? ' lv-notes-open' : ' lv-notes-folded' : ''}`}>
+        <button className={`lv-row${s.on ? '' : ' off'}`} disabled={!sun} onClick={ev => { blur(ev); turnTo(sun); if (phone) setNotesOpen(false); }} data-tip={t('hud.turnSun')}>
           <SunGlyph size={20} off={!s.on} />
           <span><span className="lv-verdict">{s.verdict}</span>{s.note && <span className="lv-note">{s.note}</span>}</span>
         </button>
-        <button className={`lv-row${e.on ? '' : ' off'}`} disabled={!earth} onClick={ev => { blur(ev); turnTo(earth); }} data-tip={t('hud.turnEarth')}>
+        <button className={`lv-row${e.on ? '' : ' off'}`} disabled={!earth} onClick={ev => { blur(ev); turnTo(earth); if (phone) setNotesOpen(false); }} data-tip={t('hud.turnEarth')}>
           <EarthGlyph size={20} off={!e.on} />
           <span><span className="lv-verdict">{e.verdict}</span>{e.note && <span className="lv-note">{e.note}</span>}</span>
         </button>
@@ -260,7 +292,7 @@ export function LanderHud({ name, sun, earth, earthNeverRises, mastM, timeline, 
         </div>
       </div>
 
-      {!drive.on && !onRover && <div className="lv-hint lv-glass"><HandGrabbing size={16} /> {t(touch ? 'hud.hint.touch' : 'hud.hint')}</div>}
+      {(!phone || hintVisible) && !drive.on && !onRover && <div className="lv-hint lv-glass"><HandGrabbing size={16} /> {t(touch ? 'hud.hint.touch' : 'hud.hint')}</div>}
       {touch && <TouchDrive />}
 
       <Minimap bodies={bodies} layers={layers} opacity={opacity} layerDefs={layerDefs} timeKey={timeKey} mastM={mastM} route={route} names={names} onOpen={onOpenMap} />

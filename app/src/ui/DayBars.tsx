@@ -79,6 +79,8 @@ export function DayBars({ timeline, days, cursor, kind, nowWord, nowTip, onSeek 
   const bubble = useRef<HTMLDivElement>(null);
   const tipTimer = useRef<number | undefined>(undefined);
   const pendingTip = useRef<(BarTip & { target: HTMLButtonElement }) | null>(null);
+  // a finger cannot hover: on touch a tap moves the time there AND shows the bar's number for a moment
+  const byFinger = useRef(false);
   const [widths, setWidths] = useState({ plot: 300, first: 30 });
   const [focusIndex, setFocusIndex] = useState<number | null>(null);
   const [tip, setTip] = useState<BarTip | null>(null);
@@ -202,7 +204,13 @@ export function DayBars({ timeline, days, cursor, kind, nowWord, nowTip, onSeek 
                 }}
                 onMouseLeave={hideTip} onBlur={hideTip}
                 onFocus={e => { setFocusIndex(i); if (e.currentTarget.matches(':focus-visible')) showTip(i, e.currentTarget, barTip, `${Math.round(pct)}%`, `${day} · ${date}`); }}
-                onKeyDown={e => onKey(e, i)} onClick={() => { hideTip(); onSeek(bin.startMs); }}>
+                onPointerDown={e => { byFinger.current = e.pointerType !== 'mouse'; }}
+                onKeyDown={e => onKey(e, i)} onClick={e => {
+                  hideTip(); onSeek(bin.startMs);
+                  if (!byFinger.current) return;
+                  showTip(i, e.currentTarget, barTip, `${Math.round(pct)}%`, `${day} · ${date}`);
+                  tipTimer.current = window.setTimeout(hideTip, 2600);
+                }}>
                 <span className="pday-track" aria-hidden="true"><i className="pday-fill" style={{ height: `${pct}%`, minHeight: up > 0 ? 2 : 0 }} /></span>
               </button>
             );

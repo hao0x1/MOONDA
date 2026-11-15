@@ -29,7 +29,7 @@ import { POLAR_EXTENT_M, SHARP_POLAR_LAYERS, scienceToLayer, type LayerDef, type
 import { LolaTerrainProvider } from './lolaTerrain';
 import { attachNavigation, cameraHeadingPitch, poseGlobe, poseLookingAt, type Navigation } from './navigation';
 import { runPreload, type LoadProgress } from './preload';
-import { applyQuality, initQuality, isPhoneGraphics, knobs } from '../app/quality';
+import { applyQuality, initQuality, isPhoneGraphics, knobs, setPhoneSurfaceGraphics } from '../app/quality';
 import { settings } from '../app/settings';
 import { t } from '../i18n';
 import { SpaceSky } from './sky';
@@ -40,6 +40,7 @@ import { MapModes, type MapMode } from './mapMode';
 import { createDataDetailLayer } from './dataDetail';
 import { setExploreHeights } from '../explore/context';
 import { mapImagery, prefetchMapHeightAt } from '../explore/mapImagery';
+import { watchGraphicsContext, type GraphicsView } from '../ui/RenderStopped';
 
 /** The Height colours layer's NASA Moon Trek map (globe, flat map and start-up preload use the same one).
  *  North of minTrueLat only: the sharper south-pole height map (data/layers/height.png) is drawn below it. */
@@ -53,6 +54,8 @@ export type MapSelection =
 export interface MapPin { id: string; lat: number; lon: number; letter: string; color: string }
 
 export interface MoonMapHandle {
+  captureView(): GraphicsView | null;
+  restoreView(view: GraphicsView): void;
   flyTo(lat: number, lon: number, heightKm?: number, tilted?: boolean): void;
   flyWhole(): void;
   flyPole(): void;
@@ -262,6 +265,9 @@ export const MoonMap = forwardRef<MoonMapHandle, Props>(function MoonMap(props, 
     }
     viewer.scene.renderError.addEventListener((_scene: unknown, error: unknown) => failed(error));
     viewerRef.current = viewer;
+    const offContextLoss = watchGraphicsContext(viewer.canvas);
+    const visible = () => { if (!document.hidden && !viewer.isDestroyed()) viewer.scene.requestRender(); };
+    document.addEventListener('visibilitychange', visible);
     // Cesium draws as many map layers per ground tile as the graphics card has texture slots (16 on many), but it
     // does not count the 8 pictures our own ground shader reads (lander.ts: hill shadows, heights, soil scans, rock
     // shadows, the Sun shadow map). With 9 or more layers on one tile the shader then asked for more slots than
@@ -476,7 +482,8 @@ export const MoonMap = forwardRef<MoonMapHandle, Props>(function MoonMap(props, 
     debugHook.nav = navRef.current;
 
     // The flat map (2D) and the move between it and the globe (flatMap.ts, mapMode.ts).
-    const flat = new FlatMap(host.current!, {
+    let flat: FlatMap | null = null;
+    try { flat = new FlatMap(host.current!, {
       labels: () => labels.flatEntries(),
       route: () => cb.current.overviewRoute ?? null,
       destination: () => cb.current.routeDestination ?? null,
@@ -513,10 +520,10 @@ export const MoonMap = forwardRef<MoonMapHandle, Props>(function MoonMap(props, 
       // zooming in at the flat map's closest zoom: offer to roll back to the globe right there
       limitText: () => ({ msg: t('map.flatLimit'), go: t('map.flatCloser') }),
       onCloser: (lat, lon) => { void modesRef.current?.toGlobe({ at: { lat, lon, km: 140 } }); },
-    });
+    }); } catch (error) { console.warn('Flat map unavailable; keeping the globe:', error); }
     flatRef.current = flat;
     if (import.meta.env.DEV) debugHook.flat = flat;
-    const modes = new MapModes(flat, {
+    const modes = flat ? new MapModes(flat, {
       viewer, nav: navRef.current,
       heightAt: (lat, lon) => heights.heightAt(lat, lon, false),
       setGlobeExtras: on => {
@@ -529,8 +536,8 @@ export const MoonMap = forwardRef<MoonMapHandle, Props>(function MoonMap(props, 
         viewer.entities.show = on;
         scene.requestRender();
       },
-    });
-    modes.onChange = m => cb.current.onMapMode?.(m);
+    }) : null;
+    if (modes) modes.onChange = m => cb.current.onMapMode?.(m);
     modesRef.current = modes;
     debugHook.flat = flat; debugHook.modes = modes;
 
@@ -562,7 +569,7 @@ export const MoonMap = forwardRef<MoonMapHandle, Props>(function MoonMap(props, 
         prepareScienceLayers(viewer, imagery.current, currentDefs);
         // Capture and queue this view before preload moves the camera to the pole.
         let visible = warmVisibleLayerTiles(viewer, switchableProviders(imagery.current), LAYER_WARM_MS, opening);
-        let overlays = boundedLayerWarm(flat.warmOverlays(flatLayerOverlays(currentDefs, ALL_SCIENCE_SWITCHES)), LAYER_WARM_MS);
+        let overlays = isPhoneGraphics() || !flat ? Promise.resolve(true) : boundedLayerWarm(flat.warmOverlays(flatLayerOverlays(currentDefs, ALL_SCIENCE_SWITCHES)), LAYER_WARM_MS);
         const manifest = await loadManifest();
         const defs = manifest.map(scienceToLayer).filter(d => SCIENCE_SWITCHES.has(d.id));
         if (viewer.isDestroyed()) return false;
@@ -572,7 +579,7 @@ export const MoonMap = forwardRef<MoonMapHandle, Props>(function MoonMap(props, 
           const remaining = Math.max(0, deadline - performance.now());
           const added = warmVisibleLayerTiles(viewer, switchableProviders(imagery.current), remaining, opening);
           visible = Promise.all([visible, added]).then(results => results.every(Boolean));
-          const addedOverlays = boundedLayerWarm(flat.warmOverlays(flatLayerOverlays(defs, ALL_SCIENCE_SWITCHES)), remaining);
+          const addedOverlays = isPhoneGraphics() || !flat ? Promise.resolve(true) : boundedLayerWarm(flat.warmOverlays(flatLayerOverlays(defs, ALL_SCIENCE_SWITCHES)), remaining);
           overlays = Promise.all([overlays, addedOverlays]).then(results => results.every(Boolean));
         }
         // The small value files also stay available for a new spot after going offline.
@@ -604,13 +611,13 @@ export const MoonMap = forwardRef<MoonMapHandle, Props>(function MoonMap(props, 
         debug.progress = p;
         if (p.done && navRef.current && !lander.active) navRef.current.enabled = true;
         // the flat map's picture and shaders, quietly, once the start-up loading is over (the first switch must not hitch)
-        if (p.done) { const go = () => void flat.prepare(settings.get().quality === 'light').catch(e => console.warn('Flat map not available:', e)); if ('requestIdleCallback' in window) requestIdleCallback(go, { timeout: 1500 }); else setTimeout(go, 300); }
+        if (p.done && !isPhoneGraphics()) { const go = () => void flat?.prepare(settings.get().quality === 'light').catch(e => console.warn('Flat map not available:', e)); if ('requestIdleCallback' in window) requestIdleCallback(go, { timeout: 1500 }); else setTimeout(go, 300); }
         cb.current.onLoadProgress?.(p);
       },
       cancelled: () => skipPreload.current,
     });
 
-    return () => { releaseScienceLayers(); flat.destroy(); offQuality(); offReload(); offPhotoCull(); clearTimeout(photoCullTimer); resizeObs.disconnect(); panelObs.disconnect(); clearTimeout(settle); navRef.current?.destroy(); lander.destroy(); markersRef.current?.destroy(); labels.destroy(); sky.destroy(); skyRef.current = null; viewer.destroy(); viewerRef.current = null; };
+    return () => { offContextLoss(); document.removeEventListener('visibilitychange', visible); setPhoneSurfaceGraphics(false); releaseScienceLayers(); flat?.destroy(); offQuality(); offReload(); offPhotoCull(); clearTimeout(photoCullTimer); resizeObs.disconnect(); panelObs.disconnect(); clearTimeout(settle); navRef.current?.destroy(); lander.destroy(); markersRef.current?.destroy(); labels.destroy(); sky.destroy(); skyRef.current = null; viewer.destroy(); viewerRef.current = null; };
   }, []);
 
   // Names
@@ -817,12 +824,13 @@ export const MoonMap = forwardRef<MoonMapHandle, Props>(function MoonMap(props, 
       const spec = props.lander, sky = props.sky;
       void prefetchMapHeightAt(spec.lat, spec.lon);
       void mapImagery.warmScienceAt(spec.lat, spec.lon, cb.current.scienceLayers);
-      const go = () => { nav.enabled = false; lander.enter(spec, sky, spec.faceAz); };
+      const go = () => { setPhoneSurfaceGraphics(true); nav.enabled = false; lander.enter(spec, sky, spec.faceAz); };
       const modes = modesRef.current;
       // from the flat map: first a shortened move back to the globe at that spot
       if (modes && modes.mode === 'flat') void modes.toGlobe({ at: { lat: spec.lat, lon: spec.lon, km: 40 }, fast: true, handOff: go });
       else go();
     } else if (!props.lander && lander.active) {
+      setPhoneSurfaceGraphics(false);
       lander.exit(); // first: it puts Cesium's input switch back the way navigation left it
       nav.enabled = true;
     }
@@ -832,6 +840,24 @@ export const MoonMap = forwardRef<MoonMapHandle, Props>(function MoonMap(props, 
   const flatOn = () => modesRef.current?.mode === 'flat' && !modesRef.current.moving ? flatRef.current : null;
   const heldRender = useRef(false);
   useImperativeHandle(ref, () => ({
+    captureView() {
+      const v = viewerRef.current;
+      if (!v || v.isDestroyed()) return null;
+      const a = (p: Cartesian3) => [p.x, p.y, p.z];
+      const flat = flatOn();
+      return { position: a(v.camera.positionWC), direction: a(v.camera.directionWC), up: a(v.camera.upWC), ...(flat ? { flat: { ...flat.view } } : {}) };
+    },
+    restoreView(saved) {
+      const v = viewerRef.current;
+      if (!v || ![saved.position, saved.direction, saved.up].every(a => a.length === 3 && a.every(Number.isFinite))) return;
+      const p = (a: number[]) => new Cartesian3(a[0], a[1], a[2]);
+      v.camera.setView({ destination: p(saved.position), orientation: { direction: p(saved.direction), up: p(saved.up) } });
+      if (saved.flat && Object.values(saved.flat).every(Number.isFinite)) {
+        const view = saved.flat;
+        void modesRef.current?.toFlat().then(() => { const flat = flatRef.current; if (flat) { flat.view = view; flat.request(); } });
+      }
+      v.scene.requestRender();
+    },
     setRenderPaused(paused) {
       const v = viewerRef.current;
       if (!v) return;

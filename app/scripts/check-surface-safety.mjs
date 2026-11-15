@@ -26,6 +26,7 @@ try {
   args:['--enable-gpu','--use-angle=metal','--ignore-gpu-blocklist','--no-first-run','--hide-scrollbars','--disable-background-timer-throttling','--disable-renderer-backgrounding','--disable-backgrounding-occluded-windows']});
  await lease.afterLaunch(browser);
  page=(await browser.pages())[0];
+ await page.setViewport({width:1440,height:900,deviceScaleFactor:2});
  const modules=flag('--modules',null);
  if(modules){await page.setRequestInterception(true);page.on('request',r=>{const n=new URL(r.url()).pathname.match(/^\/src\/moon\/(\w+)\.ts$/)?.[1],p=n&&join(modules,n+'.js');if(p&&existsSync(p))void r.respond({status:200,contentType:'text/javascript',body:readFileSync(p)});else void r.continue();});}
  page.on('pageerror',e=>result.errors.push(e.stack||String(e)));

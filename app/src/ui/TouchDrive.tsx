@@ -12,11 +12,24 @@ const send = (type: 'keydown' | 'keyup', key: string) => window.dispatchEvent(ne
 export function TouchDrive() {
   const t = useT();
   const held = useRef(new Set<string>());
+  const padPointer = useRef<number | null>(null);
+  const fastPointer = useRef<number | null>(null);
   const [knob, setKnob] = useState<{ x: number; y: number } | null>(null);
   const [fast, setFast] = useState(false);
-  const release = () => { for (const key of held.current) send('keyup', key); held.current.clear(); setKnob(null); };
-  // every key is let go when the pad goes away (leaving the surface) or the page loses the finger
-  useEffect(() => () => { for (const key of held.current) send('keyup', key); send('keyup', 'Shift'); }, []);
+  const release = () => { for (const key of held.current) send('keyup', key); held.current.clear(); padPointer.current = null; setKnob(null); };
+  const releaseFast = () => { fastPointer.current = null; setFast(false); send('keyup', 'Shift'); };
+  // Let go when a finger is cancelled or the page goes into the background.
+  useEffect(() => {
+    const reset = () => {
+      for (const key of held.current) send('keyup', key);
+      held.current.clear(); padPointer.current = null; fastPointer.current = null;
+      send('keyup', 'Shift'); setKnob(null); setFast(false);
+    };
+    const visibility = () => { if (document.hidden) reset(); };
+    window.addEventListener('blur', reset);
+    document.addEventListener('visibilitychange', visibility);
+    return () => { reset(); window.removeEventListener('blur', reset); document.removeEventListener('visibilitychange', visibility); };
+  }, []);
 
   const steer = (ev: React.PointerEvent<HTMLDivElement>) => {
     const r = ev.currentTarget.getBoundingClientRect(), reach = r.width / 2;
@@ -35,16 +48,18 @@ export function TouchDrive() {
 
   return <>
     <div className={`lv-pad${knob ? ' held' : ''}`} role="group" aria-label={t('hud.pad')}
-      onPointerDown={ev => { ev.preventDefault(); ev.stopPropagation(); ev.currentTarget.setPointerCapture(ev.pointerId); steer(ev); }}
-      onPointerMove={ev => { if (ev.currentTarget.hasPointerCapture(ev.pointerId)) steer(ev); }}
-      onPointerUp={release} onPointerCancel={release} onLostPointerCapture={release} onContextMenu={ev => ev.preventDefault()}>
+      onPointerDown={ev => { ev.preventDefault(); ev.stopPropagation(); if (padPointer.current !== null) return; padPointer.current = ev.pointerId; ev.currentTarget.setPointerCapture(ev.pointerId); steer(ev); }}
+      onPointerMove={ev => { if (padPointer.current === ev.pointerId && ev.currentTarget.hasPointerCapture(ev.pointerId)) steer(ev); }}
+      onPointerUp={ev => { if (padPointer.current === ev.pointerId) release(); }}
+      onPointerCancel={ev => { if (padPointer.current === ev.pointerId) release(); }} onLostPointerCapture={ev => { if (padPointer.current === ev.pointerId) release(); }} onContextMenu={ev => ev.preventDefault()}>
       <CaretUp className="lv-pad-n" size={14} weight="bold" aria-hidden="true" /><CaretDown className="lv-pad-s" size={14} weight="bold" aria-hidden="true" />
       <CaretLeft className="lv-pad-w" size={14} weight="bold" aria-hidden="true" /><CaretRight className="lv-pad-e" size={14} weight="bold" aria-hidden="true" />
       <i className="lv-pad-knob" style={knob ? { transform: `translate(${knob.x * 34}px, ${knob.y * 34}px)` } : undefined} />
     </div>
     <button type="button" className={`lv-fast${fast ? ' held' : ''}`} aria-label={t('hud.fast')} aria-pressed={fast}
-      onPointerDown={ev => { ev.preventDefault(); ev.stopPropagation(); ev.currentTarget.setPointerCapture(ev.pointerId); setFast(true); send('keydown', 'Shift'); }}
-      onPointerUp={() => { setFast(false); send('keyup', 'Shift'); }} onPointerCancel={() => { setFast(false); send('keyup', 'Shift'); }}
+      onPointerDown={ev => { ev.preventDefault(); ev.stopPropagation(); if (fastPointer.current !== null) return; fastPointer.current = ev.pointerId; ev.currentTarget.setPointerCapture(ev.pointerId); setFast(true); send('keydown', 'Shift'); }}
+      onPointerUp={ev => { if (fastPointer.current === ev.pointerId) releaseFast(); }} onPointerCancel={ev => { if (fastPointer.current === ev.pointerId) releaseFast(); }}
+      onLostPointerCapture={ev => { if (fastPointer.current === ev.pointerId) releaseFast(); }}
       onContextMenu={ev => ev.preventDefault()}>
       <Lightning size={20} weight="fill" /><span>{t('hud.fast')}</span>
     </button>

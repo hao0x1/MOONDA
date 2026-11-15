@@ -56,6 +56,10 @@ html.lang-km .start-actions .btn { line-height: 1.65; }
 
 
 @media (max-width: 520px) { .start-mode-list { grid-template-columns: 1fr; } }
+@media (max-height: 520px) and (pointer: coarse) {
+  /* Keep the last choice above the bottom edge when focusing it. */
+  .start-col { height: max-content; padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px)); }
+}
 @media (prefers-reduced-motion: reduce) { .st-line.busy i { animation: none; width: 100%; opacity: .4; } }
 
 /* "While you wait": a small board on two ropes beside the column (WaitQuestions.tsx). A moment after loading

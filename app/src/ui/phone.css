@@ -1,10 +1,10 @@
 /* ---- MOONDA on a phone (by the lead, 15 Nov). The owner: "right now it's not actually responsive for mobile ...
    PC right now is really good, I don't want you to degrade it." So nothing here applies above 720 px of width:
    a desktop reads none of these rules. Below it the same parts are laid out for one hand and a narrow screen:
-     - the top bar is two rows: search, then the tools in a row you can slide sideways
+     - the top search pill and bottom tool pill leave the Moon clear
      - the place card is a sheet across the bottom, folded to its name and buttons until you open it
      - Layers, Compare and MOONDA AI are sheets over the whole width
-     - the time bar is two short rows: the menus and the clock, then the timeline
+     - the time bar opens from a clock pill and hides while a sheet is open
      - in Land here the name, compass, round map and the Sun and Earth notes share the top, and the drive
        controls sit at the bottom with a thumb pad (ui/TouchDrive.tsx)
    Loaded last (main.tsx), so these rules win over the ones they restate. ---- */
@@ -150,4 +150,220 @@
   .lv-fast { width: 64px; height: 64px; bottom: calc(var(--tb, 72px) + 70px); }
   .lv-hint { display: none; }
   .start { padding-top: 16px; }
+}
+
+/* The map keeps its search above, tools below, and one sheet in between. */
+@media (max-width: 720px), (max-height: 520px) and (pointer: coarse) {
+  :root { --m: 12px; --top: 76px; --status-h: 0px; --z: 1 !important; }
+  .statusline { display: none; }
+  .topbar { top: max(12px, env(safe-area-inset-top, 0px)); left: 12px; right: 12px; height: 52px; flex-direction: row; gap: 0; z-index: 40; }
+  .topbar .search { flex: 1; width: 100%; min-width: 0; z-index: 2; }
+  .searchbar { height: 52px; padding: 0 8px 0 16px; border-radius: 28px; }
+  .searchbar .brand { padding-right: 12px; margin-right: 12px; }
+  .searchbar input { font-size: 16px; }
+  .searchbar .ibtn { width: 44px; height: 44px; }
+  .search-results { top: 60px; max-height: min(60dvh, 440px); }
+  .search-results .result { min-height: 52px; }
+  .topbar .toolbar { display: none; }
+  .phone-toolbar { position: fixed; left: 12px; right: 12px; bottom: max(12px, env(safe-area-inset-bottom, 0px)); display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 2px; padding: 5px; border-radius: 34px; background: rgba(23, 24, 28, .94); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); box-shadow: 0 10px 36px rgba(0, 0, 0, .4); }
+  .phone-toolbar > button { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; min-width: 0; min-height: 52px; padding: 4px 1px; border: 0; border-radius: 26px; background: transparent; color: var(--text-2); font: 500 10px/13px var(--sans); cursor: pointer; touch-action: manipulation; }
+  .phone-toolbar > button[aria-pressed='true'] { color: var(--ink); background: var(--white); }
+  .phone-toolbar > button:disabled { opacity: .4; }
+  .phone-toolbar > button > span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .phone-toolbar > button > svg { flex: none; }
+  .phone-tool-count { position: absolute; top: 1px; right: 5px; display: grid; place-items: center; min-width: 16px; height: 16px; padding: 0 3px; border-radius: 50%; background: var(--text); color: var(--ink); font-size: 10px; }
+  .phone-more { position: fixed; left: 12px; right: 12px; bottom: calc(86px + env(safe-area-inset-bottom, 0px)); display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 12px; border-radius: 24px; background: rgba(23, 24, 28, .98); max-height: calc(100dvh - 164px); overflow-y: auto; }
+  .phone-more header { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; padding-left: 8px; }
+  .phone-more h2 { font-size: 20px; font-weight: 500; }
+  .phone-more button { display: flex; align-items: center; justify-content: flex-start; gap: 8px; min-height: 48px; min-width: 0; padding: 8px; border: 0; border-radius: 12px; background: var(--fill-1); color: var(--text); font: 400 13px/19px var(--sans); text-align: left; overflow-wrap: anywhere; }
+  .phone-more header button { width: 44px; height: 44px; justify-content: center; background: transparent; }
+  .phone-more button svg { flex: none; }
+
+  .map-controls, .app.layers-open .map-controls, .app.drawer-open .map-controls, .app.ai-open .map-controls { top: max(80px, calc(env(safe-area-inset-top, 0px) + 68px)); right: 12px; transform: none; display: flex; gap: 10px; }
+  .map-controls .ibtn.lg { width: 48px; height: 48px; border-radius: 50%; background: rgba(23, 24, 28, .9); }
+  .map-controls .ctl-ai, .map-controls .ctl-zoom, .map-controls .oroute-slot { display: none; }
+  .app:has(.phone-sheet-expanded:not([hidden])) .map-controls { display: none; }
+  .app.drawer-open, .app.layers-open, .app.ai-open { --rp: 0px; }
+  .legend-float { left: 12px; right: auto; top: 80px; bottom: auto; width: min(190px, calc(100vw - 90px)); padding: 10px 12px; }
+  .app:has(.phone-sheet-expanded:not([hidden])) .legend-float { display: none; }
+
+  .place.phone-sheet, .layers.phone-sheet, .drawer.phone-sheet, .ai-panel.phone-sheet, .oroute-dock.phone-sheet {
+    --phone-peek: 332px; position: fixed; top: auto; left: 0; right: 0; bottom: 0; width: 100%; max-width: none;
+    height: var(--phone-sheet-size, var(--phone-peek)); max-height: calc(100dvh - max(72px, 10dvh)); margin: 0;
+    padding-bottom: calc(84px + env(safe-area-inset-bottom, 0px)); scale: 1; transform: none; transform-origin: 50% 100%;
+    z-index: 30; display: flex; flex-direction: column; align-items: stretch; gap: 0; overflow: hidden; border-radius: 28px 28px 0 0;
+    background: rgba(20, 21, 25, .97); box-shadow: 0 -10px 48px rgba(0, 0, 0, .4); animation: none;
+    transition: height 220ms var(--ease); pointer-events: auto;
+  }
+  .place.phone-sheet { --phone-peek: 332px; }
+  .drawer.phone-sheet { --phone-peek: 332px; }
+  .ai-panel.phone-sheet { --phone-peek: 332px; }
+  .oroute-dock.phone-sheet { --phone-peek: 332px; }
+  .phone-sheet.phone-sheet-expanded { padding-bottom: max(12px, env(safe-area-inset-bottom, 0px)); height: var(--phone-sheet-size, calc(100dvh - max(72px, 10dvh))); }
+  .phone-sheet.phone-sheet-dragging { transition: none; }
+  .ai-panel.phone-sheet[hidden] { display: none; }
+  .phone-sheet-handle { flex: none; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 7px; width: 100%; height: 44px; min-height: 44px; padding: 5px 0 3px; border: 0; background: transparent; color: var(--text-3); cursor: ns-resize; touch-action: none; user-select: none; -webkit-user-select: none; }
+  .phone-sheet-handle > i { display: block; width: 36px; height: 4px; border-radius: 3px; background: var(--text-3); opacity: .8; }
+  .phone-sheet-handle > span { display: inline-flex; align-items: center; gap: 5px; font: 400 10px/12px var(--sans); }
+  .phone-sheet .drawer-head { height: 56px; min-height: 56px; padding: 0 12px 8px 16px; }
+  .phone-sheet .drawer-head h2 { font-size: 22px; font-weight: 500; letter-spacing: -.02em; }
+  .phone-sheet .drawer-head > .ibtn { order: -1; margin-left: -6px; margin-right: 4px; }
+  .phone-sheet .ibtn, .phone-sheet .ai-icon-btn { flex: none; width: 44px; height: 44px; }
+  .phone-sheet button, .phone-sheet summary { min-height: 44px; }
+  .phone-sheet button { min-width: 44px; }
+  .phone-sheet .seg { height: auto; min-height: 48px; }
+  .phone-sheet .pday-plot { max-width: 100%; overflow-x: auto; padding-bottom: 8px; overscroll-behavior-x: contain; scrollbar-width: thin; }
+  .phone-sheet .pday-bars, .phone-sheet .pday-labels, .phone-sheet .pday-axis { min-width: calc(var(--pday-count) * 44px); }
+  .phone-sheet .btn { min-height: 44px; height: auto; }
+  .phone-sheet .place-body, .phone-sheet .layers-body, .phone-sheet .drawer-body, .phone-sheet .ai-body { min-height: 0; overflow-x: hidden; overscroll-behavior: contain; }
+  .phone-sheet-summary { flex: none; display: flex; flex-direction: column; gap: 12px; padding: 12px 16px 16px; }
+  .phone-sheet-summary p { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin: 0; color: var(--text-2); font-size: 14px; line-height: 20px; }
+  .phone-sheet-summary .btn { width: 100%; }
+  .phone-sheet-expanded .phone-sheet-summary { padding-top: 10px; padding-bottom: 10px; }
+  .phone-sheet-expanded .phone-sheet-summary p { display: none; }
+  .app:not(.standing):has(.phone-sheet:not([hidden])) .timebar,
+  .app:not(.standing):has(.phone-sheet:not([hidden])) .tb-shade,
+  .app:has(.phone-sheet-expanded:not([hidden])) .phone-toolbar { display: none; }
+  .app:has(.phone-more) .timebar { display: none; }
+
+  .phone-sheet .place-head { padding: 0 16px 10px; }
+  .phone-sheet .place-top { min-height: 44px; }
+  .phone-sheet .place-toggle { display: none; }
+  .phone-sheet .place-kind { font-size: 10px; }
+  .phone-sheet .place-title { font-size: 22px; line-height: 27px; letter-spacing: -.02em; }
+  .phone-sheet .place-name-row { margin-top: -2px; }
+  .phone-sheet .place-coords { min-height: 44px; }
+  .phone-sheet-peek .place-coords, .phone-sheet-peek .place-source { display: none; }
+  .phone-sheet-peek .place-title { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .phone-sheet .place-line { font-size: 12px; line-height: 18px; }
+  .phone-sheet .place-source { min-height: 44px; }
+  .phone-sheet .place-actions { gap: 6px; padding: 0 16px 12px; }
+  .phone-sheet .place-actions .btn { font-size: 12px; gap: 5px; padding: 0 5px; }
+  .phone-sheet .place-actions .btn svg { width: 17px; flex: none; }
+  .phone-sheet .place-body { flex: 1; padding: 0 16px 20px; }
+  .phone-sheet .place-body.has-more { mask-image: none; }
+  .phone-sheet .layers-body { flex: 1; padding: 0 16px 20px; }
+  .phone-sheet .layer-row { min-height: 52px; }
+  .phone-sheet .layer-title { font-size: 14px; }
+  .phone-sheet .help-btn { min-width: 44px; min-height: 44px; }
+  .phone-sheet .strength { min-height: 44px; }
+  .phone-sheet .strength input { height: 44px; }
+
+  .timebar { left: 12px; right: 12px; bottom: calc(86px + env(safe-area-inset-bottom, 0px)); width: auto; scale: 1; grid-template-columns: minmax(0, 1fr); grid-template-areas: 'toggle' 'menus' 'mid'; row-gap: 8px; column-gap: 0; align-items: center; }
+  .phone-time-toggle { grid-area: toggle; justify-self: start; display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; max-width: 100%; padding: 0 14px; border: 1px solid var(--line); border-radius: 24px; color: var(--text-2); background: rgba(23, 24, 28, .9); font: 400 12px/18px var(--sans); font-variant-numeric: tabular-nums; cursor: pointer; }
+  .phone-time-toggle > span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .phone-time-collapsed .tbar-menus, .phone-time-collapsed .tbar-mid, .timebar .tbar-clock { display: none; }
+  .timebar .tbar-menus { margin-left: 0; overflow: visible; width: 100%; }
+  .timebar .mbtn { height: 44px; padding: 0 8px; }
+  .timebar .mbtn-cap { font-size: 10px; }
+  .timebar .mbtn-val { font-size: 12px; }
+  .timebar .tbar-menus .mbtn:nth-of-type(3) { display: grid; }
+  .timebar .tbar-play { width: 44px; height: 44px; }
+  .timebar .tbar-row { gap: 10px; }
+  .timebar .tbar-cap, .clk-cap, .clk-sub { display: none; }
+  .tb-shade { height: 180px; }
+  .dtp { width: min(336px, calc(100vw - 24px)); max-height: calc(100dvh - 24px); overflow-y: auto; }
+  .dtp-head { height: 44px; }
+  .dtp button { min-height: 44px; min-width: 44px; }
+  .dtp-days button { width: 44px; height: 44px; }
+  .dtp-field { min-height: 48px; }
+  .dtp input { font-size: 16px; }
+  .dtp-time input { width: 44px; height: 44px; }
+  .menu-item { min-height: 44px; }
+  .app:has(.phone-time-collapsed) .tb-shade { height: 120px; }
+  .app.standing .phone-time-toggle { display: none; }
+  .app.standing .timebar { bottom: calc(8px + env(safe-area-inset-bottom, 0px)); grid-template-areas: 'mid'; }
+  .app.standing .timebar .tbar-mid { display: block; }
+
+  .welcome-card { width: calc(100% - 24px); max-height: calc(100dvh - 24px); padding: 24px 20px 20px; }
+  .welcome-actions { flex-direction: column; }
+  .welcome-actions .btn { width: 100%; min-height: 48px; }
+  .welcome-close { width: 44px; height: 44px; top: 8px; right: 8px; }
+  .welcome-sources td { display: block; width: auto; padding-bottom: 4px; overflow-wrap: anywhere; }
+  .moonda-tutorial-banner { left: 12px; right: 72px; top: 80px !important; transform: none; max-width: none; padding: 8px; gap: 8px; border-radius: 20px; }
+  .moonda-tutorial-text b { white-space: normal; font-size: 13px; }
+  .moonda-tutorial-text span { font-size: 12px; line-height: 17px; }
+  .moonda-tutorial-dots { display: none; }
+  .moonda-tutorial-close, .moonda-tutorial-skip { min-width: 44px; min-height: 44px; }
+  body:has(.app:not(.standing) .phone-sheet-expanded:not([hidden])) .moonda-tutorial-banner { display: none; }
+}
+
+@media (max-height: 520px) and (pointer: coarse) {
+  .topbar { right: 76px; }
+  .phone-toolbar { left: max(12px, env(safe-area-inset-left, 0px)); right: auto; width: 330px; bottom: 10px; }
+  .phone-more { left: 12px; right: auto; width: 380px; bottom: 82px; max-height: calc(100dvh - 156px); }
+  .map-controls, .app.layers-open .map-controls, .app.drawer-open .map-controls, .app.ai-open .map-controls { top: 12px; right: max(12px, env(safe-area-inset-right, 0px)); gap: 8px; }
+  .app:has(.phone-sheet:not([hidden])) .map-controls { display: none; }
+  .timebar { left: auto; right: 80px; bottom: 12px; max-width: calc(100vw - 440px); }
+  .timebar:not(.phone-time-collapsed) { left: 360px; right: 80px; max-width: none; }
+  .phone-sheet { --phone-peek: 188px !important; padding-bottom: max(12px, env(safe-area-inset-bottom, 0px)) !important; }
+  .app:has(.phone-sheet-peek) .phone-toolbar { left: auto; right: 12px; }
+  .phone-sheet-peek .place-actions, .phone-sheet-peek .phone-sheet-summary, .phone-sheet-peek .layers-body,
+  .ai-panel.phone-sheet-peek .ai-compose, .oroute-dock.phone-sheet-peek > .rcard { width: calc(100% - 360px); }
+  .phone-sheet .phone-sheet-handle { height: 44px; min-height: 44px; }
+  .phone-sheet .phone-sheet-handle > span { display: none; }
+  .phone-sheet .drawer-head { height: 48px; min-height: 48px; }
+  .phone-sheet .place-head { padding-top: 0; }
+  .phone-sheet-peek .place-line { display: none; }
+  .phone-sheet-peek .place-title { -webkit-line-clamp: 1; }
+  .phone-sheet-summary { padding-top: 8px; gap: 8px; }
+  .phone-sheet-peek .phone-sheet-summary p { display: none; }
+  .place.phone-sheet-peek .place-head { position: relative; height: 44px; min-height: 44px; padding-top: 8px; }
+  .place.phone-sheet-peek .place-top { position: absolute; top: 0; right: 12px; }
+  .place.phone-sheet-peek .place-kind { display: none; }
+  .place.phone-sheet-peek .place-name-row { padding-right: 52px; }
+  .ai-panel.phone-sheet-peek { --phone-peek: 188px !important; }
+  .ai-panel.phone-sheet-peek .ai-head { height: 48px; min-height: 48px; }
+  .ai-panel.phone-sheet-peek .ai-head-text span, .ai-panel.phone-sheet-peek .ai-foot { display: none; }
+  .ai-panel.phone-sheet-peek .ai-body { display: none; }
+  .oroute-dock.phone-sheet { --phone-peek: 188px !important; }
+  .moonda-tutorial-banner { right: 80px; max-width: 460px; }
+}
+
+@media (max-width: 720px) and (prefers-reduced-motion: reduce), (max-height: 520px) and (pointer: coarse) and (prefers-reduced-motion: reduce) {
+  .phone-sheet { transition: none; }
+}
+
+/* ---- Final pass on a real iPhone (15 Nov, by the lead). The owner: the pin's sheet "is taking up too big space"
+   on smaller phones; the MOONDA logo "is too small"; the "2" on Compare "is coming out of the white thing".
+   So: the grab bar alone (no "Show details" line), a short peek with the name, one line and the three buttons,
+   the full wordmark in the search pill, and the count inside the tool's own pill. ---- */
+@media (max-width: 720px) {
+  /* the grab bar: drag or tap it; it no longer spends a whole row on words */
+  .phone-sheet .phone-sheet-handle { height: 24px; min-height: 24px; padding: 8px 0 0; justify-content: flex-start; }
+  .phone-sheet .phone-sheet-handle > i { width: 40px; height: 5px; opacity: .55; }
+
+  /* the place's peek: name and close on one row, one line under it, the three buttons */
+  .place.phone-sheet { --phone-peek: calc(166px + 84px + env(safe-area-inset-bottom, 0px)); }
+  .place.phone-sheet-peek .place-head { position: relative; padding: 4px 16px 10px; }
+  .place.phone-sheet-peek .place-top { position: absolute; top: 0; right: 8px; min-height: 0; }
+  .place.phone-sheet-peek .place-kind, .place.phone-sheet-peek .place-top-gap { display: none; }
+  .place.phone-sheet-peek .place-name-row { padding-right: 48px; margin-top: 0; }
+  .place.phone-sheet-peek .place-title { display: block; font-size: 20px; line-height: 28px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .place.phone-sheet-peek .place-line { margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text-2); }
+  .place.phone-sheet-peek .place-actions { padding: 0 16px 10px; }
+  .phone-sheet .place-actions .btn { height: 44px; border-radius: 22px; font-size: 13px; }
+
+  /* other sheets peek lower too, since their header is shorter now */
+  .layers.phone-sheet, .oroute-dock.phone-sheet { --phone-peek: calc(260px + 84px + env(safe-area-inset-bottom, 0px)); }
+  .phone-sheet .drawer-head { height: 48px; min-height: 48px; padding-bottom: 4px; }
+  .phone-sheet .drawer-head h2 { font-size: 20px; }
+  /* a full-height sheet (AI, Compare with plans) reads as its own page */
+  .phone-sheet.phone-sheet-expanded { border-radius: 24px 24px 0 0; }
+
+  /* the logo: the whole wordmark, not just its Moon */
+  .searchbar .brand { height: 24px; padding-right: 12px; margin-right: 10px; font-size: 17px; }
+  .searchbar .brand .wordmark-text { display: inline; }
+  .searchbar .brand .wordmark-moon { margin: 0 .07em 0 .03em; }
+  .searchbar input::placeholder { font-size: 15px; }
+
+  /* the count sits beside the icon, inside the tool's pill whether it is lit or not */
+  .phone-toolbar .phone-tool-count { top: 6px; right: auto; left: calc(50% + 7px); min-width: 17px; height: 17px; padding: 0 4px; border-radius: 9px; font: 600 10px/17px var(--sans); box-shadow: 0 0 0 2px rgba(23, 24, 28, .94); }
+  .phone-toolbar > button[aria-pressed='true'] .phone-tool-count { background: var(--ink); color: var(--white); box-shadow: 0 0 0 2px var(--white); }
+}
+
+/* the whole header of a sheet can be dragged (PhoneSheet.tsx): the browser must not take that finger for a scroll */
+@media (max-width: 720px), (max-height: 520px) and (pointer: coarse) {
+  .phone-sheet .phone-sheet-handle, .phone-sheet .place-head, .phone-sheet .drawer-head, .phone-sheet .ai-head, .phone-sheet .phone-sheet-summary { touch-action: none; }
+  .phone-sheet .phone-sheet-handle { height: 28px; min-height: 28px; padding-top: 10px; }
 }

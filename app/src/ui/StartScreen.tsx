@@ -27,6 +27,11 @@ interface Props {
 const MODES: Quality[] = ['full', 'light'];
 const SKIP_AFTER_MS = 20000; // only offer "Skip waiting" when start-up is really slow
 
+function removeIntro() {
+  document.getElementById('intro-video')?.dispatchEvent(new Event('moonda-intro-dispose'));
+  document.getElementById('intro-bg')?.remove();
+}
+
 function StageRow({ s }: { s: Stage }) {
   const t = useT();
   const right = s.state === 'done' ? (
@@ -54,10 +59,10 @@ export function StartScreen({ progress, leaving, onEnter, onSkip }: Props) {
     const bg = document.getElementById('intro-bg');
     if (!bg || !leaving) return;
     bg.classList.add('gone');
-    const id = setTimeout(() => bg.remove(), 520);
+    const id = setTimeout(removeIntro, 520);
     return () => clearTimeout(id);
   }, [leaving]);
-  useEffect(() => () => document.getElementById('intro-bg')?.remove(), []);
+  useEffect(() => removeIntro, []);
   const prefs = settings.use();
   const { seen } = tutorialStore.use();
   const [recommended] = useState(() => { initQuality(); return detectQuality(); });

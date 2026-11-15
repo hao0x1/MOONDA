@@ -25,6 +25,7 @@ import { SUN_URL, EARTH_URL } from '../ui/glyphs';
 import type { RouteResult } from '../science/route';
 import { MAP_DETAIL_SOURCES, POLAR_HALF as PHOTO_POLAR_HALF, POLAR_MAX_LEVEL, TILE, TREK_MAX_LEVEL, detailUrl, mapImagery, polarXY, trekUrl, type MapPhotoSource } from '../explore/mapImagery';
 import { drawingPixelRatio, isPhoneGraphics } from '../app/quality';
+import { watchGraphicsContext } from '../ui/RenderStopped';
 
 /** Resize before upload: clamping only the destination texture still leaves an oversized source upload. */
 async function fitTextureBitmap(gl: WebGL2RenderingContext, bitmap: ImageBitmap, phoneLimit = Infinity): Promise<ImageBitmap> {
@@ -386,9 +387,11 @@ export class FlatMap {
   private light = false;
   private u: Record<string, WebGLUniformLocation | null> = {};
   private preparing: Promise<void> | null = null;
+  private overlayTail: Promise<void> = Promise.resolve();
   private hooks: FlatHooks;
   private raf = 0;
   private dpr = 1;
+  private uiDpr = 1;
   private width = 1;
   private height = 1;
   // what is drawn
@@ -439,6 +442,7 @@ export class FlatMap {
   private tileProg: WebGLProgram | null = null;
   private tileU: Record<string, WebGLUniformLocation | null> = {};
   private tileVao: WebGLVertexArrayObject | null = null;
+  private buffers: WebGLBuffer[] = [];
   private tileTextures = new Map<string, { texture: WebGLTexture; bitmap: ImageBitmap; used: number }>();
   private tileKeys = new Set<string>();
   private tileFrame = 0;
@@ -446,6 +450,10 @@ export class FlatMap {
   private tileLevels = new Set<string>();
   private offImagery: () => void;
   private alive = true;
+  private phoneHidden = true;
+  private readonly offContextLoss: () => void;
+  /** Lost while hidden: the 2D view cannot be shown again without a reload (MoonMap asks before switching). */
+  contextLost = false;
 
   constructor(parent: HTMLElement, hooks: FlatHooks) {
     this.hooks = hooks;
@@ -462,8 +470,10 @@ export class FlatMap {
     this.el.appendChild(this.pill);
     parent.appendChild(this.el);
     const gl = this.glCanvas.getContext('webgl2', { alpha: true, premultipliedAlpha: true, antialias: true, depth: true, powerPreference: 'high-performance' });
-    if (!gl) throw new Error('WebGL2 is not available');
+    if (!gl) { this.offImagery(); this.el.remove(); throw new Error('WebGL2 is not available'); }
     this.gl = gl;
+    // Hidden (the 3D globe is showing): losing it costs nothing now; the page reloads only if it is on screen.
+    this.offContextLoss = watchGraphicsContext(this.glCanvas, () => { this.contextLost = true; return this.el.style.visibility !== 'visible'; });
     this.ctx = this.ui.getContext('2d')!;
     this.ui.addEventListener('pointerdown', this.onDown);
     this.ui.addEventListener('pointermove', this.onMove);
@@ -481,13 +491,15 @@ export class FlatMap {
 
   /** Load and re-project the whole-Moon picture, build the mesh, compile the shaders, draw once. Call early (start screen). */
   prepare(light: boolean): Promise<void> {
+    if (!this.alive) return Promise.resolve();
     if (this.preparing) return this.preparing;
-    this.light = light;
+    this.light = light || isPhoneGraphics();
     this.preparing = (async () => {
       const gl = this.gl;
-      const small = light || (gl.getParameter(gl.MAX_TEXTURE_SIZE) as number) < 8192;
+      const small = this.light || (gl.getParameter(gl.MAX_TEXTURE_SIZE) as number) < 8192;
       const res = await fetch(new URL(small ? './data/base/v5/moon2k.jpg' : './data/base/v5/moon8k.jpg', document.baseURI).href);
       const bmp = await fitTextureBitmap(gl, await createImageBitmap(await res.blob(), { colorSpaceConversion: 'none', premultiplyAlpha: 'none' }));
+      if (!this.alive) { bmp.close(); return; }
       this.prog = compile(gl, VS, FS);
       for (const n of ['uC', 'uA', 'uB', 'uS', 'uD', 'uO', 'uFlat', 'uSize', 'uProj', 'uTex', 'uSunOn', 'uDetail', 'uGrid', 'uPhoto', 'uSun', 'uTint0', 'uTint1', 'uTint2', 'uPolS', 'uPolN', 'uPolOn', 'uSharp']) this.u[n] = gl.getUniformLocation(this.prog, n);
       this.ovProg = compile(gl, VS, OFS);
@@ -497,6 +509,7 @@ export class FlatMap {
       this.tileVao = gl.createVertexArray();
       gl.bindVertexArray(this.tileVao);
       const tileBuffer = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, tileBuffer);
+      if (tileBuffer) this.buffers.push(tileBuffer);
       gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([0, 0, 0, 1, 1, 0, 1, 1]), gl.STATIC_DRAW);
       gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
       gl.bindVertexArray(null);
@@ -514,8 +527,10 @@ export class FlatMap {
       this.vao = gl.createVertexArray();
       gl.bindVertexArray(this.vao);
       const vb = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, vb); gl.bufferData(gl.ARRAY_BUFFER, v, gl.STATIC_DRAW);
+      if (vb) this.buffers.push(vb);
       gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
       const ib = gl.createBuffer(); gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ib); gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, idx, gl.STATIC_DRAW);
+      if (ib) this.buffers.push(ib);
       gl.bindVertexArray(null);
       // source (display frame) -> true lon/lat texture
       gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
@@ -527,7 +542,8 @@ export class FlatMap {
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-      const viewport = gl.getParameter(gl.MAX_VIEWPORT_DIMS) as Int32Array;
+      const viewport = gl.getParameter(gl.MAX_VIEWPORT_DIMS) as Int32Array | null;
+      if (!viewport || gl.isContextLost()) { bmp.close(); gl.deleteTexture(src); throw new Error('Map graphics context was lost'); }
       const W = Math.min(gl.getParameter(gl.MAX_TEXTURE_SIZE) as number, gl.getParameter(gl.MAX_RENDERBUFFER_SIZE) as number, viewport[0], viewport[1] * 2, bmp.width), H = W / 2;
       bmp.close();
       const tex = gl.createTexture()!;
@@ -574,6 +590,7 @@ export class FlatMap {
         const res = await fetch(new URL(`./data/base/v5/${POLAR_PICS[i].file}`, document.baseURI).href);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const bmp = await fitTextureBitmap(this.gl, await createImageBitmap(await res.blob(), { colorSpaceConversion: 'none', premultiplyAlpha: 'none' }));
+        if (!this.alive) { bmp.close(); return; }
         const gl = this.gl, tex = gl.createTexture()!;
         gl.bindTexture(gl.TEXTURE_2D, tex);
         gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
@@ -602,12 +619,13 @@ export class FlatMap {
   setOverlays(list: FlatOverlay[]) {
     if (list.map(o => o.id).join('|') !== this.overlays.map(o => o.id).join('|')) this.layerLabelsUntil = performance.now() + 500;
     this.overlays = list;
-    for (const o of list) void this.loadOverlay(o);
+    if (!isPhoneGraphics() || !this.phoneHidden) for (const o of list) void this.loadOverlay(o);
     this.request();
   }
 
   /** Small real-source previews make first use cheap without keeping every 4k texture resident. */
   async warmOverlays(list: FlatOverlay[]): Promise<boolean> {
+    if (isPhoneGraphics()) return true;
     let ok = true;
     // Decoding one original at a time bounds the temporary memory as well as the retained mipmaps.
     for (const o of list) {
@@ -662,10 +680,14 @@ export class FlatMap {
       if ('close' in image) image.close();
       else { image.width = 1; image.height = 1; }
     };
+    const before = isPhoneGraphics() && o.kind === 'polar' ? this.overlayTail : null;
+    let releaseQueue: (() => void) | undefined;
+    if (before) this.overlayTail = new Promise<void>(done => { releaseQueue = done; });
     const task = (async () => {
       let src: ImageBitmap | OffscreenCanvas | HTMLCanvasElement | null = null;
       let texture: WebGLTexture | null = null;
       try {
+        if (before) { await before; if (!valid()) return false; }
         if (o.kind === 'polar') src = await decode(await fetchBlob(o.url));
         else {
           // The final picture uses the same Moon Trek squares and missing-tile behavior as before.
@@ -743,6 +765,7 @@ export class FlatMap {
         release(src);
         if (texture) this.gl.deleteTexture(texture);
         current.pending = null; current.controller = null;
+        releaseQueue?.();
       }
     })();
     current.pending = task;
@@ -783,8 +806,11 @@ export class FlatMap {
     this.width = this.ui.clientWidth || 1; this.height = this.ui.clientHeight || 1;
     const { W, H } = this.size();
     this.dpr = drawingPixelRatio(this.gl, W, H, Math.min(isPhoneGraphics() ? 1 : 2, window.devicePixelRatio || 1));
+    this.uiDpr = isPhoneGraphics() && this.ready ? Math.min(2, window.devicePixelRatio || 1) : this.dpr;
     for (const c of [this.glCanvas, this.ui]) {
-      const w = Math.round(W * this.dpr), h = Math.round(H * this.dpr);
+      const ratio = c === this.ui ? this.uiDpr : this.dpr;
+      const hidden = isPhoneGraphics() && this.phoneHidden;
+      const w = hidden ? 1 : Math.round(W * ratio), h = hidden ? 1 : Math.round(H * ratio);
       if (c.width !== w || c.height !== h) { c.width = w; c.height = h; }
     }
     if (this.active && !this.busy) this.view = this.clampView(this.view);
@@ -792,9 +818,10 @@ export class FlatMap {
   }
 
   // ---- drawing -----------------------------------------------------------------------------
-  request() { if (!this.raf) this.raf = requestAnimationFrame(this.frame); }
+  request() { if (this.alive && !this.raf) this.raf = requestAnimationFrame(this.frame); }
   private frame = (now: number) => {
     this.raf = 0;
+    if (!this.alive || isPhoneGraphics() && this.phoneHidden) return;
     const dt = this.lastTick ? Math.min(0.064, (now - this.lastTick) / 1000) : 0.016;
     this.lastTick = now;
     const before = this.view;
@@ -1060,7 +1087,7 @@ export class FlatMap {
   /** Names, icons, pins, the Sun / Earth points and grid labels. Returns true while something is still fading. */
   private drawOverlay(dt: number): boolean {
     const ctx = this.ctx, { W, H } = this.size();
-    ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+    ctx.setTransform(this.uiDpr, 0, 0, this.uiDpr, 0, 0);
     ctx.clearRect(0, 0, W, H);
     this.hits.length = 0;
     if (this.overlayAlpha <= 0.001 || this.morphB < 0.999) return false;
@@ -1425,23 +1452,48 @@ export class FlatMap {
 
   /** Show (or hide) the layer itself; while shown it takes the pointer. */
   setShown(on: boolean, opacity = on ? 1 : 0) {
+    // its context went while it was hidden: only now, when it is wanted, does the page reload to get it back
+    if (on && this.contextLost) { window.dispatchEvent(new Event('moonda-context-lost')); return; }
+    if (on && isPhoneGraphics() && this.phoneHidden) {
+      this.phoneHidden = false; this.resize();
+      for (const o of this.overlays) void this.loadOverlay(o);
+    }
     this.el.style.visibility = on || opacity > 0 ? 'visible' : 'hidden';
     this.el.style.opacity = String(opacity);
     this.el.style.pointerEvents = on ? 'auto' : 'none';
     this.ui.style.cursor = this.busy ? 'default' : this.hooks.choosingDestination?.() ? 'crosshair' : 'grab';
-    if (!on && opacity === 0) mapImagery.release(this);
+    if (!on && opacity === 0) {
+      mapImagery.release(this);
+      if (isPhoneGraphics()) {
+        this.phoneHidden = true;
+        for (const entry of this.tileTextures.values()) this.gl.deleteTexture(entry.texture);
+        this.tileTextures.clear(); this.tileKeys.clear();
+        for (const entry of this.ovTex.values()) { entry.controller?.abort(); if (entry.tex) this.gl.deleteTexture(entry.tex); }
+        this.ovTex.clear();
+        this.glCanvas.width = this.glCanvas.height = this.ui.width = this.ui.height = 1;
+      }
+    }
   }
 
   destroy() {
+    this.offContextLoss();
     this.alive = false; this.offImagery(); mapImagery.release(this);
     for (const entry of this.ovTex.values()) { entry.controller?.abort(); if (entry.tex) this.gl.deleteTexture(entry.tex); }
     this.ovTex.clear();
+    for (const entry of this.tileTextures.values()) this.gl.deleteTexture(entry.texture);
+    this.tileTextures.clear();
+    for (const texture of [this.tex, ...this.pol]) this.gl.deleteTexture(texture);
+    for (const program of [this.prog, this.ovProg, this.tileProg]) this.gl.deleteProgram(program);
+    for (const vao of [this.vao, this.tileVao]) this.gl.deleteVertexArray(vao);
+    for (const buffer of this.buffers) this.gl.deleteBuffer(buffer);
+    this.buffers.length = 0;
     clearTimeout(this.clickTimer); clearTimeout(this.pillTimer);
     cancelAnimationFrame(this.raf);
     window.removeEventListener('keydown', this.onKey);
     window.removeEventListener('keyup', this.onKeyUp);
     this.el.remove();
     this.gl.getExtension('WEBGL_lose_context')?.loseContext();
+    this.glCanvas.width = this.glCanvas.height = this.ui.width = this.ui.height = 1;
   }
 }
 

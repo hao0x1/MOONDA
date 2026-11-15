@@ -127,10 +127,21 @@ export function createTexture(spec: TextureSpec): GlTexture {
 }
 
 /**
- * Download and decode a picture without blocking the page. Goes through an <img> (not fetch + Blob): Chrome
- * keeps big Blobs on disk and refuses them when the disk is nearly full, which made the 10 MB sky map fail.
+ * Decode phone maps at their upload size. Keep the image fallback for older Safari and disk-full Blob failures.
  */
 export async function loadBitmap(url: string): Promise<ImageBitmap> {
+  if (isPhoneGraphics()) {
+    try {
+      const response = await fetch(url);
+      if (!response.ok) throw new Error(`Sky picture returned ${response.status}`);
+      // Sky maps are 2:1. Avoid retaining a full-size HTML image decode on the phone.
+      const edge = Math.min(1024, P.ContextLimits.maximumTextureSize);
+      const bitmap = await createImageBitmap(await response.blob(), { resizeWidth: edge, resizeHeight: Math.max(1, edge / 2),
+        resizeQuality: 'high', imageOrientation: 'none', premultiplyAlpha: 'none', colorSpaceConversion: 'none' });
+      if (bitmap.width === edge && bitmap.height === Math.max(1, edge / 2)) return bitmap;
+      bitmap.close();
+    } catch { /* Older Safari can still use the image decoder below. */ }
+  }
   const img = new Image();
   img.decoding = 'async';
   img.src = url;

@@ -26,6 +26,7 @@ import { ARRIVAL_MAX, ARRIVAL_MIN, parseDate } from './parseDate';
 import { EarthGlyph, SunGlyph } from './glyphs';
 import { IconButton, Popover, useReachesControls } from './kit';
 import { Tracks } from './TimeBar';
+import { PhoneSheetHandle, usePhoneSheet } from './PhoneSheet';
 
 export interface CompareItem { id: string; letter: string; color: string; label: string; lat: number; lon: number; startMs: number }
 
@@ -560,7 +561,7 @@ function Cell({ hours, need, check, what }: { hours: number; need: number; check
   const tip = isOn(need) ? t('cmp.cell.tip', { what, value: shown, limit: limitWords(need) }) : t('cmp.cell.tipOff', { what, value: shown });
   const said = check === 'pass' ? t('cmp.cell.fits') : check === 'fail' ? t('cmp.cell.over') : '';
   return (
-    <div className={`cmp-cell ${check}`} role="img" aria-label={`${what}: ${shown}${said ? `, ${said}` : ''}.`} data-tip={tip}>
+    <div className={`cmp-cell ${check}`} data-phone-label={what} role="img" aria-label={`${what}: ${shown}${said ? `, ${said}` : ''}.`} data-tip={tip}>
       <span className="cmp-val">
         {parts ? <>{parts.n}<small>{parts.unit}</small></> : <span className="cmp-none">{shown}</span>}
         {check === 'pass' && <Check className="cmp-mark" size={12} weight="bold" aria-hidden="true" />}
@@ -817,6 +818,8 @@ export function Compare(p: Props) {
   const answer = answerFor(ev, needs);
   const nextLetter = planLetter(nextPlanIndex(p.items));
   const root = useReachesControls(r => p.onReach?.(r));
+  // (on a phone, plans to compare open the sheet at full height: the cards are the point of it)
+  const sheet = usePhoneSheet(root, true, undefined, p.items.length > 0);
   const empty = p.items.length === 0;
   const canAdd = p.canAddCurrent && !!p.currentLabel;
 
@@ -836,7 +839,8 @@ export function Compare(p: Props) {
   };
 
   return (
-    <aside ref={root} className={`drawer panel cmp${dragging ? ' cmp-scrubbing' : ''}`} aria-label={t('cmp.aria')}>
+    <aside ref={root} className={`drawer panel cmp${dragging ? ' cmp-scrubbing' : ''}${sheet.className}`} aria-label={t('cmp.aria')}>
+      <PhoneSheetHandle sheet={sheet} />
       <header className="drawer-head">
         <h2>{t('cmp.title')}</h2>
         {!empty && <span className="drawer-sub">{tn('cmp.count', p.items.length)}</span>}
@@ -844,6 +848,12 @@ export function Compare(p: Props) {
         <IconButton size="sm" label={t('cmp.close')} onClick={p.onClose}><X size={16} /></IconButton>
       </header>
 
+      {sheet.phone && (empty || canAdd) && <div className="phone-sheet-summary">
+        {empty && <p>{t('cmp.empty')}</p>}
+        {canAdd && <button type="button" className="btn primary" onClick={() => { p.onAddCurrent(); sheet.setExpanded(true); }}>
+          <Plus size={18} />{t('cmp.addSelected')}
+        </button>}
+      </div>}
       <div className="drawer-body">
         <section className="cmp-needs" aria-labelledby="cmp-robot-title">
           <h3 className="cmp-section-title" id="cmp-robot-title">{t('cmp.needs')} <span className="cmp-section-hint">{t('cmp.needs.hint')}</span></h3>

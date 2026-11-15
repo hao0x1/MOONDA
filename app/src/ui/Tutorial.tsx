@@ -9,7 +9,7 @@ import { Check, X } from '@phosphor-icons/react';
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { tMaybe, useT, type Key } from '../i18n';
-import { isTouch } from './device';
+import { isPhone, isTouch } from './device';
 import { roverLink } from '../moon/roverLink';
 import { tutorialStore } from './tutorialStore';
 import './tutorial.css';
@@ -31,7 +31,9 @@ function boxOf(selector: string, label?: string): Box | null {
 }
 const isStanding = () => !!document.querySelector('.app.standing');
 const hasSpot = () => !!document.querySelector('.place');
-const planCount = () => Number.parseInt(document.querySelector('.topbar .tb-count')?.textContent ?? '0', 10) || 0;
+const phoneTools = () => isPhone() || (isTouch() && innerHeight <= 520);
+const toolSelector = () => phoneTools() ? '.phone-toolbar button[aria-expanded]' : '.topbar .tb[aria-expanded]';
+const planCount = () => Number.parseInt(document.querySelector(phoneTools() ? '.phone-tool-count' : '.topbar .tb-count')?.textContent ?? '0', 10) || 0;
 /** The open middle of the Moon, clear of the left panel. */
 const moonCentre = () => ({ x: innerWidth * (innerWidth < 760 ? .5 : .56), y: innerHeight * .46 });
 
@@ -126,11 +128,11 @@ function Tour() {
         else { body = 'tutorial.drive.land'; ring = boxOf('.place-actions .btn.primary'); }
       } else if (next === 'compare') {
         if (standing) { body = 'tutorial.compare.back'; ring = boxOf('.lv-back'); }
-        else { body = 'tutorial.compare.body'; ring = boxOf('.place-actions .btn:nth-child(2)') ?? boxOf('.topbar .tb[aria-expanded]', t('top.compare')); }
+        else { body = 'tutorial.compare.body'; ring = boxOf('.place-actions .btn:nth-child(2)') ?? boxOf(toolSelector(), t('top.compare')); }
       } else if (next === 'layers') {
         if (standing) { body = 'tutorial.layers.back'; ring = boxOf('.lv-back'); }
         else if (document.querySelector('.layers.panel')) body = 'tutorial.layers.open';
-        else { body = 'tutorial.layers.body'; ring = boxOf('.topbar .tb[aria-expanded]', t('top.layers')); }
+        else { body = 'tutorial.layers.body'; ring = boxOf(toolSelector(), t('top.layers')); }
       }
       if (live.current.ticked) { ring = null; ghost = null; }
       // under the top bar on the map; under the compass on the surface

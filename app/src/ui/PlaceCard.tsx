@@ -17,6 +17,7 @@ import { DayBars } from './DayBars';
 import { durationParts, fmtKm } from './format';
 import { Help } from './Help';
 import { isPhone } from './device';
+import { PhoneSheetHandle, usePhoneSheet } from './PhoneSheet';
 import { IconButton, Segmented } from './kit';
 
 export type Selection =
@@ -83,6 +84,9 @@ export function PlaceCard(p: Props) {
   const nearest = useMemo(() => (p.selection.type === 'pin' && p.names ? nearestNames(p.names, lat, lon, 1)[0] : null), [p.names, lat, lon, p.selection.type]);
   // (on a phone the card is a sheet across the bottom: it starts folded to its name and buttons, so the Moon stays in view)
   const [collapsed, setCollapsed] = useState(isPhone);
+  const sheetRoot = useRef<HTMLElement>(null);
+  const sheet = usePhoneSheet(sheetRoot, true, `${lat},${lon}`);
+  const folded = sheet.phone ? !sheet.expanded : collapsed;
   const [copied, setCopied] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [moreBelow, setMoreBelow] = useState(false);
@@ -126,7 +130,7 @@ export function PlaceCard(p: Props) {
     if (content.current) observer.observe(content.current);
     update();
     return () => observer.disconnect();
-  }, [collapsed, title, tl]);
+  }, [folded, title, tl]);
   // these only change with the timeline, not on every tick of the clock
   const stats = useMemo(() => (tl ? statsFor(tl) : null), [tl]);
   const earthNever = useMemo(() => (tl ? Array.from(tl.earthEl).every(v => v < 0) : false), [tl]);
@@ -235,7 +239,8 @@ export function PlaceCard(p: Props) {
   ] : [];
 
   return (
-    <aside className={`place panel${collapsed ? ' collapsed' : ''}${scrolled ? ' scrolled' : ''}`} aria-label={title}>
+    <aside ref={sheetRoot} className={`place panel${folded ? ' collapsed' : ''}${scrolled ? ' scrolled' : ''}${sheet.className}`} aria-label={title}>
+      <PhoneSheetHandle sheet={sheet} />
       <header className="place-head">
         <div className="place-top">
           <span className="place-kind">{kind}</span>
@@ -257,7 +262,7 @@ export function PlaceCard(p: Props) {
       </header>
 
       {/* (the sheet on a phone keeps its three buttons when folded: Land here is what most people came for) */}
-      {(!collapsed || isPhone()) && (
+      {(!folded || sheet.phone) && (
         <div className="place-actions">
           <button type="button" className="btn primary" onClick={p.onStand} disabled={!ready} data-tip={ready ? t('place.standTip') : t('place.standWait')}>
             {ready ? <ArrowLineDown size={18} weight="bold" /> : <span className="spinner dark" />} {t('place.stand')}
@@ -272,7 +277,7 @@ export function PlaceCard(p: Props) {
         </div>
       )}
 
-      {!collapsed && (
+      {!folded && (
         <div className={`place-body${moreBelow ? ' has-more' : ''}`} ref={body} onScroll={e => {
           const el = e.currentTarget;
           setScrolled(el.scrollTop > 2);

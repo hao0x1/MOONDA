@@ -10,6 +10,7 @@ import { exploreHeights } from './context';
 import { SurfaceProjection } from './surfaceProjection';
 import { BASE_PICTURES, MAP_DETAIL_SOURCES, MAP_R, POLAR_HALF, TREK_MAX_LEVEL, detailUrl, cropMapPhoto, getPhotoPreview, mapImagery, polarLatLon, polarXY, trekUrl, scienceTileRect, scienceHeightParts } from './mapImagery';
 import { drawingPixelRatio, isPhoneGraphics } from '../app/quality';
+import { watchGraphicsContext } from '../ui/RenderStopped';
 
 const DEG = Math.PI / 180;
 const TAU = Math.PI * 2;
@@ -201,7 +202,7 @@ export class MapEngine {
   }
 
   getAcross() { return this.across; }
-  getDiagnostics() { return { layers:Object.keys(this.layers).filter(id=>this.layers[id]), opacity:this.opacity, layerDefs:this.layerDefs.map(d=>d.id),realSun:this.realSun,covered:this.covered, projection: 'flat', blend: this.projection?.blend ?? 0, imagery: mapImagery.getStats(), gpu: this.basePlane?.getStats() }; }
+  getDiagnostics() { return { layers:Object.keys(this.layers).filter(id=>this.layers[id]), opacity:this.opacity, layerDefs:this.layerDefs.map(d=>d.id),realSun:this.realSun,covered:this.covered, drawing:{width:this.canvas.width,height:this.canvas.height,pixelRatio:this.dpr}, projection: 'flat', blend: this.projection?.blend ?? 0, imagery: mapImagery.getStats(), gpu: this.basePlane?.getStats() }; }
   /** A small, on-demand check of the retained data tiles; never reads pixels in the draw loop. */
   getRasterDiagnostics() {
     const canvas=new OffscreenCanvas(128,128),g=canvas.getContext('2d',{willReadFrequently:true})!;
@@ -259,6 +260,7 @@ export class MapEngine {
     // The expanded picture covers the dial. Its hidden canvas and tile queue need no frames.
     if(this.raf)cancelAnimationFrame(this.raf);this.raf=0;clearTimeout(this.timer);this.timer=undefined;
     this.basePlane?.cancelPendingGlobal(true);mapImagery.release(this);
+    if (isPhoneGraphics()) { this.basePlane?.releasePhotos(); this.roundPhoto = null; }
   }
 
   centre() {
@@ -492,6 +494,7 @@ export class MapEngine {
   private draw() {
     if (!this.alive || !this.active || this.covered) return;
     this.lastDraw = performance.now();
+    if (this.basePlane?.lost) { this.basePlane.destroy(); this.basePlane = null; this.photoDirty = true; }
     this.basePlane?.beginFrame();
     this.smoothBearings(this.lastDraw);
     this.fading = false;
@@ -1351,12 +1354,17 @@ class BasePlane {
   private readonly warmTexture: WebGLTexture;
   private readonly uniforms = new Map<string, WebGLUniformLocation | null>();
   private readonly invalidate: () => void;
+  private readonly offContextLoss: () => void;
+  /** The browser took this context back (phones do under memory pressure): MapEngine drops this plane. */
+  lost = false;
 
   constructor(invalidate: () => void) {
     this.invalidate = invalidate;
     const gl = this.canvas.getContext('webgl2', { alpha: true, antialias: false, depth: false, stencil: false });
     if (!gl) throw new Error('Map photo acceleration unavailable');
     this.gl = gl;
+    // (if the phone takes this context back, the map draws on with its plain canvas path: see MapEngine.draw)
+    this.offContextLoss = watchGraphicsContext(this.canvas, () => { this.lost = true; invalidate(); return true; });
     this.maxTextureSize = gl.getParameter(gl.MAX_TEXTURE_SIZE) as number;
     const program = gl.createProgram()!;
     for (const [type, source] of [[gl.VERTEX_SHADER, `#version 300 es
@@ -1536,7 +1544,7 @@ class BasePlane {
         if(!tile.pending&&this.tilePending<4){
           const item=tile;item.pending=true;this.tilePending++;
           void cropMapPhoto(image,item.x,item.y,item.width,item.height).then(bitmap=>{
-            item.pending=false;this.tilePending--;if(this.disposed){bitmap.close();return;}item.bitmap=bitmap;this.invalidate();
+            item.pending=false;this.tilePending--;if(this.disposed||(isPhoneGraphics()&&this.baseTiles.get(key)!==item)){bitmap.close();return;}item.bitmap=bitmap;this.invalidate();
           }).catch(()=>{item.pending=false;this.tilePending--;});
         }
         continue;
@@ -1608,7 +1616,16 @@ class BasePlane {
 
   private drop(entry:PlaneTexture) { entry.disposed=true;cancelAnimationFrame(entry.raf);this.gl.deleteTexture(entry.texture); }
 
+  releasePhotos() {
+    for (const entry of this.textures.values()) this.drop(entry);
+    this.textures.clear();
+    for (const tile of this.baseTiles.values()) tile.bitmap?.close();
+    this.baseTiles.clear(); this.baseRegionReady = false;
+    this.canvas.width = this.canvas.height = 1;
+  }
+
   destroy() {
+    this.offContextLoss();
     this.disposed=true;for(const tile of this.baseTiles.values())tile.bitmap?.close();this.baseTiles.clear();this.gl.deleteTexture(this.warmTexture);
     for(const entry of this.textures.values())this.drop(entry);
     this.textures.clear();this.gl.deleteBuffer(this.vertices);this.gl.deleteVertexArray(this.vao);this.gl.deleteProgram(this.program);

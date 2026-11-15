@@ -1,4 +1,5 @@
-import { Columns, Moon, Question, SpeakerHigh, SpeakerSlash, Stack, Target, X } from '@phosphor-icons/react';
+import { Columns, DotsThree, Gauge, Moon, Path, Question, SpeakerHigh, SpeakerSlash, Stack, Target, X } from '@phosphor-icons/react';
+import { chooseQuality } from './app/quality';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { settings } from './app/settings';
 import { loadNames, type MoonName } from './data/names';
@@ -11,10 +12,11 @@ import { initialProgress } from './moon/preload';
 import { MoonMap, type LoadProgress, type MapPin, type MapSelection, type MoonMapHandle } from './moon/MoonMap';
 import { planRouteAsync, useSpot, useSpots, warmUp } from './science/client';
 import type { RoutePrefer, RouteResult } from './science/route';
-import { bodyFixedState } from './science/ephemeris';
+import { bodyFixedState, MOON_RADIUS_M } from './science/ephemeris';
 import { loadManifest, useLayerValues } from './science/layerValues';
 import type { AppBridge } from './ai/tools';
-import { AiPanel } from './ui/AiPanel';
+import { AiMark, AiPanel } from './ui/AiPanel';
+import { usePhoneLayout } from './ui/PhoneSheet';
 import { Compare, nextPlanIndex, planColour, planLetter, readNeeds, type CompareItem } from './ui/Compare';
 import { LanderHud } from './ui/LanderHud';
 import { LayerLegend, LayersPanel } from './ui/LayersPanel';
@@ -34,7 +36,7 @@ import { setExploreNames } from './explore/context';
 import { probeAt } from './explore/probe';
 import type { RouteView } from './explore/RoutePanel';
 import { SurfaceMap } from './explore/SurfaceMap';
-import { RenderStopped } from './ui/RenderStopped';
+import { RenderStopped, readGraphicsRecovery, saveGraphicsRecovery } from './ui/RenderStopped';
 
 const DEFAULT_ARRIVAL = Date.UTC(2026, 10, 18, 2, 0);
 const sameSpot = (a: { lat: number; lon: number }, b: { lat: number; lon: number }) => Math.abs(a.lat - b.lat) < 1e-6 && Math.abs(a.lon - b.lon) < 1e-6;
@@ -52,8 +54,13 @@ function askRoute(cur: PlannedRoute | null, from: Pin, to: Pin, prefer: RoutePre
 
 export default function App() {
   const map = useRef<MoonMapHandle>(null);
+  const [graphicsRecovery] = useState(readGraphicsRecovery);
+  const recoveryRover = useRef(graphicsRecovery?.rover ?? null);
+  const recoveryApplied = useRef(false);
   const t = useT();
   const prefs = settings.use();
+  const phone = usePhoneLayout();
+  const [phoneMore, setPhoneMore] = useState(false);
   useEffect(() => installLang(), []);
   const [names, setNames] = useState<MoonName[] | null>(null);
   const [manifest, setManifest] = useState<ScienceManifestEntry[]>([]);
@@ -66,20 +73,20 @@ export default function App() {
     return polar ? { ...base, legend: polar.legend, units: polar.units } : base;
   }, [scienceLayers]);
 
-  const [layers, setLayers] = useState<Record<string, boolean>>(layerDefaults);
-  const [opacity, setOpacity] = useState<Record<string, number>>({});
+  const [layers, setLayers] = useState<Record<string, boolean>>(graphicsRecovery?.layers ?? layerDefaults);
+  const [opacity, setOpacity] = useState<Record<string, number>>(graphicsRecovery?.opacity ?? {});
   const [showLayers, setShowLayers] = useState(false);
   const [mapMode, setMapMode] = useState<'globe' | 'flat'>('globe');
   const mapModeRef = useRef(mapMode);
   useEffect(() => { mapModeRef.current = mapMode; }, [mapMode]);
-  const [selection, setSelection] = useState<Selection | null>(null);
-  const [arrival, setArrival] = useState(DEFAULT_ARRIVAL);
-  const [days, setDays] = useState(14);
-  const [cursor, setCursor] = useState(DEFAULT_ARRIVAL);
+  const [selection, setSelection] = useState<Selection | null>(graphicsRecovery?.selection ?? null);
+  const [arrival, setArrival] = useState(graphicsRecovery?.arrival ?? DEFAULT_ARRIVAL);
+  const [days, setDays] = useState(graphicsRecovery?.days ?? 14);
+  const [cursor, setCursor] = useState(graphicsRecovery?.cursor ?? DEFAULT_ARRIVAL);
   const minuteRef = useRef(DEFAULT_ARRIVAL);
   const [playing, setPlaying] = useState(false);
   const [speed, setSpeed] = useState(6);
-  const [mastM, setMastM] = useState(2);
+  const [mastM, setMastM] = useState(graphicsRecovery?.mastM ?? 2);
   const [compare, setCompare] = useState<CompareItem[]>([]);
   const [showCompare, setShowCompare] = useState(false);
   const [showAi, setShowAi] = useState(false);
@@ -97,6 +104,7 @@ export default function App() {
   const [overviewPrefer, setOverviewPrefer] = useState<RoutePrefer>('fastest');
   const [surfaceMapOpen, setSurfaceMapOpen] = useState(false);
   const [renderError, setRenderError] = useState<string | null>(null);
+  const [contextLost, setContextLost] = useState(false);
   // What is switched on inside the surface map belongs to that visit. It used to be the overview's own switches:
   // Water ice turned on down there followed you back up, where its colour key then sat on the screen with (at
   // most places) nothing on the Moon to explain it. The visit starts from the overview's switches and adds its own.
@@ -197,14 +205,73 @@ export default function App() {
   const sky = useMemo(() => ({ sun: bodies.sun, earth: bodies.earth, sunPart: sunNow?.part ?? null, earthUp: earthNow ? earthNow.el > earthNow.sky : null }),
     [bodies, sunNow?.part, earthNow?.el, earthNow?.sky]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const [faceAz, setFaceAz] = useState(0);
-  const landerLive = useMemo(() => (standing && ready && sel ? { lat: sel.lat, lon: sel.lon, groundM: ready.horizon.groundM, mastM, skyline: ready.horizon, faceAz, rover: null } : null),
+  const [faceAz, setFaceAz] = useState(graphicsRecovery?.az ?? 0);
+  const landerLive = useMemo(() => (standing && ready && sel ? { lat: sel.lat, lon: sel.lon, groundM: ready.horizon.groundM, mastM, skyline: ready.horizon, faceAz, rover: recoveryRover.current } : null),
     [standing, ready, sel?.lat, sel?.lon, mastM, faceAz]); // eslint-disable-line react-hooks/exhaustive-deps
   // While standing, a new arrival date / mission length makes the worker recalculate for a moment:
   // keep the view we have instead of dropping back to the map and fading in again.
   const lastLander = useRef(landerLive);
   if (landerLive) lastLander.current = landerLive; else if (!standing) lastLander.current = null;
   const lander = standing ? (landerLive ?? lastLander.current) : null;
+  const captureRecovery = useRef(() => {});
+  captureRecovery.current = () => {
+    if (!load.done) return;
+    const p = roverLink.pose;
+    saveGraphicsRecovery({ at: Date.now(), entered, view: map.current?.captureView() ?? null, selection, standing,
+      rover: standing && p.on ? { lat: p.lat, lon: p.lon, headingDeg: p.headingDeg } : null,
+      surfaceView: landerLink.view, az: landerLink.az, el: landerLink.el,
+      arrival, cursor, days, mastM, layers, opacity });
+  };
+  useEffect(() => {
+    let lost = false, timer: ReturnType<typeof setTimeout> | undefined;
+    const reloadVisible = () => {
+      if (!lost || document.hidden || timer) return;
+      try {
+        const previous = Number(sessionStorage.getItem('moonda.graphics-reloaded'));
+        if (previous && Date.now() - previous < 5 * 60_000) return;
+      } catch { return; } // Keep the manual Reload button when storage is unavailable.
+      timer = setTimeout(() => {
+        timer = undefined;
+        if (document.hidden) return;
+        try { sessionStorage.setItem('moonda.graphics-reloaded', String(Date.now())); } catch { return; }
+        location.reload();
+      }, 700);
+    };
+    const onLoss = () => {
+      if (lost) return;
+      lost = true; captureRecovery.current();
+      landerLink.setWalk(false); setContextLost(true);
+      reloadVisible();
+    };
+    const visibility = () => {
+      if (document.hidden) { if (!lost) captureRecovery.current(); }
+      else {
+        if (!lost) { try { sessionStorage.removeItem('moonda.graphics-recovery.v1'); } catch { /* Storage may be disabled. */ } }
+        reloadVisible();
+      }
+    };
+    window.addEventListener('moonda-context-lost', onLoss);
+    document.addEventListener('visibilitychange', visibility);
+    return () => { clearTimeout(timer); window.removeEventListener('moonda-context-lost', onLoss); document.removeEventListener('visibilitychange', visibility); };
+  }, []);
+  useEffect(() => {
+    if (!load.done || !graphicsRecovery || recoveryApplied.current) return;
+    recoveryApplied.current = true;
+    if (graphicsRecovery.entered) setEntered(true);
+    if (!graphicsRecovery.standing) {
+      if (graphicsRecovery.view) map.current?.restoreView(graphicsRecovery.view);
+      return;
+    }
+    setStanding(true);
+    const off = landerLink.subscribe(() => {
+      if (landerLink.phase !== 'ready') return;
+      off();
+      landerLink.setView(graphicsRecovery.surfaceView);
+      map.current?.look(graphicsRecovery.az, graphicsRecovery.el);
+      recoveryRover.current = null;
+    });
+    return off;
+  }, [load.done, graphicsRecovery]);
   useEffect(() => { if (standing && !selection) setStanding(false); }, [standing, selection]);
 
   const [standWhenReady, setStandWhenReady] = useState(false);
@@ -221,7 +288,16 @@ export default function App() {
   useEffect(() => { if (standWhenReady && ready) { setStandWhenReady(false); stand(); } }); // eslint-disable-line react-hooks/exhaustive-deps
 
   const title = selection ? selectionTitle(selection, names) : '';
-  const onSelect = useCallback((s: MapSelection) => setSelection(s), []);
+  const onSelect = useCallback((s: MapSelection) => {
+    setSelection(s);
+    if (phone) {
+      setShowLayers(false); setShowCompare(false); setShowAi(false); setPhoneMore(false);
+      const { lat, lon } = selectionLatLon(s);
+      const view = map.current?.captureView();
+      const km = view && !view.flat ? Math.max(25, (Math.hypot(...view.position) - MOON_RADIUS_M) / 1000) : 60;
+      map.current?.flyTo(lat, lon, km);
+    }
+  }, [phone]);
   const toggleOverviewRoute = () => {
     if (routeArmed) { setRouteArmed(false); return; }
     if (!sel) return;
@@ -407,8 +483,8 @@ export default function App() {
     const d = s.type === 'name' ? s.name.diameterKm : 20;
     map.current?.flyTo(lat, lon, Math.min(2500, Math.max(25, d * 3.2)), tilted);
   };
-  const pickName = (n: MoonName) => { const s: Selection = { type: 'name', name: n }; setStanding(false); setSelection(s); flyToSel(s); };
-  const pickPlace = (p: Place) => { const s: Selection = { type: 'place', place: p }; setStanding(false); setSelection(s); flyToSel(s); };
+  const pickName = (n: MoonName) => { if (phone) { setShowLayers(false); setShowCompare(false); setShowAi(false); setPhoneMore(false); } const s: Selection = { type: 'name', name: n }; setStanding(false); setSelection(s); flyToSel(s); };
+  const pickPlace = (p: Place) => { if (phone) { setShowLayers(false); setShowCompare(false); setShowAi(false); setPhoneMore(false); } const s: Selection = { type: 'place', place: p }; setStanding(false); setSelection(s); flyToSel(s); };
 
   const inCompare = !!sel && compare.some(c => Math.abs(c.lat - sel.lat) < 1e-6 && Math.abs(c.lon - sel.lon) < 1e-6 && c.startMs === arrival);
   const addCompare = () => {
@@ -441,7 +517,8 @@ export default function App() {
   const onEscape = useRef(() => {});
   onEscape.current = () => {
     if (standing) return;
-    if (routeArmed) setRouteArmed(false);
+    if (phone && phoneMore) setPhoneMore(false);
+    else if (routeArmed) setRouteArmed(false);
     else if (welcome) closeWelcome();
     else if (showLayers) setShowLayers(false);
     else if (showAi) setShowAi(false);
@@ -503,6 +580,7 @@ export default function App() {
 
   const sunOn = layers.realSun !== false;
   const loading = !loadGone;
+  const phoneSheetOpen = phone && !standing && !!(selection || showLayers || showCompare || showAi || phoneMore || routeArmed || overviewRoute);
 
   // What the AI helper can see and do in the app (its tools call these).
   const aiBridge: AppBridge = {
@@ -552,13 +630,46 @@ export default function App() {
             <button type="button" className="tb icon toolbar-island panel" onClick={() => settings.set({ sound: !prefs.sound })} aria-pressed={undefined} aria-label={prefs.sound ? t('top.soundOn') : t('top.soundOff')} data-tip={prefs.sound ? t('top.soundOn') : t('top.soundOff')}>
               {prefs.sound ? <SpeakerHigh size={18} /> : <SpeakerSlash size={18} />}
             </button>
+            {/* the graphics mode from the start screen, switchable later too (it applies at once, src/app/quality.ts) */}
+            <button type="button" className="tb icon toolbar-island panel" onClick={() => chooseQuality(prefs.quality === 'full' ? 'light' : 'full')} aria-label={t(prefs.quality === 'full' ? 'top.gfxFull' : 'top.gfxLight')} data-tip={t(prefs.quality === 'full' ? 'top.gfxFull' : 'top.gfxLight')}>
+              <Gauge size={18} weight={prefs.quality === 'full' ? 'fill' : 'regular'} />
+            </button>
             <button type="button" className="tb toolbar-island toolbar-tutorial panel" onClick={() => { closeWelcome(); tutorialStore.start(); }} data-tip={t('top.tutorial.tip')}>{t('top.tutorial')}</button>
             <button type="button" className="tb icon toolbar-island panel" onClick={() => setWelcome('intro')} aria-label={t('top.help')} data-tip={t('top.help')}><Question size={18} /></button>
           </nav>
+          {phone && <nav className="phone-toolbar panel" aria-label={t('top.tools')}>
+            <button type="button" aria-pressed={showLayers} aria-expanded={showLayers} onClick={() => { setPhoneMore(false); toggleLayers(); }}>
+              <Stack size={21} /><span>{t('top.layers')}</span>
+            </button>
+            <button type="button" aria-pressed={showCompare} aria-expanded={showCompare} onClick={() => { setPhoneMore(false); toggleCompareDrawer(); }}>
+              <Columns size={21} /><span>{t('top.compare')}</span>{compare.length > 0 && <b className="phone-tool-count">{compare.length}</b>}
+            </button>
+            <button type="button" aria-label={t('ai.title')} aria-pressed={showAi} aria-expanded={showAi} onClick={() => { setPhoneMore(false); toggleAi(); }}>
+              <AiMark size={21} /><span>MOONDA AI</span>
+            </button>
+            <button type="button" aria-label={t(sel ? 'route.button' : 'route.pickFirst')} aria-pressed={routeArmed} disabled={!sel}
+              onClick={() => { setPhoneMore(false); setShowLayers(false); setShowCompare(false); setShowAi(false); toggleOverviewRoute(); }}>
+              <Path size={21} /><span>{t('route.title')}</span>
+            </button>
+            <button type="button" aria-label={t('top.tools')} aria-expanded={phoneMore} aria-pressed={phoneMore}
+              onClick={() => { setShowLayers(false); setShowCompare(false); setShowAi(false); setPhoneMore(v => !v); }}>
+              <DotsThree size={23} weight="bold" /><span>{prefs.lang === 'en' ? 'More' : 'ផ្សេងទៀត'}</span>
+            </button>
+          </nav>}
+          {phone && phoneMore && <section className="phone-more panel" role="dialog" aria-label={t('top.tools')}>
+            <header><h2>{t('top.tools')}</h2><button type="button" aria-label={t('common.close')} onClick={() => setPhoneMore(false)}><X size={20} /></button></header>
+            <button type="button" onClick={() => { setPhoneMore(false); setSelection(null); map.current?.flyWhole(); }}><Moon size={20} />{t('top.wholeMoon')}</button>
+            <button type="button" onClick={() => { setPhoneMore(false); setSelection(null); map.current?.flyPole(); }}><Target size={20} />{t('top.southPole')}</button>
+            <button type="button" onClick={() => setLang(prefs.lang === 'en' ? 'km' : 'en')} lang={prefs.lang === 'en' ? 'km' : 'en'}>{prefs.lang === 'en' ? 'ខ្មែរ' : 'English'}</button>
+            <button type="button" aria-pressed={prefs.sound} aria-label={t(prefs.sound ? 'top.soundOn' : 'top.soundOff')} onClick={() => settings.set({ sound: !prefs.sound })}>{prefs.sound ? <SpeakerHigh size={20} /> : <SpeakerSlash size={20} />}{t('start.music')}</button>
+            <button type="button" aria-label={t(prefs.quality === 'full' ? 'top.gfxFull' : 'top.gfxLight')} onClick={() => chooseQuality(prefs.quality === 'full' ? 'light' : 'full')}><Gauge size={20} />{t('start.graphics')}: {t(`start.mode.${prefs.quality}`)}</button>
+            <button type="button" onClick={() => { setPhoneMore(false); closeWelcome(); tutorialStore.start(); }}>{t('top.tutorial')}</button>
+            <button type="button" onClick={() => { setPhoneMore(false); setWelcome('intro'); }}><Question size={20} />{t('top.help')}</button>
+          </section>}
         </header>
       )}
 
-      {selection && !standing && (
+      {selection && !standing && !(phone && (showLayers || showCompare || showAi || phoneMore || routeArmed || overviewRoute)) && (
         <PlaceCard selection={selection} names={names} spot={shown ?? spot} stale={stale} cursor={cursor} days={days} mastM={mastM}
           science={manifest} scienceValues={scienceValues} inCompare={inCompare}
           onMast={setMastM} onSeek={setCursor} onClose={() => setSelection(null)} onZoom={() => flyToSel(selection, true)} onCompare={toggleCompare} onStand={stand} />
@@ -616,12 +727,12 @@ export default function App() {
 
       {!standing && <>
         <OverviewRouteButton selected={!!sel} armed={routeArmed} onClick={toggleOverviewRoute} />
-        <RouteTool route={overviewRoute?.result ?? null} busy={overviewRoute?.status === 'working'} failed={overviewRoute?.status === 'error'}
+        {!(phone && (showLayers || showCompare || showAi || phoneMore)) && <RouteTool route={overviewRoute?.result ?? null} busy={overviewRoute?.status === 'working'} failed={overviewRoute?.status === 'error'}
           prefer={overviewPrefer} armed={routeArmed} onPrefer={preferOverviewRoute}
-          onClear={() => { setOverviewRoute(null); setRouteArmed(false); }} />
+          onClear={() => { setOverviewRoute(null); setRouteArmed(false); }} />}
       </>}
 
-      <TimeBar arrival={arrival} days={days} cursor={cursor} playing={playing} speed={speed} timeline={timeline}
+      <TimeBar key={phoneSheetOpen ? 'phone-sheet' : 'map'} arrival={arrival} days={days} cursor={cursor} playing={playing} speed={speed} timeline={timeline}
         loading={spot?.status === 'loading' && !shown} spotLabel={null}
         onArrival={setArrivalSafe} onDays={setDays} onCursor={setCursor} onPlaying={setPlaying} onSpeed={setSpeed} />
       <StatusLine names={names} standingAt={standing && sel ? { lat: sel.lat, lon: sel.lon, label: title } : null} onCredits={() => setWelcome('sources')} />
@@ -631,7 +742,7 @@ export default function App() {
           onPole={() => { closeWelcome(); map.current?.flyPole(); }} onExplore={() => { closeWelcome(); map.current?.flyWhole(); }} />
       )}
       {loading && <StartScreen progress={load} leaving={entered && load.done} onEnter={enterApp} onSkip={skipLoading} />}
-      {renderError && <RenderStopped message={renderError} />}
+      {(renderError || contextLost) && <RenderStopped message={renderError ?? ''} contextLost={contextLost} />}
     </div>
   );
 }

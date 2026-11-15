@@ -7,16 +7,18 @@ import { Tutorial } from './ui/Tutorial';
 import { installMusic } from './audio/music';
 // Last on purpose, after App and every stylesheet its parts bring in: the phone layout restates their rules.
 import './ui/phone.css';
+import './ui/phone-drive.css';
 
 // The start screen's space video (index.html) goes first: wait until it can play (at most 2.5 s) before
 // the app starts and begins downloading the Moon data, so the two do not fight over the connection.
 function introReady(): Promise<void> {
   const v = document.getElementById('intro-video') as HTMLVideoElement | null;
-  if (!v || v.readyState >= 3) return Promise.resolve();
+  if (!v || v.readyState >= 3 || v.dataset.introReady === 'true') return Promise.resolve();
   return new Promise(res => {
-    const done = () => { clearTimeout(t); v.removeEventListener('canplay', done); v.removeEventListener('error', done); res(); };
+    const done = () => { clearTimeout(t); v.removeEventListener('canplay', done); v.removeEventListener('error', done); v.removeEventListener('moonda-intro-ready', done); res(); };
     const t = setTimeout(done, 2500);
     v.addEventListener('canplay', done); v.addEventListener('error', done);
+    v.addEventListener('moonda-intro-ready', done);
   });
 }
 

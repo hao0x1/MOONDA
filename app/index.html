@@ -21,8 +21,14 @@
          dimming are baked into the file; the shade on top keeps the text readable. The film is cut from
          NASA visualisations, public domain: sources in public/intro/CREDITS.md, built by
          data-prep/intro/make-intro.sh. */
-      .intro-bg { position: fixed; inset: 0; z-index: 99; pointer-events: none; background: #05060a; transition: opacity 480ms ease-out; }
-      .intro-bg video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+      .intro-bg { position: fixed; inset: 0; z-index: 99; pointer-events: none; background: #05060a url('/intro/space.jpg') center / cover no-repeat; transition: opacity 480ms ease-out; }
+      .intro-bg video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; visibility: hidden; }
+      .intro-bg.playing video { visibility: visible; }
+      #intro-video::-webkit-media-controls,
+      #intro-video::-webkit-media-controls-enclosure,
+      #intro-video::-webkit-media-controls-panel,
+      #intro-video::-webkit-media-controls-start-playback-button,
+      #intro-video::-webkit-media-controls-play-button { display: none !important; -webkit-appearance: none; }
       .intro-bg::after { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse 60% 75% at 50% 48%, rgba(5, 6, 10, .46) 0%, rgba(5, 6, 10, .2) 60%, rgba(5, 6, 10, .06) 100%); }
       .intro-bg.gone { opacity: 0; }
       .boot { position: fixed; inset: 0; z-index: 100; box-sizing: border-box; padding-top: max(24px, calc(50vh - 370px * var(--sz, 1))); display: flex; justify-content: center; align-items: flex-start; background: transparent; color: #eeeff1; font-family: 'Google Sans Flex Variable', system-ui, -apple-system, sans-serif; }
@@ -84,8 +90,37 @@
   </head>
   <body>
     <div class="intro-bg" id="intro-bg" aria-hidden="true">
-      <video id="intro-video" src="./intro/space.mp4" poster="./intro/space.jpg" autoplay muted loop playsinline preload="auto"></video>
+      <video id="intro-video" src="./intro/space.mp4" poster="./intro/space.jpg" autoplay muted loop playsinline preload="auto" disablepictureinpicture disableremoteplayback controlslist="nodownload nofullscreen noremoteplayback"></video>
     </div>
+    <script>
+      (function () {
+        var video = document.getElementById('intro-video'), bg = document.getElementById('intro-bg'), disposed = false;
+        function ready() { video.dataset.introReady = 'true'; video.dispatchEvent(new Event('moonda-intro-ready')); }
+        function poster() { bg.classList.remove('playing'); ready(); }
+        function playing() { if (!disposed && !document.hidden) bg.classList.add('playing'); ready(); }
+        function play() {
+          if (disposed || document.hidden || !video.isConnected) return;
+          video.muted = true;
+          try { var attempt = video.play(); if (attempt) attempt.catch(poster); } catch (_) { poster(); }
+        }
+        function visibility() { if (document.hidden) { video.pause(); poster(); } else play(); }
+        function dispose() {
+          disposed = true;
+          document.removeEventListener('pointerdown', play);
+          document.removeEventListener('touchstart', play);
+          document.removeEventListener('visibilitychange', visibility);
+          video.removeEventListener('playing', playing); video.removeEventListener('error', poster); video.removeEventListener('pause', poster);
+          video.removeEventListener('moonda-intro-dispose', dispose);
+          video.pause(); video.removeAttribute('src'); video.load();
+        }
+        video.addEventListener('playing', playing); video.addEventListener('error', poster); video.addEventListener('pause', poster);
+        video.addEventListener('moonda-intro-dispose', dispose);
+        document.addEventListener('pointerdown', play, { once: true, passive: true });
+        document.addEventListener('touchstart', play, { once: true, passive: true });
+        document.addEventListener('visibilitychange', visibility);
+        play();
+      })();
+    </script>
     <div id="root">
       <div class="boot" role="status" aria-label="Loading MOONDA">
         <div class="boot-col">

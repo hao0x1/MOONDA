@@ -144,10 +144,19 @@ function runMathChecks() {
     }
     const map = new Flat(lat, lon); map.setAcross(circumference, false);
     const frame = map.basis(), offsetM = map.offsetN();
-    const outsideX = map.unproject(Math.PI * R + 1, 0), outsideY = map.unproject(0, Math.PI * R / 2 - offsetM + 1);
-    const valid = !Number.isFinite(outsideX[0]) && !Number.isFinite(outsideY[0]) && Math.abs(offsetM) < .000001 && Math.abs(frame.north[2] - 1) < 1e-12;
-    farBounds.push({ place: name, offsetM, widthM: circumference, heightM: circumference / 2, rejectsOutsidePhoto: valid });
-    if (!valid) failures.push({ name, reason: 'Far frame or rectangle bounds are wrong' });
+    // The map repeats east/west; crossing either dateline must preserve the same ground on
+    // the next copy. Only north/south have physical ends, so retain both pole bounds checks.
+    const wrapChecks = [Math.PI * R + 1, -Math.PI * R - 1, 3 * Math.PI * R + 1, -3 * Math.PI * R - 1].map(x => {
+      const wrappedX = x - circumference * Math.round(x / circumference);
+      const actual = map.unproject(x, 0), expected = map.unproject(wrappedX, 0);
+      return { x, wrappedX, errorM: distance(actual, expected), finite: Number.isFinite(actual[0] + actual[1]) };
+    });
+    const repeatsEastWest = wrapChecks.every(check => check.finite && check.errorM < .01);
+    const outsideNorth = map.unproject(0, Math.PI * R / 2 - offsetM + 1), outsideSouth = map.unproject(0, -Math.PI * R / 2 - offsetM - 1);
+    const rejectsBeyondPoles = !Number.isFinite(outsideNorth[0]) && !Number.isFinite(outsideSouth[0]);
+    const valid = repeatsEastWest && rejectsBeyondPoles && Math.abs(offsetM) < .000001 && Math.abs(frame.north[2] - 1) < 1e-12;
+    farBounds.push({ place: name, offsetM, widthM: circumference, heightM: circumference / 2, repeatsEastWest, rejectsBeyondPoles, wrapChecks });
+    if (!valid) failures.push({ name, reason: 'Far frame, east/west wrapping or pole bounds are wrong' });
   }
   const report = { source: 'Current MapEngine.ts FlatMapProjection and surfaceProjection.ts, compiled by the installed TypeScript',
     compilerVersion: require('typescript').version, cases: results.length, points: results.reduce((n, r) => n + r.points, 0),

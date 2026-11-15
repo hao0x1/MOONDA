@@ -14,8 +14,9 @@
 
 import type { Cartesian2, Scene, Viewer } from 'cesium';
 
-/** How dense the (invisible) fog is for refining tiles: errors far away may grow by up to FOG_SSE px (reached ~60 km out). */
-const FOG_DENSITY = 1 / 30000, FOG_SSE = 2;
+/** Invisible refinement fog: far hills may grow by up to 3 px (~35 km out); nearby wheel terrain stays fine.
+ * Ridge A/B: about 25% fewer terrain triangles, with genuine level-18 ground still under the rover. */
+const FOG_DENSITY = 1 / 18000, FOG_SSE = 3;
 
 let saved: { enabled: boolean; renderable: boolean; density: number; sse: number; heightScalar: number; heightFalloff: number } | null = null;
 
@@ -42,12 +43,13 @@ const FRAME_HIGH_MS = 18.5;
 const SHED_RATE = 1.6, BACK_RATE_STILL = 1.0, BACK_RATE_MOVING = 0.25;
 /** At the lowest level the crater sizes fade out this many times nearer (see lvLod.y in the shader). */
 const FOOTPRINT_MAX = 2.4;
-/** The drawing size never falls below this share of the full size while moving: the picture must stay sharp (a 2x screen still gets 1.5x). */
+/** The drawing size never falls below this share of the full surface size while moving. */
 const DRAWING_FLOOR = 0.75;
-/** At least 1.5 pixels per screen point, or the user's chosen size if that is already smaller. */
-const DRAWING_NATIVE_FLOOR = 1.5;
+/** Under sustained load, keep at least 1.25 pixels per screen point, or the chosen size if already smaller. */
+const DRAWING_NATIVE_FLOOR = 1.25;
 /** Give shader detail time to ease down before reducing the picture's size. */
 const DRAWING_HIGH_DWELL_S = 0.4, DRAWING_STEP_MS = 250;
+const DRAWING_MIN_CUT = 0.025;
 const DRAWING_BACK_MOVING = 0.25, DRAWING_BACK_STILL = 1;
 
 type TimerExt = { TIME_ELAPSED_EXT: number; GPU_DISJOINT_EXT: number };
@@ -181,11 +183,13 @@ export class GroundGovernor {
       const budget = this.ext ? Math.sqrt(GPU_TARGET_MS / this.gpuMs) : Math.sqrt(16.7 / this.frameMs);
       const dpr = Number.isFinite(globalThis.devicePixelRatio) && globalThis.devicePixelRatio > 0 ? globalThis.devicePixelRatio : 2;
       // Full detail already caps large Retina buffers. A further relative cut must not take
-      // their actual drawing below 1.5x, or reduce a 1x / Smooth view below the user's choice.
+      // their actual drawing below 1.25x, or reduce a 1x / Smooth view below the user's choice.
       const floor = Math.max(DRAWING_FLOOR, Math.min(1, DRAWING_NATIVE_FLOOR / (dpr * this.drawingBase)));
       next = Math.max(floor, next * budget);
     } else if (low) next = Math.min(1, next + elapsed * DRAWING_BACK_MOVING);
     if (next === this.drawingScale) return !moving && next < 1;
+    // Tiny cuts save less than the stall of reallocating every surface render target.
+    if (moving && next < this.drawingScale && this.drawingScale - next < DRAWING_MIN_CUT) return false;
     this.drawingScale = next;
     this.drawingApplied = this.drawingBase * next;
     viewer.resolutionScale = this.drawingApplied;
