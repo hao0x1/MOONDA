@@ -25,6 +25,84 @@ const RETRY_MS = 30000;
 const SCIENCE_BYTES = 24 * 1024 * 1024;
 export const SCIENCE_TILE_SIZE = 256;
 const heightParts = new WeakMap<LayerDef, { global: LayerDef; polar: LayerDef }>();
+interface HeightSpotWarm {
+  url: string; state: 'queued' | 'active' | 'done'; settled: boolean; completedAt: number;
+  promise: Promise<boolean>; resolve: (ok: boolean) => void;
+  controller: AbortController; timer: ReturnType<typeof setTimeout>;
+}
+const heightSpotWarms = new Map<string, HeightSpotWarm>();
+const heightSpotWarmStats = { requests: 0, bytes: 0, active: 0, completed: 0, failed: 0, hits: 0, deduped: 0, expired: 0, skipped: 0, maxActive: 0 };
+
+function finishHeightSpotWarm(job: HeightSpotWarm, ok: boolean): void {
+  if (job.settled) return;
+  job.settled = true; clearTimeout(job.timer);
+  if (job.state === 'active') heightSpotWarmStats.active--;
+  heightSpotWarms.delete(job.url);
+  if (ok) {
+    job.state = 'done'; job.completedAt = performance.now(); heightSpotWarms.set(job.url, job); heightSpotWarmStats.completed++;
+  } else heightSpotWarmStats.failed++;
+  job.resolve(ok); pumpHeightSpotWarms();
+}
+
+function pumpHeightSpotWarms(): void {
+  for (const job of heightSpotWarms.values()) {
+    if (heightSpotWarmStats.active >= 2) break;
+    if (job.state !== 'queued') continue;
+    job.state = 'active'; heightSpotWarmStats.active++; heightSpotWarmStats.requests++;
+    heightSpotWarmStats.maxActive = Math.max(heightSpotWarmStats.maxActive, heightSpotWarmStats.active);
+    void (async () => {
+      let ok = false;
+      try {
+        const response = await fetch(job.url, { signal: job.controller.signal, mode: 'cors', credentials: 'omit', cache: 'force-cache' });
+        if (response.ok) { heightSpotWarmStats.bytes += (await response.arrayBuffer()).byteLength; ok = true; }
+      } catch { /* A layer request can retry when the source is slow or unavailable. */ }
+      finally { finishHeightSpotWarm(job, ok); }
+    })();
+  }
+}
+
+function warmHeightSpotUrl(url: string): Promise<boolean> {
+  const old = heightSpotWarms.get(url);
+  if (old && (old.state !== 'done' || performance.now() - old.completedAt < 10000)) {
+    heightSpotWarms.delete(url); heightSpotWarms.set(url, old);
+    if (old.state === 'done') heightSpotWarmStats.hits++; else heightSpotWarmStats.deduped++;
+    return old.promise;
+  }
+  // A completed read does not pin the browser cache through later photo browsing.
+  if (old) heightSpotWarms.delete(url);
+  // Keep only small URL records; the browser owns encoded bytes and workers decode on demand.
+  while (heightSpotWarms.size >= 128) {
+    const spare = [...heightSpotWarms.values()].find(job => job.state === 'done')
+      ?? [...heightSpotWarms.values()].find(job => job.state === 'queued');
+    if (!spare) return Promise.resolve(false);
+    if (spare.state === 'queued') finishHeightSpotWarm(spare, false);
+    else heightSpotWarms.delete(spare.url);
+  }
+  let resolve!: (ok: boolean) => void;
+  const promise = new Promise<boolean>(done => { resolve = done; });
+  const job: HeightSpotWarm = { url, state: 'queued', settled: false, completedAt: 0, promise, resolve, controller: new AbortController(), timer: setTimeout(() => {
+    heightSpotWarmStats.expired++;
+    if (job.state === 'active') job.controller.abort(); else finishHeightSpotWarm(job, false);
+  }, 10000) };
+  heightSpotWarms.set(url, job); pumpHeightSpotWarms();
+  return promise;
+}
+
+/** Landing gives the native height squares a head start before the big map asks for them. */
+export async function prefetchMapHeightAt(lat: number, lon: number): Promise<boolean> {
+  if (!Number.isFinite(lat + lon) || Math.abs(lat) > 90 || lat < -80.4) { heightSpotWarmStats.skipped++; return true; }
+  const rows = 2 ** 6, cols = rows * 2;
+  const x = Math.floor((((lon + 180) % 360 + 360) % 360) / 360 * cols);
+  const y = Math.max(0, Math.min(rows - 1, Math.floor((90 - lat) / 180 * rows)));
+  const urls = new Set<string>();
+  const add = (dx: number, dy: number) => {
+    const row = y + dy;
+    if (row >= 0 && row < rows) urls.add(sourceTrekUrl('LRO_LOLA_ClrShade_Global_256ppd_v06', 'png', 6, (x + dx + cols) % cols, row));
+  };
+  add(0, 0);
+  for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) add(dx, dy);
+  return (await Promise.all([...urls].map(warmHeightSpotUrl))).every(Boolean);
+}
 
 /** The globe places the southern height picture above slope, while global heights lie below it. */
 export function scienceHeightParts(def: LayerDef): { global: LayerDef; polar: LayerDef } {
@@ -421,10 +499,16 @@ async function prepareScienceTile(bitmaps: ImageBitmap[]): Promise<ImageBitmap> 
 interface Cached { bitmap: ImageBitmap; bytes: number; arrivedAt: number }
 interface ScienceProvider { provider: ReprojectedImageryProvider; compact: boolean }
 interface ScienceLayer { prefix: string; fingerprint: string; providers: ScienceProvider[] }
-interface ScienceJob { layer: ScienceLayer; level: number; x: number; y: number }
+interface ScienceJob { layer: ScienceLayer; level: number; x: number; y: number; queuedAt: number }
 interface Pending { key: string; urls: string[]; priority: number; at: number; ctl: AbortController | null; science?: ScienceJob }
 interface Failure { count: number; until: number }
 interface SiteFailure { count: number; until: number }
+interface StageTiming { calls: number; totalMs: number; maxMs: number; lastMs: number }
+const stageTiming = (): StageTiming => ({ calls: 0, totalMs: 0, maxMs: 0, lastMs: 0 });
+function recordStage(stage: StageTiming, startedAt: number): void {
+  const elapsed = performance.now() - startedAt;
+  stage.calls++; stage.totalMs += elapsed; stage.lastMs = elapsed; stage.maxMs = Math.max(stage.maxMs, elapsed);
+}
 type Index = { layers?: string; halfM?: number; tilePx?: number; levels?: Record<string, { runs?: unknown }> };
 
 /** A small shared LRU, with one download of a tile even while both maps use it. */
@@ -454,6 +538,12 @@ export class MapImagery {
   private maxScienceStartsPerFrame = 0;
   private readonly scienceQueue: { start: () => void; signal: AbortSignal }[] = [];
   private scienceScheduled = false;
+  private readonly sciencePipeline = {
+    hits: 0, misses: 0, queued: 0, completed: 0, busy: 0, failed: 0, cancelled: 0,
+    invalidatedTiles: 0, budgetEvictions: 0, totalBudgetEvictions: 0, evictedBytes: 0,
+    queue: stageTiming(), source: stageTiming(), normalise: stageTiming(), total: stageTiming(),
+  };
+  private readonly landingScienceWarm = { calls: 0, running: 0, ready: 0, count: 0, timedOut: 0, lastMs: 0 };
 
   constructor() {
     void this.loadIndex();
@@ -501,14 +591,64 @@ export class MapImagery {
     // These providers can be made after the globe last published its active switches. Their own
     // ready callbacks must still wake this map, without changing the worker's shared source list.
     for (const { provider, compact } of layer.providers) if (compact) (provider as ReprojectedImageryProvider & { active: boolean }).active = true;
-    if (bitmap) return bitmap;
+    if (bitmap) { this.sciencePipeline.hits++; return bitmap; }
+    this.sciencePipeline.misses++;
     const fail = this.failed.get(key);
     if (fail && performance.now() < fail.until) { this.wakeAt(fail.until); return null; }
     const old = this.pending.get(key);
     if (old) { old.priority = Math.min(old.priority, priority); return null; }
-    this.pending.set(key, { key, urls: [], science: { layer, level, x, y }, priority, at: this.order++, ctl: null });
+    this.pending.set(key, { key, urls: [], science: { layer, level, x, y, queuedAt: performance.now() }, priority, at: this.order++, ctl: null });
+    this.sciencePipeline.queued++;
     this.schedule();
     return null;
+  }
+
+  /** Landing can prepare the actual close-map centre tiles before its first layer switch. */
+  warmScienceAt(lat: number, lon: number, defs: readonly LayerDef[]): Promise<boolean> {
+    if (!Number.isFinite(lat + lon) || Math.abs(lat) > 90) return Promise.resolve(false);
+    const selected = new Map<string, LayerDef>();
+    for (const def of defs) {
+      if (def.id === 'height') {
+        const parts = scienceHeightParts(def);
+        selected.set(parts.global.id, parts.global); selected.set(parts.polar.id, parts.polar);
+      } else if (['psr', 'waterice', 'danger', 'slope'].includes(def.id)) selected.set(def.id, def);
+    }
+    if (!selected.size) return Promise.resolve(true);
+    // This is MapEngine's display grid and its close-view level cap, not a true-latitude WMTS tile.
+    const p = lat * DEG, l = lon * DEG;
+    const displayLon = Math.atan2(-Math.sin(p), Math.cos(p) * Math.cos(l));
+    const displayLat = Math.asin(Math.max(-1, Math.min(1, Math.cos(p) * Math.sin(l))));
+    const x = Math.max(0, Math.min(1023, Math.floor((displayLon / (Math.PI * 2) + .5) * 1024)));
+    const y = Math.max(0, Math.min(511, Math.floor((.5 - displayLat / Math.PI) * 512)));
+    const tiles = [...selected.values()].map(def => ({ def, key: this.scienceTileKey(def, 9, x, y) }));
+    const owner = {}, keys = new Set(tiles.map(tile => tile.key)), began = performance.now();
+    const stats = this.landingScienceWarm, run = ++stats.calls;
+    stats.running++; stats.count = tiles.length; stats.ready = 0;
+    return new Promise(resolve => {
+      let finished = false, checking = false;
+      const finish = (ok: boolean) => {
+        if (finished) return;
+        finished = true; clearTimeout(timer); off(); this.release(owner); stats.running--;
+        if (!ok) stats.timedOut++;
+        if (run === stats.calls) stats.lastMs = performance.now() - began;
+        resolve(ok);
+      };
+      const check = () => {
+        checking = false;
+        if (finished) return;
+        let ready = 0;
+        for (const tile of tiles) if (this.requestScienceTile(tile.def, 9, x, y, 49)) ready++;
+        if (run === stats.calls) stats.ready = ready;
+        if (ready === tiles.length) finish(true);
+      };
+      const off = this.subscribe(() => {
+        if (checking || finished) return;
+        checking = true; queueMicrotask(check);
+      });
+      // Releasing only this owner lets a map that opens meanwhile keep the same pending work.
+      const timer = setTimeout(() => finish(false), 1500);
+      this.retain(owner, keys); check();
+    });
   }
 
   private scienceLayer(def: LayerDef): ScienceLayer {
@@ -530,6 +670,7 @@ export class MapImagery {
   private invalidateScience(layer: ScienceLayer): void {
     for (const [key, entry] of this.cached) if (key.startsWith(layer.prefix)) {
       this.cached.delete(key); this.bytes -= entry.bytes; closeCachedPhoto(entry.bitmap);
+      this.sciencePipeline.invalidatedTiles++;
     }
     for (const [key, item] of this.pending) if (key.startsWith(layer.prefix)) { item.ctl?.abort(); this.pending.delete(key); }
     this.notify(); this.schedule();
@@ -550,7 +691,10 @@ export class MapImagery {
     }
     return { active: this.active, pending: this.pending.size, cached: this.cached.size, bytes: this.bytes,
       ...decodeStats, networkStarts: this.fetchStarts, maxStartsPerFrame: this.maxStartsPerFrame,
-      scienceBytes, scienceTiles, scienceByLayer, scienceBudgetBytes: SCIENCE_BYTES, scienceActive: this.scienceActive, scienceStarts: this.scienceStarts, maxScienceStartsPerFrame: this.maxScienceStartsPerFrame };
+      heightSpotWarm: { ...heightSpotWarmStats, retained: heightSpotWarms.size, queued: [...heightSpotWarms.values()].filter(job => job.state === 'queued').length },
+      landingScienceWarm: { ...this.landingScienceWarm },
+      scienceBytes, scienceTiles, scienceByLayer, scienceBudgetBytes: SCIENCE_BYTES, scienceActive: this.scienceActive, scienceStarts: this.scienceStarts, maxScienceStartsPerFrame: this.maxScienceStartsPerFrame,
+      sciencePipeline: { ...this.sciencePipeline, queue: { ...this.sciencePipeline.queue }, source: { ...this.sciencePipeline.source }, normalise: { ...this.sciencePipeline.normalise }, total: { ...this.sciencePipeline.total } } };
   }
 
   /** New detail settles over the photo already on screen instead of popping into view. */
@@ -808,6 +952,8 @@ export class MapImagery {
     ctl.signal.addEventListener('abort', cancel, { once: true });
     try {
       await this.admitScience(ctl.signal);
+      recordStage(this.sciencePipeline.queue, item.science!.queuedAt);
+      const sourceAt = performance.now();
       const results = await Promise.allSettled(layer.providers.map(async ({ provider, compact }) => {
         const request: { cancelled?: boolean; cancelFunction?: () => void } = {};
         requests.push(request);
@@ -829,6 +975,7 @@ export class MapImagery {
         }
         return bitmap;
       }));
+      recordStage(this.sciencePipeline.source, sourceAt);
       let failed = false;
       for (const result of results) {
         if (result.status === 'fulfilled') { if (result.value) bitmaps.push(result.value); }
@@ -836,17 +983,23 @@ export class MapImagery {
       }
       if (failed && !ctl.signal.aborted) throw new Error('Science tile not available');
       if (ctl.signal.aborted || busy) return;
-      prepared = await prepareScienceTile(bitmaps.splice(0));
+      const normaliseAt = performance.now();
+      try { prepared = await prepareScienceTile(bitmaps.splice(0)); }
+      finally { recordStage(this.sciencePipeline.normalise, normaliseAt); }
       if (ctl.signal.aborted || this.pending.get(item.key) !== item) return;
       const bytes = prepared.width * prepared.height * 4;
       this.cached.set(item.key, { bitmap: prepared, bytes, arrivedAt: performance.now() }); this.bytes += bytes;
       prepared = null; this.failed.delete(item.key); this.evict(); this.notify(item.key);
+      this.sciencePipeline.completed++; recordStage(this.sciencePipeline.total, item.science!.queuedAt);
     } catch {
       if (!ctl.signal.aborted) {
+        this.sciencePipeline.failed++;
         const until = performance.now() + RETRY_MS;
         this.failed.set(item.key, { count: 1, until }); this.wakeAt(until);
       }
     } finally {
+      if (ctl.signal.aborted) this.sciencePipeline.cancelled++;
+      else if (busy) this.sciencePipeline.busy++;
       ctl.signal.removeEventListener('abort', cancel);
       for (const bitmap of bitmaps) bitmap.close(); prepared?.close();
       if (this.pending.get(item.key) === item) this.pending.delete(item.key);
@@ -861,16 +1014,25 @@ export class MapImagery {
     if (scienceBytes > SCIENCE_BYTES) for (const [key, item] of this.cached) {
       if (!key.startsWith('science:') || this.needed(key)) continue;
       this.cached.delete(key); this.bytes -= item.bytes; scienceBytes -= item.bytes; closeCachedPhoto(item.bitmap);
+      this.sciencePipeline.budgetEvictions++; this.sciencePipeline.evictedBytes += item.bytes;
       if (scienceBytes <= SCIENCE_BYTES) break;
     }
     if (this.cached.size <= MAX_ITEMS && this.bytes <= MAX_BYTES) return;
     for (const [key, item] of this.cached) {
       if (this.needed(key)) continue;
       this.cached.delete(key); this.bytes -= item.bytes; closeCachedPhoto(item.bitmap);
+      if (key.startsWith('science:')) { this.sciencePipeline.totalBudgetEvictions++; this.sciencePipeline.evictedBytes += item.bytes; }
       if (this.cached.size <= MAX_ITEMS && this.bytes <= MAX_BYTES) break;
     }
   }
 }
 
 export const mapImagery = new MapImagery();
-import.meta.hot?.dispose(() => mapImagery.dispose());
+import.meta.hot?.dispose(() => {
+  for (const job of heightSpotWarms.values()) {
+    clearTimeout(job.timer); job.controller.abort();
+    if (!job.settled) { job.settled = true; job.resolve(false); }
+  }
+  heightSpotWarms.clear(); heightSpotWarmStats.active = 0;
+  mapImagery.dispose();
+});

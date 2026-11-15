@@ -1,6 +1,7 @@
 // The route card: one small boxed card that says what the planned route is like and lets you choose its kind.
-// The same card is used beside the place panel on the overview (RouteTool.tsx) and inside the big surface map
-// (explore/RoutePanel.tsx), so a route looks and works the same wherever it was planned.
+// It stands beside the place panel on the overview (RouteTool.tsx). The big surface map shows the same route
+// as a bar along its bottom edge instead (explore/RoutePanel.tsx): there a boxed card sat on top of the photo.
+// Both use the four kinds and their pictures from here, so a route reads the same wherever it was planned.
 
 import { Broadcast, Feather, Lightning, Path, Sun, WarningCircle, X, type Icon } from '@phosphor-icons/react';
 import type { ReactNode } from 'react';
@@ -8,10 +9,10 @@ import { useT, type Key } from '../i18n';
 import type { RoutePrefer } from '../science/route';
 import './routeTool.css';
 
-const ROUTE_KINDS = ['fastest', 'gentle', 'sun', 'earth'] as const;
+export const ROUTE_KINDS = ['fastest', 'gentle', 'sun', 'earth'] as const;
 export type RouteKind = typeof ROUTE_KINDS[number];
 // each kind of route has its own small picture, so the four read at a glance
-const KIND_ICON: Record<RouteKind, Icon> = { fastest: Lightning, gentle: Feather, sun: Sun, earth: Broadcast };
+export const KIND_ICON: Record<RouteKind, Icon> = { fastest: Lightning, gentle: Feather, sun: Sun, earth: Broadcast };
 
 interface Props {
   /** pick: waiting for a destination; working: being worked out; ready: the figures below; failed: no way found */

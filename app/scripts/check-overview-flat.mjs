@@ -3,6 +3,7 @@
 import assert from 'node:assert/strict';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
+import { tmpdir } from 'node:os';
 import { acquireBrowserLease } from './browserLease.mjs';
 import { stripTypeScriptTypes } from 'node:module';
 
@@ -84,7 +85,7 @@ async function browserGrid() {
 
 async function standaloneBrowser() {
   const args = process.argv.slice(2), outFlag = args.indexOf('--out');
-  const out = resolve(outFlag >= 0 ? args[outFlag + 1] : '/private/tmp/claude-501/-Volumes-CodexWork-Projects-MOONDA/4ec40458-1a1b-4580-bbfb-7871a2a20abe/scratchpad/codex2/R/flat-standalone');
+  const out = resolve(outFlag >= 0 ? args[outFlag + 1] : join(tmpdir(), 'moonda-overview-flat'));
   mkdirSync(out, { recursive: true });
   const lease = await acquireBrowserLease({ script: 'check-overview-flat.mjs', noteDir: out, timeoutMs: 280000 });
   const { default: puppeteer } = await import('puppeteer-core');

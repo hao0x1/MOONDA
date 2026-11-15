@@ -240,9 +240,23 @@ export class WheelTracks {
     const p = d.feet;
     if (this.count) {
       const moved = Cartesian3.distance(p, this.last);
+      // How much of that was up or down. Only driving along the ground lays track. The robot also moves when
+      // the ground under it is drawn again from finer data and it is set down on that: straight up or down, by
+      // metres on a slow connection. That used to count as travel, so a new print was laid on the new ground
+      // and joined to the last one on the old ground: two strips of track standing upright behind the rover,
+      // until the last tile had arrived and every print was put on the ground again.
+      const rise = Cartesian3.dot(Cartesian3.subtract(p, this.last, sA), Cartesian3.normalize(this.last, sB));
+      const flat = Math.sqrt(Math.max(0, moved * moved - rise * rise));
       if (moved > 6) this.clear();          // put somewhere else: start afresh
-      else if (moved < this.stepM) return;
-      else this.along += moved;
+      else if (flat < this.stepM) {
+        // set down on new ground without driving on: the prints follow the ground now, and no print is added
+        if (Math.abs(rise) > 0.05) { Cartesian3.clone(p, this.last); this.reseat(env); }
+        return;
+      } else {
+        this.along += flat;
+        // (driving while the ground changed under the wheels: a step no slope explains, so seat the old prints again)
+        if (Math.abs(rise) > flat * 1.2 + 0.1) this.reseat(env);
+      }
     }
     if (!this.count) { Cartesian3.clone(p, this.origin); Cartesian3.clone(Cartesian3.ZERO, this.lo); Cartesian3.clone(Cartesian3.ZERO, this.hi); }
     Cartesian3.clone(p, this.last);
@@ -296,8 +310,15 @@ export class WheelTracks {
       // 2x modulate: result = ground * colour * 2 (colour 0.5 leaves it as it is); the picture's alpha stays
       blending: { enabled: true, functionSourceRgb: WebGLConstants.DST_COLOR, functionDestinationRgb: WebGLConstants.SRC_COLOR, functionSourceAlpha: WebGLConstants.ZERO, functionDestinationAlpha: WebGLConstants.ONE },
     });
+    // The view is read when the ribbon is DRAWN, not in update(): the camera can still be moved after this
+    // primitive's update (lander.ts lifts it once it knows which ground tiles this frame draws). With the
+    // earlier camera the whole ribbon was drawn metres off, as huge dark slabs standing in front of the lens.
+    // Centred on the origin in double precision (the Moon is 1,737 km across: floats alone would wobble).
+    const camera = this.scene.camera;
     const uniformMap = {
-      u_mv: () => this.mv, u_up: () => this.up, u_sun: () => this.sun, u_eye: () => this.eye, u_k: () => this.k, u_look: () => this.look,
+      u_mv: () => Matrix4.multiply(camera.viewMatrix, Matrix4.fromTranslation(this.origin, this.tr), this.mv),
+      u_eye: () => Cartesian3.subtract(camera.positionWC, this.origin, this.eye),
+      u_up: () => this.up, u_sun: () => this.sun, u_k: () => this.k, u_look: () => this.look,
     };
     for (let c = 0; c < 2; c++) {
       this.cmds.push(new P.DrawCommand({
@@ -321,9 +342,6 @@ export class WheelTracks {
       (mesh.buffers[2] as GlBuffer).copyFromArrayView(this.out.subarray(from, to), from * 4);
     }
     this.dirty.length = 0;
-    // centred on the origin in double precision (the Moon is 1,737 km across: floats alone would wobble)
-    Matrix4.multiply(frameState.camera.viewMatrix, Matrix4.fromTranslation(this.origin, this.tr), this.mv);
-    Cartesian3.subtract(frameState.camera.positionWC, this.origin, this.eye);
     this.k.x = this.along; this.k.y = this.keepM; this.k.z = this.fadeM;
     const c = Cartesian3.midpoint(this.lo, this.hi, sA);
     Cartesian3.add(this.origin, c, this.bound.center);

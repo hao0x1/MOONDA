@@ -602,3 +602,16 @@ export function createCraterLayer(viewer: Viewer, flat: () => FlatMap | null, he
   if (!layer) { layer = new CraterLayer(viewer, flat, heightAt); layers.set(viewer, layer); }
   return layer;
 }
+
+// ---- The big surface map (explore/MapEngine.ts) draws the same rims on its own canvas, so it needs only the
+// measured craters near a place. It has its own small catalogue: the globe's is sized and trimmed for the globe.
+let surfaceCatalogue: Catalogue | null = null, surfaceStarted = false;
+/**
+ * Craters at least `minKm` across within `radiusRad` of a place: arrays of (latitude, longitude, diameter in km),
+ * the biggest first in each. `pending` while more of them are still being fetched; `revision` changes when they arrive.
+ */
+export function cratersNear(latDeg: number, lonDeg: number, radiusRad: number, minKm: number): { arrays: Float32Array[]; pending: boolean; revision: number } {
+  if (!surfaceCatalogue) { surfaceCatalogue = new Catalogue(); void surfaceCatalogue.start().finally(() => { surfaceStarted = true; }); }
+  const arrays = surfaceCatalogue.forView({ centre: trueToDisplayVec(trueUnit(latDeg, lonDeg)), radius: radiusRad }, minKm);
+  return { arrays, pending: !surfaceStarted || surfaceCatalogue.pending.size > 0, revision: surfaceCatalogue.revision };
+}

@@ -44,7 +44,7 @@ import { FAR_ROCKS, FarRocks, type FarSpot } from './farRocks';
 import { GroundGovernor, landerTerrainFog } from './groundLod';
 import { FAR_GROUND_GLSL } from './groundFar';
 import { craterRelief, craterShader, CRATER_SHARE } from './craterField';
-import { LolaTerrainProvider, type TerrainRelief } from './lolaTerrain';
+import { LolaTerrainProvider, pickRegularSourceGrid, pickBinnedTerrain, type TerrainRelief } from './lolaTerrain';
 
 export interface LanderSpec {
   lat: number; lon: number; groundM: number; mastM: number; skyline?: { elevations: Float32Array; stepDeg: number } | null;
@@ -130,6 +130,7 @@ const EARTH_R = 6371e3;
 const FOV_MIN = 20, FOV_MAX = 90, FOV_START = 70;
 const EL_MIN = -60, EL_MAX = 90;
 const MIN_CLEARANCE_M = 1.5; // the eye is never closer than this to the drawn ground
+const CAMERA_FLOOR_M = 0.35;
 const FADE_OUT_MS = 170, FADE_IN_MS = 340;
 const LOAD_TIMEOUT_MS = 4000, LEAVE_TIMEOUT_MS = 1500;
 /** behind the curtain we look round in this many steps (each a view's width) and stop looking round after RING_MS */
@@ -1015,8 +1016,9 @@ export const ROVER = {
    * bumps there follow it too). Every length below marked "model m" is multiplied by it where it is used.
    */
   scale: ROBOT_SCALE,
-  /** parked this far in front of the landing spot when you arrive (model m), turned this much from the way you face (deg) */
-  parkM: 12, parkTurn: 60,
+  /** parked this far in front of the landing spot when you arrive (model m), turned this much from the way you face (deg).
+   *  (16, not 12: at 12 it filled the bottom of the picture and stood behind the buttons there) */
+  parkM: 16, parkTurn: 60,
   /** the chase camera looks at this point above the ground under the rover, from this far, closest (model m), farthest (m: within the
    *  ring of rocks drawn round the rover), tilted down (deg) */
   lookUp: 1.5, dist: 10, distMin: 3.5, distMax: 16, chaseEl: -14,
@@ -1086,7 +1088,25 @@ function seeded(seed: number): () => number {
 }
 
 /** A terrain tile Cesium is drawing this frame (its private GlobeSurfaceTile data). */
-interface DrawnTile { rectangle: Cesium.Rectangle; data?: { renderedMesh?: unknown; pick?: (...a: unknown[]) => Cartesian3 | undefined } }
+interface DrawnTile {
+  rectangle: Cesium.Rectangle; level?: number; x?: number; y?: number; parent?: DrawnTile;
+  _southwestChild?: DrawnTile; _southeastChild?: DrawnTile; _northwestChild?: DrawnTile; _northeastChild?: DrawnTile;
+  upsampledFromParent?: boolean;
+  data?: {
+    renderedMesh?: unknown; vertexArray?: unknown;
+    terrainData?: { wasCreatedByUpsampling?(): boolean };
+    pick?: (...a: unknown[]) => Cartesian3 | undefined;
+  };
+}
+interface GroundHit { tile: DrawnTile | null; source: 'none' | 'selected' | 'ancestor' }
+interface GroundFrame {
+  frameNumber: number; mode: Cesium.SceneMode;
+  cameraUnderground: boolean;
+  passes: { render: boolean; pick?: boolean; offscreen?: boolean };
+  commandList: unknown[]; minimumTerrainHeight: number;
+  cullingVolume: Cesium.CullingVolume;
+  occluder?: { cameraPosition: Cartesian3 };
+}
 
 interface RockSpot { id: string; e: number; n: number; d: number; kind: number; yaw: number; tilt: number; tiltAz: number }
 
@@ -1248,8 +1268,13 @@ const scratchA = new Cartesian3(), scratchB = new Cartesian3(), scratchC = new C
 const scratchF = new Cartesian3(), scratchG = new Cartesian3(), scratchH = new Cartesian3(), scratchI = new Cartesian3(), scratchJ = new Cartesian3();
 const scratchK = new Cartesian3(), scratchL = new Cartesian3(), scratchM = new Cartesian3();
 const scratchSunA = new Cartesian3(), scratchSunB = new Cartesian3();
-const scratchCarto = new Cartographic(), scratchCarto2 = new Cartographic(), scratchCarto3 = new Cartographic();
-const scratchRay = new Cesium.Ray();
+const scratchCarto = new Cartographic(), scratchCarto3 = new Cartographic();
+const guardCameraBefore = new Cartesian3(), guardWheel = new Cartesian3();
+const guardDirectionBefore = new Cartesian3(), guardUpBefore = new Cartesian3();
+const guardSurface = new Cartesian3(), guardOffset = new Cartesian3(), guardIntersection = new Cartesian3();
+const guardCarto = new Cartographic(), guardHitCarto = new Cartographic(), guardRay = new Cesium.Ray();
+const guardBoomLook = new Cartesian3(), guardBoomDirection = new Cartesian3(), guardBoomOffset = new Cartesian3(), guardBoomPoint = new Cartesian3();
+const guardBoomCarto = new Cartographic();
 
 export class LanderView {
   /** True from enter() until exit(). */
@@ -1259,6 +1284,12 @@ export class LanderView {
     enterMs: 0, loadMs: 0, loadTimedOut: false, detailMs: -1, rocksMs: -1, recentreMs: 0, recentres: 0, exitMs: 0, shadowBuildMs: 0, shadowSweepMs: 0, meanBuildMs: 0, sunHere: -1,
     /** longest gap between two frames in each step of the last enter / exit (ms) */
     worstFrame: { out: 0, load: 0, in: 0, leaveOut: 0, leaveLoad: 0, leaveIn: 0 } as Record<string, number>,
+    cameraClearanceM: 0, cameraMinClearanceM: Infinity, cameraMinBeforeM: Infinity,
+    cameraGroundSource: 'none', cameraGroundLevel: -1, cameraGuardLifts: 0, cameraGuardMaxLiftM: 0, cameraBoomClips: 0,
+    cameraGuardMissing: 0, cameraGuardReselects: 0, roverGroundReseats: 0,
+    groundReadyMode: 'waiting', groundSourceLevel: -1, groundCameraSourceLevel: -1, groundWheelSourceLevel: -1, groundCentreSourceLevel: -1,
+    openMeterMs: 0, openParkMs: 0, openRocksMs: 0,
+    fineFirstMs: -1, shadowReadyMs: -1, driveGpuReadyMs: -1, openQueueHigh: -1, openQueueMedium: -1, openQueueLow: -1,
   };
 
   private viewer: Viewer;
@@ -1287,6 +1318,14 @@ export class LanderView {
   private eye = new Cartesian3();
   private eyeHeight = 0;
   private placed = false; // the camera is ours
+  private selectedSupport: DrawnTile[] | null = null;
+  private roverGroundTiles = new Map<DrawnTile, unknown>();
+  private groundCoveredFrames = 0;
+  private groundFineFrames = 0;
+  private groundGuardFrame = -1;
+  private groundCoverageAt = 0;
+  private groundFine = false;
+  private groundCovered = false;
 
   // where the camera looks
   private az = 0;
@@ -1421,6 +1460,10 @@ export class LanderView {
   private chaseDist = ROVER.dist * ROVER.scale;
   /** the chase camera's boom: its length now (shorter while a crest is in the way), how far the eye is lifted clear of the ground (m), when it was last worked out, still settling */
   private armDist = ROVER.dist * ROVER.scale; private armLift = 0; private armT = 0; private armBusy = false;
+  /** how far the boom is swung up over the rover (deg, 0 on open ground) so a hillside behind is not in its way: see chaseEye */
+  private armTilt = 0;
+  /** A newly selected facet may require a shorter boom than its normal minimum. */
+  private armGroundCap = Infinity; private armCapAt = 0;
   /** where the rover first stood in this view (world point on the sphere, heading): Reset rover brings it back here */
   private parkPose: { p: Cartesian3; heading: number } | null = null;
   /** the pose feed for the minimap (roverLink): when it was last sent, and where the 80 m heights were last loaded round the rover */
@@ -1503,6 +1546,7 @@ export class LanderView {
     this.offs.push(() => window.clearTimeout(detailTimer));
 
     const scene = viewer.scene;
+    this.installGroundGuard();
     this.offs.push(scene.preRender.addEventListener(() => { if (this.placed) { this.applyCamera(); this.placeLamp(); } }));
     this.offs.push(scene.preRender.addEventListener(() => this.stepSunShadow()));
     // finer ground tiles arrived: put the parked rover back on the ground they draw (the loop sleeps when nothing moves)
@@ -1612,6 +1656,15 @@ export class LanderView {
     this.fromSpot = 0;
     this.enterT0 = performance.now();
     this.stats.loadTimedOut = false;
+    this.groundCoveredFrames = this.groundFineFrames = 0; this.groundCovered = this.groundFine = false;
+    this.groundCoverageAt = 0;
+    this.groundGuardFrame = -1; this.roverGroundTiles.clear(); this.selectedSupport = null;
+    this.stats.cameraMinClearanceM = this.stats.cameraMinBeforeM = Infinity;
+    this.stats.cameraGuardLifts = this.stats.cameraGuardMissing = this.stats.cameraGuardReselects = this.stats.roverGroundReseats = 0;
+    this.stats.cameraBoomClips = 0;
+    this.stats.cameraGuardMaxLiftM = 0; this.stats.groundReadyMode = 'waiting';
+    this.stats.fineFirstMs = this.stats.shadowReadyMs = this.stats.driveGpuReadyMs = -1;
+    this.stats.openQueueHigh = this.stats.openQueueMedium = this.stats.openQueueLow = -1;
     // the 80 m height tiles around the spot (needed for the exact eye height); usually already downloaded
     void this.heights.loadTilesAround(spec.lat, spec.lon, 4000).then(() => { if (this.placed && this.spec === spec) { this.setEyeHeight(this.phase !== 'on'); this.kick(); } }, () => {});
     if (spec.rover) void this.heights.loadTilesAround(spec.rover.lat, spec.rover.lon, 4000).catch(() => {});
@@ -1645,8 +1698,12 @@ export class LanderView {
     this.view = 'spot';
     this.glide = null;
     this.chaseDist = ROVER.dist * ROVER.scale;
+    this.armGroundCap = Infinity; this.armCapAt = 0;
     this.placed = true;
     this.pictureReady = false;
+    this.groundCoveredFrames = this.groundFineFrames = 0;
+    this.groundCovered = this.groundFine = false;
+    this.roverGroundTiles.clear(); this.selectedSupport = null;
     roverAudio.bed(true);
     this.setEyeHeight(true);
     Cartesian3.clone(this.eye, this.rockOrigin);
@@ -1708,7 +1765,7 @@ export class LanderView {
       // continuing a saved drive: the view opens behind the rover, where it was left
       this.view = 'third';
       this.az = this.driver.heading; this.el = ROVER.chaseEl;
-      this.armDist = this.chaseDist; this.armLift = 0;
+      this.armDist = this.chaseDist; this.armLift = 0; this.armTilt = 0;
     }
     this.syncWaypoints();
     this.setWalkLink();
@@ -1722,6 +1779,10 @@ export class LanderView {
    * slow server, and waiting for every last one is what made this view feel frozen.
    */
   private groundReady(now: number, sweep = false): boolean {
+    if (this.placed && !this.surfaceReady(now)) { this.okFrames = 0; return false; }
+    // Three actual fine-ground frames already prove the eye and all six wheels. Distant
+    // terrain and photo queues must not hold this safe local view behind the curtain.
+    if (this.placed && this.groundFineFrames >= 3) return true;
     const globe = this.viewer.scene.globe;
     if (globe.tilesLoaded) { this.okFrames++; return this.okFrames >= 3; }
     const surface = (globe as unknown as { _surface?: { _tileLoadQueueHigh?: unknown[]; _tileLoadQueueMedium?: unknown[]; _tileLoadQueueLow?: unknown[] } })._surface;
@@ -1756,10 +1817,17 @@ export class LanderView {
     const mast = Math.max(MIN_CLEARANCE_M, spec.mastM);
     const exact = this.heights.heightAt(spec.lat, spec.lon, true);
     Cartographic.fromCartesian(toCartesian(spec.lat, spec.lon, 0, scratchA), MOON_ELLIPSOID, scratchCarto);
-    const drawn = this.viewer.scene.globe.getHeight(scratchCarto);
-    const want = drawn !== undefined ? drawn + mast : exact + mast;
-    if (snap || Math.abs(want - this.eyeHeight) < 0.02) this.eyeHeight = want;
-    else this.eyeHeight += (want - this.eyeHeight) * (want > this.eyeHeight ? 0.5 : 0.12);
+    const drawn = this.selectedHeight(scratchCarto, undefined, true);
+    // Until fine ground is proven here, "the ground as drawn" can be the far view's coarse mesh, which
+    // lies hundreds of metres under the real surface (950 m on the Shackleton rim when arriving from
+    // Tycho). An eye seated on that sits inside the mountain: the real tiles are above it, never in view,
+    // never drawn, so the proof never comes and the curtain stayed down for ever. Before the proof the
+    // eye is therefore never lower than the exact NASA ground; the drawn ground can only raise it.
+    const unproven = !this.groundCovered && this.phase !== 'on';
+    const want = (drawn === undefined ? exact : unproven ? Math.max(drawn, exact) : drawn) + mast;
+    // A new facet can be higher than the old one. Lift at once; only the way down may ease.
+    if (snap || want > this.eyeHeight || Math.abs(want - this.eyeHeight) < 0.02) this.eyeHeight = want;
+    else this.eyeHeight += (want - this.eyeHeight) * 0.12;
     toCartesian(spec.lat, spec.lon, this.eyeHeight, this.spotEye);
     if (!this.walkerActive) Cartesian3.clone(this.spotEye, this.eye);
     return Math.abs(want - this.eyeHeight) > 0.02;
@@ -1878,6 +1946,8 @@ export class LanderView {
         this.setEyeHeight(true);
         const driveGpuReady = this.warmDriveGpu();
         const shadowsOk = !this.shadows || !this.materialOn || (this.shadows.ready[1] && this.shadows.ready[2] && (!this.means || this.means.ready));
+        if (driveGpuReady && this.stats.driveGpuReadyMs < 0) this.stats.driveGpuReadyMs = Math.round(now - this.enterT0);
+        if (shadowsOk && this.stats.shadowReadyMs < 0) this.stats.shadowReadyMs = Math.round(now - this.enterT0);
         if (since > 700) this.fadeNote.classList.add('show');
         const looking = this.ringStep > 0 && this.ringStep < RING_STEPS;
         if (looking && (this.groundReady(now, true) || since > RING_MS)) {
@@ -1885,15 +1955,20 @@ export class LanderView {
           this.ringStep = since > RING_MS ? RING_STEPS : this.ringStep + 1;
           this.az = wrap360(this.ringAz0 + (this.ringStep < RING_STEPS ? this.ringStep * 360 / RING_STEPS : 0));
           this.okFrames = 0; this.shapeDoneT = 0;
-        } else if (!looking && this.ringStep === 0 && this.groundReady(now, true) && since > 120 && RING_ON && settings.get().quality !== 'light') {
+        } else if (RING_ON && !looking && this.ringStep === 0 && settings.get().quality !== 'light' && this.groundReady(now, true) && since > 120) {
           this.ringStep = 1;
           this.az = wrap360(this.ringAz0 + 360 / RING_STEPS);
           this.okFrames = 0; this.shapeDoneT = 0;
-        } else if (!looking && ((this.groundReady(now) && since > 120 && shadowsOk && driveGpuReady) || since > LOAD_TIMEOUT_MS)) {
+        } else if (!looking && this.surfaceReady(now) && ((this.groundReady(now) && since > 120 && shadowsOk && driveGpuReady) || since > LOAD_TIMEOUT_MS)) {
           this.az = this.ringAz0;
           this.stats.loadTimedOut = since > LOAD_TIMEOUT_MS;
           this.stats.loadMs = Math.round(now - this.enterT0);
+          const queues = (scene.globe as unknown as { _surface?: { _tileLoadQueueHigh?: unknown[]; _tileLoadQueueMedium?: unknown[]; _tileLoadQueueLow?: unknown[] } })._surface;
+          this.stats.openQueueHigh = queues?._tileLoadQueueHigh?.length ?? -1;
+          this.stats.openQueueMedium = queues?._tileLoadQueueMedium?.length ?? -1;
+          this.stats.openQueueLow = queues?._tileLoadQueueLow?.length ?? -1;
           this.setLoadBoost(false);
+          let workAt = performance.now();
           // open the curtain on the right exposure, not on one that then drifts
           if (this.meter()) {
             this.meterAt = now;
@@ -1901,8 +1976,11 @@ export class LanderView {
             if (this.material) (this.material.uniforms as Record<string, unknown>).lvExposure = this.exposure;
             this.setSkyExposure(this.skyTarget);
           }
-          if (!this.walking && this.view === 'spot') this.parkRover(); // now on the final ground, in plain sight
+          this.stats.openMeterMs = Math.round(performance.now() - workAt); workAt = performance.now();
+          if (!this.walking && this.view === 'spot') { this.parkRover(); this.faceRover(); } // now on the final ground, in plain sight, in the middle of the picture
+          this.stats.openParkMs = Math.round(performance.now() - workAt); workAt = performance.now();
           this.placeRocks();
+          this.stats.openRocksMs = Math.round(performance.now() - workAt);
           this.fade.classList.remove('on');
           this.setPhase('in');
         }
@@ -2064,11 +2142,32 @@ export class LanderView {
 
   /** The camera only ever turns about the spot's own up direction and tilts: it cannot roll. */
   private applyCamera() {
-    const cam = this.viewer.camera;
     // behind the rover the eye depends on where you look: place it for the direction of this very frame
     if (this.view === 'third' && !this.glide && this.driver && this.roverParked && this.phase !== 'out') this.chaseEye(this.eye);
-    this.dirFor(this.az, this.el, cam.direction);
-    this.dirFor(this.az, this.el + 90, cam.up);
+    this.guardEye(false);
+    this.writeCamera();
+  }
+
+  /**
+   * How far up or down the picture looks. Behind the rover, an eye that had to be lifted clear of the ground
+   * looks down by as much as it was lifted, so it still looks at the rover. (It used to keep its angle: driving
+   * down a steep hill the eye is pushed up by the slope behind it, and the rover slid out of the bottom of the
+   * picture. The owner: "on the hill you don't see the rover".) `this.el` itself, the way you chose to look, is
+   * left alone, so nothing is added to the mouse.
+   */
+  private lookEl(): number {
+    if (this.view !== 'third' || this.glide) return this.el;
+    // (the boom itself may be swung up over a hillside, see chaseEye: the picture looks along the boom)
+    const e = (this.el - this.armTilt) * DEG;
+    if (this.armLift <= 0 || this.armDist < 0.5) return Math.max(EL_MIN, e / DEG);
+    return Math.max(EL_MIN, Math.atan2(Math.sin(e) * this.armDist - this.armLift, Math.cos(e) * this.armDist) / DEG);
+  }
+
+  /** Copy the already-seated eye without running the chase boom a second time. */
+  private writeCamera() {
+    const cam = this.viewer.camera, el = this.lookEl();
+    this.dirFor(this.az, el, cam.direction);
+    this.dirFor(this.az, el + 90, cam.up);
     Cartesian3.cross(cam.direction, cam.up, cam.right);
     Cartesian3.clone(this.eye, cam.position);
     this.updateCraterEye();
@@ -2077,6 +2176,176 @@ export class LanderView {
     // our "fov" is the width of the view; Cesium's is along the longer side of the window
     const want = fr.aspectRatio >= 1 ? this.fov * DEG : 2 * Math.atan(Math.tan(this.fov * DEG / 2) / fr.aspectRatio);
     if (Math.abs(fr.fov - want) > 1e-6) fr.fov = want;
+  }
+
+  /** Final camera and wheel seating must follow this frame's tiles, not the previous frame's. */
+  private installGroundGuard() {
+    const globe = this.viewer.scene.globe as unknown as { render(frame: GroundFrame): void };
+    const original = globe.render;
+    const guarded = (frame: GroundFrame) => {
+      const start = frame.commandList.length, minimum = frame.minimumTerrainHeight;
+      original.call(globe, frame);
+      if (!this.placed || frame.mode !== Cesium.SceneMode.SCENE3D || !frame.passes.render || frame.passes.pick || frame.passes.offscreen) return;
+      let terrainChanged = false, roverReseated = false;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        this.selectedSupport = null;
+        const before = Cartesian3.clone(this.viewer.camera.position, guardCameraBefore);
+        Cartesian3.clone(this.viewer.camera.direction, guardDirectionBefore);
+        Cartesian3.clone(this.viewer.camera.up, guardUpBefore);
+        if (this.driver && this.roverParked && this.roverSelectionChanged()) {
+          terrainChanged = true;
+          // Wheel support includes small rocks. Seat them on this selection before resampling it.
+          this.seatRocks(frame);
+          if (this.driver.syncGround(this.walkEnv)) {
+            roverReseated = true;
+            this.stats.roverGroundReseats++;
+            this.placeRoverModel();
+            if (this.rover?.ready) this.flushModelGround(this.rover, frame);
+            if (this.walkerActive) this.placeEye(performance.now());
+            this.kick();
+          }
+        }
+        const provenEye = this.guardEye(true);
+        // Cesium checked this before it selected these tiles. A late safety lift must also
+        // restore skirts and front-face drawing; otherwise this safe eye keeps underground
+        // terrain commands for one frame, leaving the edges of neighbouring tiles open.
+        const restoreSurfaceDrawing = provenEye && frame.cameraUnderground;
+        if (provenEye) {
+          frame.cameraUnderground = false;
+          (this.viewer.scene as unknown as { _cameraUnderground: boolean })._cameraUnderground = false;
+        }
+        this.writeCamera();
+        const cam = this.viewer.camera, moved = Cartesian3.distance(before, cam.position);
+        const turned = Math.max(Cartesian3.distance(guardDirectionBefore, cam.direction), Cartesian3.distance(guardUpBefore, cam.up));
+        if (moved > 1e-6 || turned > 1e-6) {
+          frame.cullingVolume = cam.frustum.computeCullingVolume(cam.positionWC, cam.directionWC, cam.upWC);
+          if (frame.occluder) frame.occluder.cameraPosition = cam.positionWC;
+          (this.viewer.scene as unknown as { context: { uniformState: { updateCamera(camera: Cesium.Camera): void } } }).context.uniformState.updateCamera(cam);
+          this.placeLamp();
+          // Far stones shrink about their camera-relative centres in the fade band too.
+          this.farRocks?.frame(cam.positionWC);
+        }
+        // Keep every other primitive's commands. Only this call's terrain commands are replaced
+        // when a large lift changes which hills the camera can see. No second physics step runs.
+        if ((!restoreSurfaceDrawing && moved <= 0.25 && turned <= 0.001) || attempt === 2) break;
+        frame.commandList.length = start;
+        frame.minimumTerrainHeight = minimum;
+        (this.viewer.scene.globe as unknown as { _surface?: { _tilesRenderedThisFrame?: Set<DrawnTile> } })._surface?._tilesRenderedThisFrame?.clear();
+        this.stats.cameraGuardReselects++;
+        original.call(globe, frame);
+      }
+      if (roverReseated) this.publishPose(performance.now(), false, true);
+      if (this.phase === 'load' || this.phase === 'in' || terrainChanged || performance.now() - this.groundCoverageAt > 250) this.checkSurfaceCoverage(frame.frameNumber);
+    };
+    globe.render = guarded;
+    this.offs.push(() => { if (globe.render === guarded) globe.render = original; });
+  }
+
+  /** A model was already updated before Cesium selected the ground. Update its existing commands. */
+  private flushModelGround(model: Model, frame: GroundFrame) {
+    const graph = (model as unknown as { _sceneGraph?: { updateModelMatrix(matrix: Matrix4, frame: GroundFrame): void; update(frame: GroundFrame, animations: boolean): void } })._sceneGraph;
+    if (!graph) return;
+    graph.updateModelMatrix(model.modelMatrix, frame);
+    graph.update(frame, false);
+  }
+
+  /** A short top-down sample also works when the eye is below a newly selected facet. */
+  private guardEye(record: boolean): boolean {
+    let c = Cartographic.fromCartesian(this.eye, MOON_ELLIPSOID, guardCarto);
+    if (!c) return false;
+    const found: GroundHit = { tile: null, source: 'none' };
+    let height = this.selectedHeight(c, found, true);
+    if (height === undefined) { if (record) this.stats.cameraGuardMissing++; return false; }
+    // The boom may be blocked even though the ground under the wheels did not change. Bring
+    // it towards the rover on this selection before a safety lift sends it far above the body.
+    if (record && c.height - height < CAMERA_FLOOR_M && this.view === 'third' && !this.glide && this.driver && this.roverParked && this.clipChaseToGround()) {
+      c = Cartographic.fromCartesian(this.eye, MOON_ELLIPSOID, guardCarto);
+      if (!c) return false;
+      height = this.selectedHeight(c, found, true);
+      if (height === undefined) { this.stats.cameraGuardMissing++; return false; }
+    }
+    const before = c.height - height, lift = Math.max(0, CAMERA_FLOOR_M + 0.0001 - before);
+    if (lift > 0) {
+      Cartesian3.multiplyByScalar(this.eye, (MOON_R + c.height + lift) / (MOON_R + c.height), this.eye);
+      if (this.view === 'spot' && !this.glide) { this.eyeHeight = c.height + lift; Cartesian3.clone(this.eye, this.spotEye); }
+      this.stats.cameraGuardLifts++;
+      this.stats.cameraGuardMaxLiftM = Math.max(this.stats.cameraGuardMaxLiftM, lift);
+    }
+    if (record) {
+      this.stats.cameraMinBeforeM = Math.min(this.stats.cameraMinBeforeM, before);
+      this.stats.cameraClearanceM = before + lift;
+      this.stats.cameraMinClearanceM = Math.min(this.stats.cameraMinClearanceM, before + lift);
+      this.stats.cameraGroundSource = found.source;
+      this.stats.cameraGroundLevel = found.tile?.level ?? -1;
+    }
+    return true;
+  }
+
+  /** Only a changed mesh near the wheels needs the extra, time-free seating pass. */
+  private roverSelectionChanged(): boolean {
+    const d = this.driver;
+    if (!d) return false;
+    const c = Cartographic.fromCartesian(d.feet, MOON_ELLIPSOID, guardCarto);
+    if (!c) return false;
+    const pad = 2 / MOON_R, lonPad = pad / Math.max(0.01, Math.cos(c.latitude));
+    const near = (tile: DrawnTile) => {
+      const r = tile.rectangle;
+      if (c.latitude < r.south - pad || c.latitude > r.north + pad) return false;
+      if (c.longitude >= r.west && c.longitude <= r.east) return true;
+      return Math.min(Math.abs(Math.atan2(Math.sin(c.longitude - r.west), Math.cos(c.longitude - r.west))),
+        Math.abs(Math.atan2(Math.sin(c.longitude - r.east), Math.cos(c.longitude - r.east)))) <= lonPad;
+    };
+    const next = new Map<DrawnTile, unknown>();
+    for (const tile of this.currentGroundTiles()) if (tile.data?.renderedMesh && near(tile)) next.set(tile, tile.data.renderedMesh);
+    if (!next.size) {
+      for (const tile of this.groundSupportTiles()) if (tile.data?.renderedMesh && near(tile)) {
+        next.set(tile, tile.data.renderedMesh);
+        if ((tile.level ?? 0) >= 7) break;
+      }
+    }
+    const changed = next.size !== this.roverGroundTiles.size || [...next].some(([tile, mesh]) => this.roverGroundTiles.get(tile) !== mesh);
+    this.roverGroundTiles = next;
+    return changed;
+  }
+
+  /** Photos and shadows may time out; a proven ground mesh and safe eye may not. */
+  private surfaceReady(now: number): boolean {
+    const ready = this.groundCovered && this.groundCoveredFrames >= 3 && (this.groundFineFrames >= 3 || now - this.enterT0 >= LOAD_TIMEOUT_MS);
+    this.stats.groundReadyMode = ready ? this.groundFine ? 'fine' : 'coarse' : 'waiting';
+    return ready;
+  }
+
+  private checkSurfaceCoverage(frameNumber: number) {
+    this.groundCoverageAt = performance.now();
+    const probe: GroundHit = { tile: null, source: 'none' };
+    const sample = (p: Cartesian3): number => {
+      const c = Cartographic.fromCartesian(p, MOON_ELLIPSOID, guardCarto);
+      if (!c || this.selectedHeight(c, probe, true) === undefined) return -1;
+      let source = probe.tile;
+      while (source && (!source.data?.vertexArray || source.upsampledFromParent || source.data.terrainData?.wasCreatedByUpsampling?.())) source = source.parent ?? null;
+      return source?.level ?? -1;
+    };
+    const cameraLevel = sample(this.eye);
+    let centreLevel = -1, wheelLevel = -1;
+    const d = this.driver;
+    if (d && this.roverParked) {
+      centreLevel = sample(d.feet);
+      wheelLevel = Infinity;
+      for (let i = 0; i < 6; i++) wheelLevel = Math.min(wheelLevel, sample(d.wheelContact(i, guardWheel)));
+    }
+    this.groundCovered = cameraLevel >= 7 && centreLevel >= 7 && wheelLevel >= 7 && this.stats.cameraClearanceM >= CAMERA_FLOOR_M;
+    // An off-frustum lens can use the selected tile's coarser parent. The wheels need the real
+    // fine source; the eye needs a proven mesh at its actual support LOD and the hard clearance.
+    this.groundFine = this.groundCovered && wheelLevel >= (this.relief ? 18 : this.spec && this.spec.lat < -80 ? 11 : 7);
+    this.stats.groundCameraSourceLevel = cameraLevel; this.stats.groundWheelSourceLevel = wheelLevel;
+    this.stats.groundCentreSourceLevel = centreLevel;
+    this.stats.groundSourceLevel = Math.min(cameraLevel, centreLevel, wheelLevel);
+    if (frameNumber !== this.groundGuardFrame) {
+      this.groundGuardFrame = frameNumber;
+      this.groundCoveredFrames = this.groundCovered ? this.groundCoveredFrames + 1 : 0;
+      this.groundFineFrames = this.groundFine ? this.groundFineFrames + 1 : 0;
+      if (this.groundFineFrames >= 3 && this.stats.fineFirstMs < 0 && (this.phase === 'load' || this.phase === 'in' || this.phase === 'on')) this.stats.fineFirstMs = Math.round(performance.now() - this.enterT0);
+    }
   }
 
   // ---- the rover (see walk.ts) ---------------------------------------------------------------
@@ -2092,8 +2361,10 @@ export class LanderView {
     const at = (e: number, n: number, out: Cartesian3) => Cartesian3.fromElements(base.x + this.east.x * e + this.north.x * n, base.y + this.east.y * e + this.north.y * n, base.z + this.east.z * e + this.north.z * n, out);
     const S = ROVER.scale, parkM = ROVER.parkM * S;
     let e = Math.sin(this.az * DEG) * parkM, n = Math.cos(this.az * DEG) * parkM;
-    search: for (const dist of [parkM, 13 * S, 16 * S]) {
-      for (const off of [0, -22, 22, -45, 45]) {
+    // (on a steep hillside the only places like that can be well to the side, or behind: the view turns to the rover
+    // when it opens, see faceRover, so anywhere round the landing spot will do)
+    search: for (const dist of [parkM, parkM + 3 * S, parkM + 7 * S]) {
+      for (const off of [0, -22, 22, -45, 45, -70, 70, -100, 100, -140, 140, 180]) {
         const a = (this.az + off) * DEG, ce = Math.sin(a) * dist, cn = Math.cos(a) * dist;
         const g = this.groundUnder(at(ce, cn, scratchB));
         const g2 = this.groundUnder(at(ce + Math.sin(a) * 1.5, cn + Math.cos(a) * 1.5, scratchB));
@@ -2131,6 +2402,25 @@ export class LanderView {
   }
 
   /**
+   * Arriving, look at the rover: turned towards it and tipped so that it stands in the middle of the picture.
+   * The view used to open level. On flat ground that left the rover at the bottom edge, behind the buttons; where
+   * the ground fell away in front it was out of the picture altogether (the owner: "on the hill you don't see the
+   * rover ... make the rover in the centre, so you can see like face down a bit").
+   */
+  private faceRover() {
+    const d = this.driver;
+    if (!d || !this.roverParked) return;
+    // the middle of its body, about a metre (model) above its wheels
+    const body = Cartesian3.add(d.base(scratchA), Cartesian3.multiplyByScalar(d.up, 1.1 * ROVER.scale, scratchB), scratchA);
+    const to = Cartesian3.subtract(body, this.spotEye, scratchA);
+    const e = Cartesian3.dot(to, this.east), n = Cartesian3.dot(to, this.north), u = Cartesian3.dot(to, this.up), flat = Math.hypot(e, n);
+    if (flat < 0.5) return;
+    this.az = wrap360(Math.atan2(e, n) / DEG);
+    // (never so far down or up that the horizon is lost for good: the mouse takes over from here)
+    this.el = clamp(Math.atan2(u, flat) / DEG, -42, 24);
+  }
+
+  /**
    * Start or stop driving. Driving starts behind the rover (the chase camera); stopping keeps the camera where
    * it is. "Back to lander" (setView('spot')) glides back to the landing spot; the rover stays where it is.
    */
@@ -2161,7 +2451,8 @@ export class LanderView {
     if (v !== 'spot' && (!d || !this.roverParked)) return;
     this.glide = { from: Cartesian3.clone(this.eye), t0: performance.now() };
     this.view = v;
-    this.armDist = this.chaseDist; this.armLift = 0;
+    this.armDist = this.chaseDist; this.armLift = 0; this.armTilt = 0;
+    this.armGroundCap = Infinity; this.armCapAt = 0;
     let az = this.az, el = this.el;
     if (d && v === 'third') { az = d.heading; el = ROVER.chaseEl; }
     else if (d && v === 'first') { az = d.heading; el = ROVER.firstEl; }
@@ -2241,17 +2532,40 @@ export class LanderView {
   /**
    * Behind the rover: the eye sits on a boom from a point just above the rover, pointing back along the way you
    * look. You are free to look anywhere: the boom shortens when a crest comes between the camera and the rover,
-   * and where the camera would dip under the ground it is lifted clear instead. The direction you look in is
-   * never changed for you. Worked out for the direction of the very frame being drawn (see applyCamera), so the
-   * rover does not shake against the mouse.
+   * and where the camera would dip under the ground it is lifted clear instead. A direction you chose with the
+   * mouse is never changed for you; left at its own angle, the boom swings up over a hillside behind the rover
+   * (armTilt) and the picture looks down along it (lookEl). Worked out for the direction of the very frame being
+   * drawn (see applyCamera), so the rover does not shake against the mouse.
    */
   private chaseEye(out: Cartesian3): Cartesian3 {
     const d = this.driver!;
     const S = ROVER.scale, minClear = Math.max(0.45, 0.9 * S), dMin = ROVER.distMin * S;
     const look = Cartesian3.add(d.base(scratchI), Cartesian3.multiplyByScalar(d.up, ROVER.lookUp * S, scratchJ), scratchI);
-    const dir = this.dirFor(this.az, this.el, scratchJ);
-    const at = (dist: number, o: Cartesian3) => Cartesian3.subtract(look, Cartesian3.multiplyByScalar(dir, dist, scratchK), o);
     const clearAt = (p: Cartesian3) => Cartesian3.magnitude(p) - MOON_R - this.groundUnder(p);
+    const now = performance.now(), dt = Math.min(0.05, Math.max(0.001, (now - this.armT) / 1000));
+    this.armT = now;
+    // Driving down a steep hill, the slope behind the rover is in the boom's way. Pulling the camera in until it
+    // clears (all it used to do) leaves it 1.75 m from the rover on a 35 degree slope: the rover fills the picture
+    // and you cannot see where you are going. So first the boom swings up over the rover, as far as the ground
+    // behind asks for, and the camera looks down by the same angle: the rover stays in the middle at its usual
+    // size, with the slope below it in view. Only while the view is the camera's own (you have not tipped it
+    // yourself): a view you chose with the mouse is never turned for you.
+    let wantTilt = 0;
+    if (Math.abs(this.el - ROVER.chaseEl) < 2 && !this.anim) {
+      const boom = (this.armTilt - this.el) * DEG, lookH = Cartesian3.magnitude(look) - MOON_R;
+      const a = this.az * DEG, bn = -Math.cos(a), be = -Math.sin(a), N = this.viewN, E = this.viewE;
+      let need = -90;
+      for (let k = 1; k <= 4; k++) {
+        const s = this.chaseDist * Math.cos(boom) * k / 4;
+        Cartesian3.fromElements(look.x + (N.x * bn + E.x * be) * s, look.y + (N.y * bn + E.y * be) * s, look.z + (N.z * bn + E.z * be) * s, scratchL);
+        need = Math.max(need, Math.atan2(this.groundUnder(scratchL) + (k === 4 ? minClear + 0.1 : 0.3) - lookH, s) / DEG);
+      }
+      wantTilt = clamp(need + this.el, 0, 44);
+    }
+    this.armTilt += (wantTilt - this.armTilt) * (1 - Math.exp(-dt / (wantTilt > this.armTilt ? 0.16 : 0.5)));
+    if (Math.abs(wantTilt - this.armTilt) < 0.02) this.armTilt = wantTilt;
+    const dir = this.dirFor(this.az, this.el - this.armTilt, scratchJ);
+    const at = (dist: number, o: Cartesian3) => Cartesian3.subtract(look, Cartesian3.multiplyByScalar(dir, dist, scratchK), o);
     // a crest between the camera and the rover: bring the camera in front of it
     let want = this.chaseDist;
     if (want > dMin + 0.2) {
@@ -2259,8 +2573,23 @@ export class LanderView {
         if (clearAt(at(dMin + (this.chaseDist - dMin) * k / 4, scratchL)) < 0.12) { want = dMin + (this.chaseDist - dMin) * (k - 1) / 4; break; }
       }
     }
-    const now = performance.now(), dt = Math.min(0.05, Math.max(0.001, (now - this.armT) / 1000));
-    this.armT = now;
+    if (Number.isFinite(this.armGroundCap)) {
+      // A remembered stop avoids easing back into the same facet every frame. Expand only
+      // through a path that has been checked, slowly enough to keep the camera settled.
+      if (now - this.armCapAt >= 250) {
+        const end = Math.min(this.chaseDist, this.armGroundCap + 0.2);
+        let clear = true;
+        for (let k = 1; k <= 2; k++) {
+          const p = at(this.armGroundCap + (end - this.armGroundCap) * k / 2, guardBoomPoint);
+          const c = Cartographic.fromCartesian(p, MOON_ELLIPSOID, guardBoomCarto);
+          const h = c ? this.selectedHeight(c, undefined, true) : undefined;
+          if (!c || h === undefined || c.height - h < minClear) { clear = false; break; }
+        }
+        if (clear) this.armGroundCap = end >= this.chaseDist ? Infinity : end;
+        this.armCapAt = now;
+      }
+      want = Math.min(want, this.armGroundCap);
+    }
     // in quickly (the rover must not vanish behind the hill), back out gently
     this.armDist += (want - this.armDist) * (1 - Math.exp(-dt / (want < this.armDist ? 0.07 : 0.45)));
     if (Math.abs(want - this.armDist) < 0.01) this.armDist = want;
@@ -2269,10 +2598,42 @@ export class LanderView {
     this.armLift = lift >= this.armLift ? lift : this.armLift + (lift - this.armLift) * (1 - Math.exp(-dt / 0.25));
     if (this.armLift < 1e-3) this.armLift = 0;
     else Cartesian3.add(out, Cartesian3.multiplyByScalar(d.up, this.armLift, scratchK), out);
-    this.armBusy = this.armDist !== want || (this.armLift > 0 && this.armLift - lift > 1e-3);
+    this.armBusy = this.armDist !== want || this.armTilt !== wantTilt || (this.armLift > 0 && this.armLift - lift > 1e-3);
     return out;
   }
 
+  /** Only a late floor violation runs this short search; normal driving adds no ray work. */
+  private clipChaseToGround(): boolean {
+    const d = this.driver;
+    if (!d) return false;
+    const minClear = Math.max(0.45, 0.9 * ROVER.scale);
+    const look = Cartesian3.add(d.base(guardBoomLook), Cartesian3.multiplyByScalar(d.up, ROVER.lookUp * ROVER.scale, guardBoomOffset), guardBoomLook);
+    const dir = this.dirFor(this.az, this.el - this.armTilt, guardBoomDirection);
+    const at = (dist: number) => Cartesian3.subtract(look, Cartesian3.multiplyByScalar(dir, dist, guardBoomOffset), guardBoomPoint);
+    const safe = (dist: number) => {
+      const c = Cartographic.fromCartesian(at(dist), MOON_ELLIPSOID, guardBoomCarto);
+      const h = c ? this.selectedHeight(c, undefined, true) : undefined;
+      return !!c && h !== undefined && c.height - h >= minClear;
+    };
+    if (!safe(0)) return false;
+    let lo = 0, hi = this.chaseDist, blocked = false;
+    for (let k = 1; k <= 8; k++) {
+      const dist = this.chaseDist * k / 8;
+      if (!safe(dist)) { hi = dist; blocked = true; break; }
+      lo = dist;
+    }
+    if (blocked) for (let k = 0; k < 10; k++) {
+      const mid = (lo + hi) / 2;
+      if (safe(mid)) lo = mid; else hi = mid;
+    }
+    const distance = blocked ? Math.max(0, lo - 0.01) : this.chaseDist;
+    const chosen = blocked ? Math.min(this.armGroundCap, distance) : distance;
+    this.armGroundCap = blocked ? chosen : Infinity;
+    this.armCapAt = performance.now(); this.armDist = chosen; this.armLift = 0;
+    Cartesian3.clone(at(chosen), this.eye);
+    this.stats.cameraBoomClips++;
+    return true;
+  }
   /** Put the model where the rover is: its body on its wheels, tilted with the ground. */
   private placeRoverModel() {
     const d = this.driver, m = this.rover;
@@ -2426,16 +2787,16 @@ export class LanderView {
       || Math.abs(this.fov - this.pictureFov) > 0.001 || Math.abs(this.chaseDist - this.pictureDist) > 0.001
       || Cartesian3.distanceSquared(this.eye, this.pictureEye) > 1e-6
       || Cartesian3.distanceSquared(this.viewU, this.pictureUp) > 2.5e-9
-      || (this.armBusy && (Math.abs(this.armDist - this.pictureArm) > 0.001 || Math.abs(this.armLift - this.pictureLift) > 0.001)));
+      || (this.armBusy && (Math.abs(this.armDist - this.pictureArm) > 0.001 || Math.abs(this.armLift - this.pictureLift) > 0.001 || Math.abs(this.armTilt - this.pictureTilt) > 0.001)));
     this.pictureAz = this.az; this.pictureEl = this.el; this.pictureFov = this.fov; this.pictureDist = this.chaseDist;
-    this.pictureArm = this.armDist; this.pictureLift = this.armLift;
+    this.pictureArm = this.armDist; this.pictureLift = this.armLift; this.pictureTilt = this.armTilt;
     Cartesian3.clone(this.eye, this.pictureEye); Cartesian3.clone(this.viewU, this.pictureUp);
     this.pictureReady = true;
     return rover || camera;
   }
   private pictureReady = false;
   private pictureAz = 0; private pictureEl = 0; private pictureFov = 0; private pictureDist = 0;
-  private pictureArm = 0; private pictureLift = 0;
+  private pictureArm = 0; private pictureLift = 0; private pictureTilt = 0;
   private pictureEye = new Cartesian3(); private pictureUp = new Cartesian3();
   private lod: GroundGovernor | null = null;
   private marchHold = 0;
@@ -2443,7 +2804,7 @@ export class LanderView {
   /** Ground height under a world position (m above the sphere): the drawn ground, else the NASA height map. */
   private groundUnder(p: Cartesian3): number {
     const c = Cartographic.fromCartesian(p, MOON_ELLIPSOID, scratchCarto3);
-    const h = c ? this.drawnHeight(c) : undefined;
+    const h = c ? this.selectedHeight(c, undefined, true) : undefined;
     if (h !== undefined) return h;
     const t = toTrueLatLon(p);
     return this.heights.heightAt(t.lat, t.lon, true);
@@ -2556,7 +2917,8 @@ export class LanderView {
     this.anim = null; this.velAz = this.velEl = 0; this.glide = null;
     if (this.view === 'spot') this.view = 'third';
     this.az = d.heading; this.el = this.view === 'first' ? ROVER.firstEl : ROVER.chaseEl;
-    this.armDist = this.chaseDist; this.armLift = 0;
+    this.armDist = this.chaseDist; this.armLift = 0; this.armTilt = 0;
+    this.armGroundCap = Infinity; this.armCapAt = 0;
     if (home) this.goHome();
     roverLink.breakTrail();
     this.placeRoverModel();
@@ -2677,10 +3039,12 @@ export class LanderView {
     const provider = this.viewer.terrainProvider;
     if (!this.webgl2 || !(provider instanceof LolaTerrainProvider) || !this.spec) return;
     const spot = this.spec.rover ?? this.spec;
-    this.relief = { centre: { lat: spot.lat, lon: spot.lon }, radius: 600,
-      frame: { east: this.rockE, north: this.rockN, origin: this.rockOrigin }, heightAt: craterRelief };
+    this.relief = { centre: { lat: spot.lat, lon: spot.lon }, ahead: { lat: spot.lat, lon: spot.lon }, radius: 600,
+      frame: { east: this.rockE, north: this.rockN, origin: this.rockOrigin }, heightAt: craterRelief,
+      changed: () => this.kick() };
     this.reliefProvider = provider;
     this.reliefAt.x = this.reliefAt.y = Infinity;
+    this.reliefPrepareAt = 0;
     provider.setRelief(this.relief);
     provider.refreshSceneTiles(this.viewer.scene, 'changed');
   }
@@ -2697,6 +3061,22 @@ export class LanderView {
     if (!relief || !provider) return;
     const at = toTrueLatLon(p);
     relief.centre.lat = at.lat; relief.centre.lon = at.lon;
+    // Keep the wheels' fine grids and prepare the next few seconds of travel as well.
+    // The two ends form one corridor; looking backwards must not delay ground ahead.
+    const d = this.driver, input = (this.keys.has('w') || this.keys.has('ArrowUp') ? 1 : 0)
+      - (this.keys.has('s') || this.keys.has('ArrowDown') ? 1 : 0);
+    let vf = d?.speed ?? 0;
+    const vs = d?.slide ?? 0;
+    if (Math.abs(vf) < 0.1 && this.walking && input) vf = input * 0.75;
+    const speed = Math.hypot(vf, vs);
+    if (d && speed > 0.05) {
+      const lead = Math.min(30, 2 + speed * 4);
+      Cartesian3.add(p, Cartesian3.add(Cartesian3.multiplyByScalar(d.fwd, lead * vf / speed, scratchI),
+        Cartesian3.multiplyByScalar(d.right, lead * vs / speed, scratchJ), scratchI), scratchM);
+      const ahead = toTrueLatLon(scratchM);
+      relief.ahead ??= { lat: ahead.lat, lon: ahead.lon };
+      relief.ahead.lat = ahead.lat; relief.ahead.lon = ahead.lon;
+    } else if (relief.ahead) { relief.ahead.lat = at.lat; relief.ahead.lon = at.lon; }
     const delta = Cartesian3.subtract(p, this.rockOrigin, scratchM);
     const e = Cartesian3.dot(delta, this.rockE), n = Cartesian3.dot(delta, this.rockN);
     // Revisit old cut-up tiles well ahead of the wheels, rather than discard good tiles each frame.
@@ -2704,7 +3084,13 @@ export class LanderView {
       Cartesian2.fromElements(e, n, this.reliefAt);
       provider.refreshSceneTiles(this.viewer.scene);
     }
+    const now = performance.now();
+    if (now - this.reliefPrepareAt >= 250) {
+      this.reliefPrepareAt = now;
+      provider.prepareAhead(this.viewer.scene);
+    }
   }
+  private reliefPrepareAt = 0;
 
   private updateCraterEye() {
     if (!this.material) return;
@@ -3455,23 +3841,78 @@ export class LanderView {
    * would float above, or sink into, the ground you see. So we read the tile being drawn, the same way.
    */
   private drawnHeight(c: Cartographic, found?: { tile: DrawnTile | null }): number | undefined {
-    const globe = this.viewer.scene.globe;
-    const surface = (globe as unknown as { _surface?: { _tilesToRender?: DrawnTile[]; _tileProvider?: { tilingScheme: { projection: unknown } } } })._surface;
-    const tiles = surface?._tilesToRender;
-    if (found) found.tile = null;
-    if (tiles) {
-      for (const t of tiles) {
-        if (!t.data?.renderedMesh || !t.data.pick || !Cesium.Rectangle.contains(t.rectangle, c)) continue;
-        if (found) found.tile = t;
-        const ell = globe.ellipsoid, ray = scratchRay;
-        const p = Cartesian3.fromRadians(c.longitude, c.latitude, 0, ell, scratchE);
-        ell.geodeticSurfaceNormal(p, ray.direction);
-        Cartesian3.subtract(p, Cartesian3.multiplyByScalar(ray.direction, 20000, ray.origin), ray.origin); // from 20 km below, upwards
-        const hit = t.data.pick(ray, Cesium.SceneMode.SCENE3D, surface?._tileProvider?.tilingScheme.projection, false, scratchF);
-        if (hit) return ell.cartesianToCartographic(hit, scratchCarto2)?.height;
-      }
+    const probe: GroundHit | undefined = found ? { tile: null, source: 'none' } : undefined;
+    const height = this.selectedHeight(c, probe);
+    if (found) found.tile = probe?.tile ?? null; // a failed ray never makes a fallback look like a drawn hit
+    return height ?? this.loadedRockHeight(c) ?? this.viewer.scene.globe.getHeight(c);
+  }
+
+  /** Off-screen stones keep Cesium's deepest loaded seat, using the same exact fast triangles.
+   * The wheels and camera never use this path: only the current selection can support them.
+   * Calling globe.getHeight for every far stone otherwise repeats a full mesh scan thousands
+   * of times while its own triangle index is still being made, delaying the opening curtain.
+   */
+  private loadedRockHeight(c: Cartographic): number | undefined {
+    const roots = (this.viewer.scene.globe as unknown as { _surface?: { _levelZeroTiles?: DrawnTile[] } })._surface?._levelZeroTiles;
+    let tile = roots?.find(t => Cesium.Rectangle.contains(t.rectangle, c)), best: DrawnTile | undefined;
+    while (tile) {
+      if (tile.data?.renderedMesh) best = tile;
+      tile = [tile._southwestChild, tile._southeastChild, tile._northwestChild, tile._northeastChild]
+        .find(t => t && Cesium.Rectangle.contains(t.rectangle, c));
     }
-    return globe.getHeight(c);
+    return best ? this.pickGroundTile(best, c) : undefined;
+  }
+
+  private currentGroundTiles(): DrawnTile[] {
+    return (this.viewer.scene.globe as unknown as { _surface?: { _tilesToRender?: DrawnTile[] } })._surface?._tilesToRender ?? [];
+  }
+
+  /** Nearby off-screen points use a parent of the selected ground, not an unrelated finer tile. */
+  private groundSupportTiles(): DrawnTile[] {
+    if (this.selectedSupport) return this.selectedSupport;
+    const seen = new Set<DrawnTile>();
+    for (const selected of this.currentGroundTiles()) {
+      for (let tile: DrawnTile | undefined = selected; tile && !seen.has(tile); tile = tile.parent) seen.add(tile);
+    }
+    this.selectedSupport = [...seen].sort((a, b) => (b.level ?? 0) - (a.level ?? 0));
+    return this.selectedSupport;
+  }
+
+  /** Top down avoids the camera's location and ignores back-face assumptions at a new LOD. */
+  private pickGroundTile(tile: DrawnTile, c: Cartographic): number | undefined {
+    if (!tile.data?.renderedMesh || !tile.data.pick || !Cesium.Rectangle.contains(tile.rectangle, c)) return undefined;
+    const globe = this.viewer.scene.globe, ell = globe.ellipsoid;
+    const projection = (globe as unknown as { _surface?: { _tileProvider?: { tilingScheme: { projection: unknown } } } })._surface?._tileProvider?.tilingScheme.projection;
+    const p = Cartesian3.fromRadians(c.longitude, c.latitude, 0, ell, guardSurface);
+    ell.geodeticSurfaceNormal(p, guardRay.direction);
+    Cartesian3.add(p, Cartesian3.multiplyByScalar(guardRay.direction, 20000, guardOffset), guardRay.origin);
+    Cartesian3.negate(guardRay.direction, guardRay.direction);
+    const hit = pickRegularSourceGrid(tile.data, tile.rectangle, tile.level ?? -1, c, guardRay, guardIntersection)
+      ?? pickBinnedTerrain(tile.data, tile.rectangle, tile.level ?? -1, c, guardRay, guardIntersection)
+      ?? tile.data.pick(guardRay, Cesium.SceneMode.SCENE3D, projection, false, guardIntersection);
+    if (!hit) return undefined;
+    const h = ell.cartesianToCartographic(hit, guardHitCarto)?.height;
+    return h !== undefined && Number.isFinite(h) ? h : undefined;
+  }
+
+  /** Strict proof of a triangle hit, with an explicitly marked off-frustum support path. */
+  private selectedHeight(c: Cartographic, found?: GroundHit, support = false): number | undefined {
+    if (found) { found.tile = null; found.source = 'none'; }
+    let height: number | undefined, best: DrawnTile | null = null;
+    for (const tile of this.currentGroundTiles()) {
+      const h = this.pickGroundTile(tile, c);
+      if (h !== undefined && (height === undefined || h > height)) { height = h; best = tile; }
+    }
+    if (best) { if (found) { found.tile = best; found.source = 'selected'; } return height; }
+    if (!support) return undefined;
+    let level = -1;
+    for (const tile of this.groundSupportTiles()) {
+      if (best && (tile.level ?? 0) < level) break;
+      const h = this.pickGroundTile(tile, c);
+      if (h !== undefined && (height === undefined || h > height)) { height = h; best = tile; level = tile.level ?? 0; }
+    }
+    if (best && found) { found.tile = best; found.source = 'ancestor'; }
+    return height;
   }
 
   /**
@@ -3481,7 +3922,7 @@ export class LanderView {
    * whose first tiles were 54 m below the final ground) and a turn of the head brings other tiles on screen.
    * A rock is only looked at again when the tile under it is no longer the one drawn (well under 1 ms).
    */
-  private seatRocks() {
+  private seatRocks(frame?: GroundFrame) {
     // The probes and each stone's yaw belong to the fixed landing frame too.
     const E = this.rockE, N = this.rockN, U = this.up;
     let changed = false, firstSeat = false;
@@ -3522,6 +3963,7 @@ export class LanderView {
       mm[8] = Z.x * s; mm[9] = Z.y * s; mm[10] = Z.z * s; mm[11] = 0;
       mm[12] = base.x; mm[13] = base.y; mm[14] = base.z; mm[15] = 1;
       rock.model.show = rock.size > 0.02;
+      if (frame && rock.model.ready) this.flushModelGround(rock.model, frame);
       changed = true;
     }
     if (firstSeat) this.rasterRocks();

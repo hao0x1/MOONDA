@@ -295,6 +295,17 @@ export type FlatOverlay =
   | { id: string; kind: 'polar'; url: string; alpha: number }
   | { id: string; kind: 'global'; layer: string; ext: string; latMin: number; alpha: number };
 
+interface FlatOverlayTexture {
+  state: 'loading' | 'ready' | 'failed';
+  detail: 'none' | 'preview' | 'full';
+  tex: WebGLTexture | null;
+  pending: Promise<boolean> | null;
+  controller: AbortController | null;
+  source: string;
+  width: number; height: number; bytes: number;
+  timings: { fetchMs: number; decodeMs: number; uploadMs: number; previewMs: number; fullMs: number; failures: number };
+}
+
 /** Moon Trek tile (true lon/lat, 256 px, level z = 2^(z+1) x 2^z tiles); the same address the globe's workers use. */
 const trekTile = (layer: string, ext: string, z: number, x: number, y: number) =>
   `https://trek.nasa.gov/tiles/Moon/EQ/${layer}/1.0.0/default/default028mm/${z}/${y}/${x}.${ext}`;
@@ -385,7 +396,7 @@ export class FlatMap {
   private overlays: FlatOverlay[] = [];
   private ovProg: WebGLProgram | null = null;
   private ovU: Record<string, WebGLUniformLocation | null> = {};
-  private ovTex = new Map<string, { state: 'loading' | 'ready' | 'failed'; tex: WebGLTexture | null }>();
+  private ovTex = new Map<string, FlatOverlayTexture>();
   /** the flat map owns the screen (input, keys) */
   active = false;
   /** a transition is running: input is ignored */
@@ -395,6 +406,7 @@ export class FlatMap {
   private lastFrame = 0;
   // overlay state
   private fades = new Map<unknown, { a: number; t: number; ia: number; it: number }>();
+  private layerLabelsUntil = 0;
   private hits: (Box & { id: unknown })[] = [];
   private hovered: unknown = null;
   private entries: FlatLabel[] | null = null;
@@ -571,61 +583,146 @@ export class FlatMap {
     })();
   }
 
-  /** The coloured layers to draw over the photo, bottom first. Their pictures load the first time they are asked for. */
+  /** The coloured layers to draw over the photo, bottom first. */
   setOverlays(list: FlatOverlay[]) {
+    if (list.map(o => o.id).join('|') !== this.overlays.map(o => o.id).join('|')) this.layerLabelsUntil = performance.now() + 500;
     this.overlays = list;
-    for (const o of list) if (!this.ovTex.has(o.id)) this.loadOverlay(o);
+    for (const o of list) void this.loadOverlay(o);
     this.request();
   }
 
-  private loadOverlay(o: FlatOverlay) {
-    const entry: { state: 'loading' | 'ready' | 'failed'; tex: WebGLTexture | null } = { state: 'loading', tex: null };
-    this.ovTex.set(o.id, entry);
-    void (async () => {
+  /** Small real-source previews make first use cheap without keeping every 4k texture resident. */
+  async warmOverlays(list: FlatOverlay[]): Promise<boolean> {
+    let ok = true;
+    // Decoding one original at a time bounds the temporary memory as well as the retained mipmaps.
+    for (const o of list) {
+      if (!this.alive) return false;
+      if (!await this.loadOverlay(o, true)) ok = false;
+    }
+    return ok;
+  }
+
+  private loadOverlay(o: FlatOverlay, preview = false): Promise<boolean> {
+    if (!this.alive) return Promise.resolve(false);
+    const source = o.kind === 'polar' ? o.url : `${o.layer}/${o.ext}`;
+    let entry = this.ovTex.get(o.id);
+    if (entry && entry.source !== source) {
+      entry.controller?.abort();
+      if (entry.tex) this.gl.deleteTexture(entry.tex);
+      this.ovTex.delete(o.id); entry = undefined;
+    }
+    if (!entry) {
+      entry = { state: 'loading', detail: 'none', tex: null, pending: null, controller: null, source,
+        width: 0, height: 0, bytes: 0,
+        timings: { fetchMs: 0, decodeMs: 0, uploadMs: 0, previewMs: 0, fullMs: 0, failures: 0 } };
+      this.ovTex.set(o.id, entry);
+    }
+    const current = entry;
+    if (current.tex && (preview || current.detail === 'full')) return Promise.resolve(true);
+    if (current.pending) {
+      if (preview) return current.pending;
+      // A switch can arrive while its preview is being prepared. Reuse that work, then refine once.
+      return current.pending.then(ok => ok && this.alive && this.ovTex.get(o.id) === current
+        ? current.detail === 'full' || this.loadOverlay(o)
+        : false);
+    }
+    const controller = new AbortController(), began = performance.now();
+    current.controller = controller;
+    const valid = () => this.alive && !controller.signal.aborted && this.ovTex.get(o.id) === current;
+    const fetchBlob = async (url: string): Promise<Blob> => {
+      const at = performance.now();
       try {
-        let src: ImageBitmap | OffscreenCanvas | HTMLCanvasElement;
-        if (o.kind === 'polar') {
-          const res = await fetch(new URL(o.url, document.baseURI).href);
-          if (!res.ok) throw new Error(`HTTP ${res.status}`);
-          src = await createImageBitmap(await res.blob(), { colorSpaceConversion: 'none', premultiplyAlpha: 'none' });
-        } else {
-          // the whole-Moon layer from its Moon Trek tiles (a missing tile stays see-through)
+        const response = await fetch(new URL(url, document.baseURI).href, { signal: controller.signal });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        return await response.blob();
+      } finally { current.timings.fetchMs += performance.now() - at; }
+    };
+    const decode = async (blob: Blob): Promise<ImageBitmap> => {
+      const at = performance.now();
+      try { return await createImageBitmap(blob, { colorSpaceConversion: 'none', premultiplyAlpha: 'none' }); }
+      finally { current.timings.decodeMs += performance.now() - at; }
+    };
+    const release = (image: ImageBitmap | OffscreenCanvas | HTMLCanvasElement | null) => {
+      if (!image) return;
+      if ('close' in image) image.close();
+      else { image.width = 1; image.height = 1; }
+    };
+    const task = (async () => {
+      let src: ImageBitmap | OffscreenCanvas | HTMLCanvasElement | null = null;
+      let texture: WebGLTexture | null = null;
+      try {
+        if (o.kind === 'polar') src = await decode(await fetchBlob(o.url));
+        else {
+          // The final picture uses the same Moon Trek squares and missing-tile behavior as before.
           const z = FLAT_TREK_LEVEL, nx = 2 ** (z + 1), ny = 2 ** z;
-          const cv = typeof OffscreenCanvas !== 'undefined' ? new OffscreenCanvas(nx * 256, ny * 256) : Object.assign(document.createElement('canvas'), { width: nx * 256, height: ny * 256 });
+          const cv = typeof OffscreenCanvas !== 'undefined' ? new OffscreenCanvas(nx * 256, ny * 256)
+            : Object.assign(document.createElement('canvas'), { width: nx * 256, height: ny * 256 });
+          src = cv;
           const ctx = cv.getContext('2d') as CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
           let got = 0;
           await Promise.all(Array.from({ length: nx * ny }, async (_, i) => {
             const x = i % nx, y = Math.floor(i / nx);
+            let bitmap: ImageBitmap | null = null;
             try {
-              const r = await fetch(trekTile(o.layer, o.ext, z, x, y));
-              if (!r.ok) return;
-              const b = await createImageBitmap(await r.blob(), { colorSpaceConversion: 'none', premultiplyAlpha: 'none' });
-              ctx.drawImage(b, x * 256, y * 256, 256, 256); b.close(); got++;
-            } catch { /* offline: that square stays empty */ }
+              bitmap = await decode(await fetchBlob(trekTile(o.layer, o.ext, z, x, y)));
+              if (valid()) { ctx.drawImage(bitmap, x * 256, y * 256, 256, 256); got++; }
+            } catch { /* Offline squares remain transparent, as in the full-size map. */ }
+            finally { bitmap?.close(); }
           }));
           if (!got) throw new Error('no tiles');
-          src = cv;
         }
-        const gl = this.gl, tex = gl.createTexture()!;
-        gl.bindTexture(gl.TEXTURE_2D, tex);
+        if (!valid()) return false;
+        if (preview) {
+          const scale = Math.min(1, 512 / Math.max(src.width, src.height));
+          const at = performance.now();
+          const small = await createImageBitmap(src, { resizeWidth: Math.max(1, Math.round(src.width * scale)),
+            resizeHeight: Math.max(1, Math.round(src.height * scale)), resizeQuality: 'high',
+            colorSpaceConversion: 'none', premultiplyAlpha: 'none' });
+          current.timings.decodeMs += performance.now() - at;
+          release(src); src = small;
+          if (!valid()) return false;
+        }
+        const gl = this.gl, at = performance.now();
+        texture = gl.createTexture();
+        if (!texture) throw new Error('Overlay texture unavailable');
+        gl.bindTexture(gl.TEXTURE_2D, texture);
         gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
         gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
         gl.pixelStorei(gl.UNPACK_ALIGNMENT, 4);
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, src as TexImageSource);
-        if ('close' in src && typeof src.close === 'function') src.close();
         gl.generateMipmap(gl.TEXTURE_2D);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, o.kind === 'global' ? gl.REPEAT : gl.CLAMP_TO_EDGE);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-        entry.tex = tex; entry.state = 'ready';
+        current.timings.uploadMs += performance.now() - at;
+        if (current.tex) gl.deleteTexture(current.tex);
+        current.tex = texture; texture = null;
+        current.width = src.width; current.height = src.height; current.bytes = 0;
+        for (let w = src.width, h = src.height;; w = Math.max(1, w >> 1), h = Math.max(1, h >> 1)) {
+          current.bytes += w * h * 4;
+          if (w === 1 && h === 1) break;
+        }
+        current.detail = preview ? 'preview' : 'full'; current.state = 'ready';
+        current.timings[preview ? 'previewMs' : 'fullMs'] = performance.now() - began;
         this.request();
-      } catch (e) {
-        entry.state = 'failed';
-        this.ovTex.delete(o.id); // asked for again the next time the layer is switched on
-        console.warn('Flat map: layer not available', o.id, e);
+        return true;
+      } catch (error) {
+        if (valid()) {
+          current.timings.failures++;
+          current.state = current.tex ? 'ready' : 'failed';
+          if (!current.tex) this.ovTex.delete(o.id);
+          console.warn('Flat map: layer not available', o.id, error);
+        }
+        return false;
+      } finally {
+        release(src);
+        if (texture) this.gl.deleteTexture(texture);
+        current.pending = null; current.controller = null;
       }
     })();
+    current.pending = task;
+    return task;
   }
 
   // ---- geometry ----------------------------------------------------------------------------
@@ -929,7 +1026,10 @@ export class FlatMap {
 
   /** Dev harness evidence: the exact CSS transform last drawn and the real loaded detail. */
   diagnostics() {
-    return { drawn: this.drawn, size: this.size(), dpr: this.dpr, acrossKm: this.free().w / this.view.s * M_PER_DEG / 1000, tileLevels: [...this.tileLevels], tileCount: this.tileKeys.size, gpuTiles: this.tileTextures.size };
+    return { drawn: this.drawn, size: this.size(), dpr: this.dpr, acrossKm: this.free().w / this.view.s * M_PER_DEG / 1000, tileLevels: [...this.tileLevels], tileCount: this.tileKeys.size, gpuTiles: this.tileTextures.size,
+      overlayBytes: [...this.ovTex.values()].reduce((bytes, entry) => bytes + entry.bytes, 0),
+      overlays: Object.fromEntries([...this.ovTex].map(([id, entry]) => [id, { state: entry.state, detail: entry.detail,
+        pending: !!entry.pending, width: entry.width, height: entry.height, bytes: entry.bytes, timings: { ...entry.timings } }])) };
   }
 
   /** Names, icons, pins, the Sun / Earth points and grid labels. Returns true while something is still fading. */
@@ -1022,15 +1122,18 @@ export class FlatMap {
       }
     }
     // fades
-    const step = dt / 0.25;
+    // Match a switch's labels to its data immediately, including the panel's next layout.
+    // Camera moves keep the ordinary fade once that short update has finished.
+    const step = performance.now() < this.layerLabelsUntil ? 1 : dt / 0.25;
     let fading = false;
     for (const e of entries) {
       const t = want.has(e.id) ? 1 : 0, it = wantIcon.has(e.id) ? 1 : 0;
       let fd = this.fades.get(e.id);
       if (!fd) { if (!t && !it) continue; fd = { a: 0, t, ia: 0, it }; this.fades.set(e.id, fd); }
       fd.t = t; fd.it = it;
-      fd.a = t > fd.a ? Math.min(1, fd.a + step) : Math.max(0, fd.a - step);
-      fd.ia = it > fd.ia ? Math.min(1, fd.ia + step) : Math.max(0, fd.ia - step);
+      // Later tile frames must not move an already finished fade away from its target.
+      fd.a = t > fd.a ? Math.min(t, fd.a + step) : Math.max(t, fd.a - step);
+      fd.ia = it > fd.ia ? Math.min(it, fd.ia + step) : Math.max(it, fd.ia - step);
       if (fd.a !== fd.t || fd.ia !== fd.it) fading = true;
       if (!fd.a && !fd.ia && !t && !it) { this.fades.delete(e.id); continue; }
       const p = this.toScreen(e.lat, e.lon);
@@ -1306,6 +1409,8 @@ export class FlatMap {
 
   destroy() {
     this.alive = false; this.offImagery(); mapImagery.release(this);
+    for (const entry of this.ovTex.values()) { entry.controller?.abort(); if (entry.tex) this.gl.deleteTexture(entry.tex); }
+    this.ovTex.clear();
     clearTimeout(this.clickTimer); clearTimeout(this.pillTimer);
     cancelAnimationFrame(this.raf);
     window.removeEventListener('keydown', this.onKey);

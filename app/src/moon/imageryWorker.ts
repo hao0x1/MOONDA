@@ -532,27 +532,32 @@ export interface ScienceMemoryStats {
   maps: ScienceMapMemory[];
   failedUrls: string[];
   failureReasons: Record<string, string>;
+  cache: { blocks: ScienceCacheStats; previews: ScienceCacheStats };
+  timing: { reads: number; readMs: number; blockDecodes: number; blockDecodeMs: number; previewDecodes: number; previewDecodeMs: number; tiles: number; queueMs: number; sampleMs: number; compositeMs: number; lastTileMs: number; lastQueueMs: number };
 }
+export interface ScienceCacheStats { hits: number; misses: number; evictions: number; expired: number }
 
 /** One byte bound shared by decoded blocks, with a separate small instance for previews. */
 export class ScienceBlockCache {
   private readonly items = new Map<string, { src: Src; map: string; lastUsed: number }>();
   bytes = 0;
+  readonly stats: ScienceCacheStats = { hits: 0, misses: 0, evictions: 0, expired: 0 };
   readonly budgetBytes: number;
   constructor(budgetBytes: number) { this.budgetBytes = budgetBytes; }
   get(key: string, now: number): Src | undefined {
     const hit = this.items.get(key);
-    if (!hit) return undefined;
+    if (!hit) { this.stats.misses++; return undefined; }
+    this.stats.hits++;
     hit.lastUsed = now; this.items.delete(key); this.items.set(key, hit); return hit.src;
   }
   put(key: string, map: string, src: Src, now: number): void {
     this.drop(key); this.items.set(key, { src, map, lastUsed: now }); this.bytes += src.data.byteLength;
-    while (this.bytes > this.budgetBytes && this.items.size) this.drop(this.items.keys().next().value!);
+    while (this.bytes > this.budgetBytes && this.items.size) { this.stats.evictions++; this.drop(this.items.keys().next().value!); }
   }
   drop(key: string): void { const old = this.items.get(key); if (old) { this.bytes -= old.src.data.byteLength; this.items.delete(key); } }
   clear(): void { this.items.clear(); this.bytes = 0; }
   trim(now: number, active: Set<string>, idleMs = 120000): void {
-    for (const [key, hit] of this.items) if (!active.has(hit.map) && now - hit.lastUsed >= idleMs) this.drop(key);
+    for (const [key, hit] of this.items) if (!active.has(hit.map) && now - hit.lastUsed >= idleMs) { this.stats.expired++; this.drop(key); }
   }
   bytesFor(map: string): number { let bytes = 0; for (const item of this.items.values()) if (item.map === map) bytes += item.src.data.byteLength; return bytes; }
   get size(): number { return this.items.size; }
@@ -2061,6 +2066,7 @@ function startWorker() {
   const scienceFailureReasons = new Map<string, string>();
   let scienceDrawTail: Promise<void> = Promise.resolve();
   let scienceEpoch = 0;
+  const scienceTiming: ScienceMemoryStats['timing'] = { reads: 0, readMs: 0, blockDecodes: 0, blockDecodeMs: 0, previewDecodes: 0, previewDecodeMs: 0, tiles: 0, queueMs: 0, sampleMs: 0, compositeMs: 0, lastTileMs: 0, lastQueueMs: 0 };
 
   function scienceEntry(source: ScienceRasterSource): ScienceEntry {
     let entry = scienceEntries.get(source.url);
@@ -2075,7 +2081,8 @@ function startWorker() {
     if (!entry) { entry = { bytes: null, pending: null }; scienceEncoded.set(url, entry); }
     if (entry.bytes) return entry.bytes;
     if (entry.pending) return entry.pending;
-    const record = entry;
+    const record = entry, began = performance.now();
+    scienceTiming.reads++;
     record.pending = (async () => {
       let cache: Cache | null = null;
       try {
@@ -2100,19 +2107,24 @@ function startWorker() {
       if (bytes) { scienceFailures.delete(url); scienceFailureReasons.delete(url); }
       else { scienceFailures.add(url); scienceFailureReasons.set(url, 'Science file was not available'); }
       return bytes;
-    }).catch(error => { scienceFailures.add(url); scienceFailureReasons.set(url, String(error)); return null; }).finally(() => { record.pending = null; });
+    }).catch(error => { scienceFailures.add(url); scienceFailureReasons.set(url, String(error)); return null; }).finally(() => { scienceTiming.readMs += performance.now() - began; record.pending = null; });
     return record.pending;
   }
 
   async function warmScienceSource(source: ScienceRasterSource): Promise<boolean> {
     const entry = scienceEntry(source), s = entry.source;
     const urls = [s.packed?.url ?? s.url, ...(s.preview ? [s.preview.url] : [])];
-    return (await Promise.all(urls.map(encodedScience))).every(Boolean);
+    if (!(await Promise.all(urls.map(encodedScience))).every(Boolean)) return false;
+    // Small previews fit in their own budget. Preparing them now avoids decoding on the
+    // first switch; value-only grids without previews keep their full blocks on demand.
+    return !s.preview || !!await sciencePreview(entry);
   }
 
   function sweepScience(dropAll = false, dropCompressed = false) {
     if (dropAll) { scienceEpoch++; scienceBlocks.clear(); sciencePreviews.clear(); }
-    else { const now = performance.now(); scienceBlocks.trim(now, scienceActive, SCIENCE_IDLE_MS); sciencePreviews.trim(now, scienceActive, SCIENCE_IDLE_MS); }
+    else scienceBlocks.trim(performance.now(), scienceActive, SCIENCE_IDLE_MS);
+    // Preview memory is capped separately. Keep it through idle periods so a map opened
+    // after two minutes does not have to decode its overview again.
     if (dropCompressed) scienceEncoded.clear();
   }
   const scienceSweep = setInterval(() => sweepScience(), 20000);
@@ -2128,7 +2140,8 @@ function startWorker() {
     });
     return { compressedBytes: [...scienceEncoded.values()].reduce((n, e) => n + (e.bytes?.byteLength ?? 0), 0), decodedBytes: scienceBlocks.bytes,
       previewBytes: sciencePreviews.bytes, decodedBudgetBytes: scienceBlocks.budgetBytes, previewBudgetBytes: sciencePreviews.budgetBytes, idleMs: SCIENCE_IDLE_MS, maps,
-      failedUrls: [...scienceFailures], failureReasons: Object.fromEntries(scienceFailureReasons) };
+      failedUrls: [...scienceFailures], failureReasons: Object.fromEntries(scienceFailureReasons),
+      cache: { blocks: { ...scienceBlocks.stats }, previews: { ...sciencePreviews.stats } }, timing: { ...scienceTiming } };
   }
   (self as unknown as { __moondaScienceWorkerStats: () => ScienceMemoryStats }).__moondaScienceWorkerStats = scienceMemory;
 
@@ -2157,6 +2170,7 @@ function startWorker() {
         try { plane = await decode(new Blob([encoded as Uint8Array<ArrayBuffer>])); } finally { release(); }
       }
       entry.decodeMs = performance.now() - began;
+      scienceTiming.blockDecodes++; scienceTiming.blockDecodeMs += entry.decodeMs;
       if (epoch === scienceEpoch) scienceBlocks.put(key, s.url, plane, performance.now());
       return plane;
     })().catch(() => null).finally(() => entry.pending.delete(tile));
@@ -2170,8 +2184,19 @@ function startWorker() {
     const epoch = scienceEpoch;
     entry.previewPending = (async () => {
       let preview: Src | null = null;
-      if (s.preview) { const bytes = await encodedScience(s.preview.url); if (bytes) preview = await decodeScienceBlock(bytes, s.preview); }
-      else { const full = await sciencePlane(entry, 0); if (full) preview = buildSciencePreview(full, sciencePalettes.get(s.url)); }
+      if (s.preview) {
+        const bytes = await encodedScience(s.preview.url);
+        if (bytes) {
+          const began = performance.now(); preview = await decodeScienceBlock(bytes, s.preview);
+          scienceTiming.previewDecodes++; scienceTiming.previewDecodeMs += performance.now() - began;
+        }
+      } else {
+        const full = await sciencePlane(entry, 0);
+        if (full) {
+          const began = performance.now(); preview = buildSciencePreview(full, sciencePalettes.get(s.url));
+          scienceTiming.previewDecodes++; scienceTiming.previewDecodeMs += performance.now() - began;
+        }
+      }
       if (preview && epoch === scienceEpoch) sciencePreviews.put(s.url, s.url, preview, performance.now());
       return preview;
     })().catch(() => null).finally(() => { entry.previewPending = undefined; });
@@ -2228,7 +2253,9 @@ function startWorker() {
       let px: Uint8ClampedArray<ArrayBuffer> | null;
       if (usePreview) {
         if (!scienceFootprint(s, job.rect, job.level, preview.w, preview.h)) continue;
+        const began = performance.now();
         px = sampleScience(fp, { levels: [preview] }, undefined, s.projection === 'global', flip);
+        scienceTiming.sampleMs += performance.now() - began;
       } else {
         if (!scienceFootprint(s, job.rect, job.level, sourceWidth, sourceHeight)) continue;
         const size = s.packed?.tileSize ?? Math.max(sourceWidth, sourceHeight), grid: Grid = { tileW: size, tileH: size, tilesX: Math.ceil(sourceWidth / size), width: sourceWidth, height: sourceHeight, global: s.projection === 'global' };
@@ -2236,20 +2263,29 @@ function startWorker() {
         for (const key of keys) { signal.throwIfAborted(); const plane = await sciencePlane(entry, key); if (plane) tiles.set(key, plane); else gaps = true; }
         // Waiting for inflation let another value query use the scratch footprint.
         scienceFootprint(s, job.rect, job.level, sourceWidth, sourceHeight);
+        const began = performance.now();
         px = sampleScienceChunks(fp, sourceWidth, sourceHeight, size, tiles, sciencePalettes.get(s.url), s.projection === 'global', flip, span);
+        scienceTiming.sampleMs += performance.now() - began;
       }
       if (!px && !s.replace) continue;
+      const began = performance.now();
       out ??= new Uint8ClampedArray(N2 * 4); compositeSciencePixels(out, px, fp.cov, flip, s.replace);
+      scienceTiming.compositeMs += performance.now() - began;
     }
     if (out) fillClear(out);
     return { px: out, gaps };
   }
 
   async function runScience(job: Extract<Job, { kind: 'science' }>, flip: boolean, signal: AbortSignal): Promise<Drawn> {
-    const before = scienceDrawTail; let release!: () => void;
+    const queued = performance.now(), before = scienceDrawTail; let release!: () => void;
     scienceDrawTail = new Promise<void>(resolve => { release = resolve; });
     await before;
-    try { signal.throwIfAborted(); return await drawScience(job, flip, signal); } finally { release(); }
+    const began = performance.now();
+    scienceTiming.lastQueueMs = began - queued; scienceTiming.queueMs += scienceTiming.lastQueueMs;
+    try {
+      signal.throwIfAborted();
+      const drawn = await drawScience(job, flip, signal); scienceTiming.tiles++; return drawn;
+    } finally { scienceTiming.lastTileMs = performance.now() - began; release(); }
   }
 
   async function scienceValue(source: ScienceRasterSource, lat: number, lon: number): Promise<number | null> {

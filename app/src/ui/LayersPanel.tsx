@@ -17,6 +17,10 @@ interface Props {
   onClose(): void;
   /** true while the box is tall enough to reach the map controls (they then move aside). */
   onReach?(reaches: boolean): void;
+  /** The big surface map shows the same box in its own corner (explore.css places it). */
+  className?: string;
+  /** Which side of the box the "?" explanations open on: away from the edge the box stands at. */
+  helpSide?: 'left' | 'right';
 }
 
 /** A tidy number with a real minus sign; whole numbers once the scale is wide enough for decimals not to matter. */
@@ -58,11 +62,11 @@ export function LayerLegend({ layer }: { layer: Pick<LayerDef, 'id' | 'legend' |
   }
   return layer.legend ? <Legend stops={layer.legend} units={layer.units} /> : null;
 }
-export function LayersPanel({ groups, state, opacity, onToggle, onOpacity, onClose, onReach }: Props) {
+export function LayersPanel({ groups, state, opacity, onToggle, onOpacity, onClose, onReach, className, helpSide = 'left' }: Props) {
   const root = useReachesControls(r => onReach?.(r));
   const t = useT();
   return (
-    <section ref={root} className="layers panel" role="dialog" aria-label={t('layers.aria')}>
+    <section ref={root} className={`layers panel${className ? ` ${className}` : ''}`} role="dialog" aria-label={t('layers.aria')}>
       <header className="drawer-head">
         <h2>{t('layers.title')}</h2>
         <span className="drawer-gap" />
@@ -88,7 +92,7 @@ export function LayersPanel({ groups, state, opacity, onToggle, onOpacity, onClo
                       <span className="layer-title">{title}</span>
                       {coverage && <small style={{ color: 'var(--text-3)', fontSize: 11 }}>{coverage}</small>}
                     </span>
-                    <Help side="left" text={<>{layerHelp(l)}{source && <span className="layer-help-source">{t('place.source', { name: source })}</span>}</>} />
+                    <Help side={helpSide} text={<>{layerHelp(l)}{source && <span className="layer-help-source">{t('place.source', { name: source })}</span>}</>} />
                     <input id={`layer-${l.id}`} type="checkbox" className="sr-only" checked={on} onChange={e => onToggle(l.id, e.target.checked)} />
                     <span className="switch" aria-hidden="true"><i /></span>
                   </label>

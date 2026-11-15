@@ -347,14 +347,19 @@ class ImageryWorkers {
   }
 
   /** Jobs handed to the workers and not answered yet. */
-  pending(): number { return this.jobs.size; }
+  pending(includeBackground = true): number {
+    if (includeBackground) return this.jobs.size;
+    let count = 0;
+    for (const job of this.jobs.values()) if (!job.request?.background) count++;
+    return count;
+  }
 
   pendingPhotos(): number { let n = 0; for (const j of this.jobs.values()) if (j.kind === 'photo') n++; return n; }
 
   /** For tests: what is waiting, per kind of job, and for how long (ms). */
-  waiting(): { kind: string; worker: number; ms: number }[] {
+  waiting(): { kind: string; worker: number; ms: number; background: boolean }[] {
     const now = performance.now();
-    return [...this.jobs.values()].map(j => ({ kind: j.kind, worker: j.worker, ms: Math.round(now - j.at) }));
+    return [...this.jobs.values()].map(j => ({ kind: j.kind, worker: j.worker, ms: Math.round(now - j.at), background: !!j.request?.background }));
   }
 
   /** A layer has reloaded its tiles. */
@@ -479,8 +484,8 @@ export function cancelOffscreenImagery(viewer: Viewer, cull = true) {
   }
 }
 
-/** Map pictures asked for and not finished yet, across all layers (0 = nothing is loading). For the loading screen. */
-export function imageryPending(): number { return pool ? pool.pending() : 0; }
+/** Include hidden layer preparation for diagnostics, but let preload wait for its visible view alone. */
+export function imageryPending(includeBackground = true): number { return pool ? pool.pending(includeBackground) : 0; }
 
 // Small test/debug hook (scripts/drive.mjs): what the imagery workers are doing right now.
 (globalThis as { __moondaImagery?: unknown }).__moondaImagery = {
@@ -508,7 +513,7 @@ interface ProviderOptions {
   isLocal?: (job: Job) => boolean;
 }
 
-interface ImageryRequest { state?: number; cancelled?: boolean; cancelFunction?: () => void; cancel?: () => void }
+interface ImageryRequest { state?: number; cancelled?: boolean; cancelFunction?: () => void; cancel?: () => void; background?: boolean }
 
 export class ReprojectedImageryProvider {
   readonly tilingScheme = new GeographicTilingScheme({ ellipsoid: MOON_ELLIPSOID }); // DISPLAY lon/lat
@@ -710,9 +715,10 @@ export function createBaseMosaicProvider(o: { url?: string; credit: string }): R
  * Pole" view need nothing from the internet. Needs a createBaseMosaicProvider layer underneath;
  * without one, or if its files are missing, every level is streamed as before.
  */
-export function createMoonTrekProvider(o: { layer: string; ext: string; maxSourceLevel: number; minTrueLat?: number; credit: string; overBase?: boolean; sharpPhoto?: boolean }): ReprojectedImageryProvider {
+export function createMoonTrekProvider(o: { layer: string; ext: string; maxSourceLevel: number; minTrueLat?: number; credit: string; overBase?: boolean; sharpPhoto?: boolean; cachePrepared?: boolean }): ReprojectedImageryProvider {
   const minTrueLat = o.minTrueLat ?? -90;
-  const p = new ReprojectedImageryProvider({
+  const Provider = o.cachePrepared ? PreparedLayerProvider : ReprojectedImageryProvider;
+  const p: ReprojectedImageryProvider = new Provider({
     rectangle: Rectangle.clone(Rectangle.MAX_VALUE),
     maximumLevel: o.sharpPhoto ? 17 : o.maxSourceLevel + 1,
     credit: o.credit,
@@ -795,7 +801,7 @@ const absoluteScienceSource = (source: ScienceRasterSource): ScienceRasterSource
   preview: source.preview ? { ...source.preview, url: new URL(source.preview.url, document.baseURI).href } : undefined,
 });
 
-/** Download compact bytes only. Decoding belongs to a switch, not to the Enter button. */
+/** Prepare compact bytes and small previews; full-resolution blocks stay on demand. */
 export function warmScienceRasters(sources: ScienceRasterSource[], onProgress?: (frac: number) => void): Promise<boolean> {
   const unique = [...new Map(sources.map(s => [new URL(s.url, document.baseURI).href, absoluteScienceSource(s)])).values()];
   return workers().warmScience(unique, onProgress);
@@ -807,23 +813,26 @@ export function scienceRasterValueAt(source: ScienceRasterSource, lat: number, l
 }
 
 const SCIENCE_TILE_BYTES = TILE * TILE * 4;
-const SCIENCE_TILE_BUDGET = 4 * 2 ** 20;
-const SCIENCE_IDLE_MS = 120_000;
+const SCIENCE_TILE_BUDGET = 96 * 2 ** 20;
+const SCIENCE_IDLE_MS = 5 * 60_000;
 interface PreparedScienceTile {
-  owner: ScienceRasterProvider; key: string; promise: Promise<ImageBitmap>;
+  owner: PreparedLayerProvider; key: string; promise: Promise<ImageBitmap>;
   borrowers: number; removed: boolean; lastUsed: number;
 }
-const scienceProviders = new Set<ScienceRasterProvider>();
+const scienceProviders = new Set<PreparedLayerProvider>();
 const scienceTiles = new Map<PreparedScienceTile, true>();
-function removeScienceTile(tile: PreparedScienceTile) {
+const scienceTileStats = { hits: 0, misses: 0, evictions: 0, expired: 0 };
+function removeScienceTile(tile: PreparedScienceTile, reason?: 'budget' | 'idle') {
   if (tile.removed) return;
+  if (reason === 'budget') scienceTileStats.evictions++;
+  if (reason === 'idle') scienceTileStats.expired++;
   tile.removed = true; scienceTiles.delete(tile); tile.owner.forget(tile.key, tile);
   void tile.promise.then(b => { if (!tile.borrowers && b !== blank && b !== parentMark) b.close(); }).catch(() => {});
 }
 function trimScienceTiles() {
   const now = performance.now();
-  for (const tile of scienceTiles.keys()) if (!tile.owner.active && now - tile.lastUsed > SCIENCE_IDLE_MS) removeScienceTile(tile);
-  while (scienceTiles.size * SCIENCE_TILE_BYTES > SCIENCE_TILE_BUDGET) removeScienceTile(scienceTiles.keys().next().value!);
+  for (const tile of scienceTiles.keys()) if (!tile.owner.active && now - tile.lastUsed > SCIENCE_IDLE_MS) removeScienceTile(tile, 'idle');
+  while (scienceTiles.size * SCIENCE_TILE_BYTES > SCIENCE_TILE_BUDGET) removeScienceTile(scienceTiles.keys().next().value!, 'budget');
 }
 const scienceReadyTimers = new Map<string, ReturnType<typeof setTimeout>>();
 function invalidateScienceSource(url: string) {
@@ -834,13 +843,13 @@ function invalidateScienceSource(url: string) {
   }, 100));
 }
 
-/** A small shared tile cache avoids duplicating sixteen megabytes for every map. */
-class ScienceRasterProvider extends ReprojectedImageryProvider {
+/** Share a bounded cache across maps so a quick off/on keeps the same projected pixels. */
+class PreparedLayerProvider extends ReprojectedImageryProvider {
   private readonly prepared = new Map<string, PreparedScienceTile>();
   readonly sourceUrls: Set<string>;
   active = false;
 
-  constructor(o: ProviderOptions, sources: ScienceRasterSource[]) {
+  constructor(o: ProviderOptions, sources: ScienceRasterSource[] = []) {
     super(o); this.sourceUrls = new Set(sources.map(s => s.url)); scienceProviders.add(this);
   }
 
@@ -851,13 +860,15 @@ class ScienceRasterProvider extends ReprojectedImageryProvider {
     const key = `${level}/${x}/${y}`;
     let tile = this.prepared.get(key);
     if (!tile) {
+      scienceTileStats.misses++;
       const got = super.requestImage(x, y, level, request);
       if (!got) return undefined;
       tile = { owner: this, key, promise: got, borrowers: 0, removed: false, lastUsed: performance.now() };
       this.prepared.set(key, tile); scienceTiles.set(tile, true);
       const fresh = tile;
-      void got.catch(() => removeScienceTile(fresh));
-    } else { tile.lastUsed = performance.now(); scienceTiles.delete(tile); scienceTiles.set(tile, true); }
+      // Empty coverage is already answered for free. Keep the budget for real layer pixels.
+      void got.then(bitmap => { if (bitmap === blank || bitmap === parentMark) removeScienceTile(fresh); }, () => removeScienceTile(fresh));
+    } else { scienceTileStats.hits++; tile.lastUsed = performance.now(); scienceTiles.delete(tile); scienceTiles.set(tile, true); }
     const borrowed = tile; borrowed.borrowers++;
     trimScienceTiles();
     return borrowed.promise.then(b => b === parentMark ? b : createImageBitmap(b)).finally(() => {
@@ -868,6 +879,76 @@ class ScienceRasterProvider extends ReprojectedImageryProvider {
 
   override noteGaps() { this.clearPrepared(); super.noteGaps(); }
   override reloadNow() { this.clearPrepared(); super.reloadNow(); }
+}
+
+/** Prepare real projected tiles without exposing a hidden layer or changing its switches. */
+export async function warmScienceProviderTiles(provider: ReprojectedImageryProvider, tiles: readonly { x: number; y: number; level: number }[], maxMs = 1500): Promise<boolean> {
+  if (!(provider instanceof PreparedLayerProvider)) return false;
+  const deadline = performance.now() + maxMs, seen = new Set<string>();
+  for (const tile of tiles) {
+    const key = `${tile.level}/${tile.x}/${tile.y}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    let pending: Promise<ImageBitmap> | undefined;
+    while (performance.now() < deadline && !(pending = provider.requestImage(tile.x, tile.y, tile.level, { background: true }))) await new Promise<void>(resolve => setTimeout(resolve, 16));
+    if (!pending) return false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const complete = await Promise.race([
+      pending.then(bitmap => { if (bitmap !== blank && bitmap !== parentMark) bitmap.close(); return true; }, () => false),
+      new Promise<boolean>(resolve => { timer = setTimeout(() => resolve(false), Math.max(0, deadline - performance.now())); }),
+    ]);
+    clearTimeout(timer);
+    if (!complete) return false;
+  }
+  return true;
+}
+
+export interface LayerWarmView { rectangle: Rectangle; spacing: number }
+/** The preload camera moves while files arrive. Keep the opening view's actual tile needs. */
+export function captureVisibleLayerTiles(viewer: Viewer): LayerWarmView[] {
+  if (viewer.isDestroyed()) return [];
+  const visible = (viewer.scene.globe as unknown as { _surface?: { _tilesToRender?: { rectangle: Rectangle; level: number }[] } })._surface?._tilesToRender ?? [];
+  return visible.map(tile => ({ rectangle: Rectangle.clone(tile.rectangle), spacing: viewer.terrainProvider.getLevelMaximumGeometricError(tile.level) }));
+}
+
+/** Warm the imagery levels Cesium will ask for at this view, including their first parents.
+ * The same geometric-error rule is used by Cesium's Geographic imagery providers. */
+export async function warmVisibleLayerTiles(viewer: Viewer, providers: readonly ReprojectedImageryProvider[], maxMs = 1500, visible = captureVisibleLayerTiles(viewer)): Promise<boolean> {
+  if (viewer.isDestroyed()) return false;
+  const cached = providers.filter(p => p instanceof PreparedLayerProvider);
+  if (!cached.length) return true;
+  if (!visible.length) return false;
+  const perProvider = Math.max(2, Math.floor(SCIENCE_TILE_BUDGET / SCIENCE_TILE_BYTES / cached.length));
+  let capped = false;
+  const lists = cached.map(provider => {
+    const tiles = new Map<string, { x: number; y: number; level: number }>(), targets = new Set<string>();
+    for (const terrain of visible) {
+      const rect = Rectangle.intersection(terrain.rectangle, provider.rectangle);
+      if (!rect || rect.width <= 0 || rect.height <= 0) continue;
+      const spacing = terrain.spacing;
+      const zeroSpacing = MOON_ELLIPSOID.maximumRadius * provider.tilingScheme.rectangle.width / (provider.tileWidth * provider.tilingScheme.getNumberOfXTilesAtLevel(0));
+      const level = Math.max(0, Math.min(provider.maximumLevel, Math.round(Math.log2(zeroSpacing / spacing))));
+      // Insetting avoids warming a neighbour that only touches the terrain tile's edge.
+      const dx = rect.width / 512, dy = rect.height / 512;
+      const nw = provider.tilingScheme.positionToTileXY(new Cartographic(rect.west + dx, rect.north - dy), level);
+      const se = provider.tilingScheme.positionToTileXY(new Cartographic(rect.east - dx, rect.south + dy), level);
+      if (!nw || !se) continue;
+      for (let y = nw.y; y <= se.y && tiles.size < SCIENCE_TILE_BUDGET / SCIENCE_TILE_BYTES; y++) for (let x = nw.x; x <= se.x && tiles.size < SCIENCE_TILE_BUDGET / SCIENCE_TILE_BYTES; x++) {
+        targets.add(`${level}/${x}/${y}`);
+        for (let parent = 0; parent <= level; parent++) {
+          const scale = 2 ** (level - parent), px = Math.floor(x / scale), py = Math.floor(y / scale);
+          tiles.set(`${parent}/${px}/${py}`, { x: px, y: py, level: parent });
+        }
+      }
+    }
+    const rank = (tile: { x: number; y: number; level: number }) => tile.level < 2 ? 0 : targets.has(`${tile.level}/${tile.x}/${tile.y}`) ? 1 : 2;
+    const ordered = [...tiles.values()].sort((a, b) => rank(a) - rank(b) || a.level - b.level);
+    if (ordered.length > perProvider || tiles.size >= SCIENCE_TILE_BUDGET / SCIENCE_TILE_BYTES) capped = true;
+    // Share the budget fairly; a close view must not evict every other switch's roots.
+    return ordered.slice(0, perProvider);
+  });
+  const warmed = await Promise.all(cached.map((provider, i) => warmScienceProviderTiles(provider, lists[i], maxMs)));
+  return !capped && warmed.every(Boolean);
 }
 
 /** Only visible or recently used science blocks need decoded memory. */
@@ -888,7 +969,7 @@ import.meta.hot?.dispose(() => {
   for (const timer of scienceReadyTimers.values()) clearTimeout(timer);
   scienceReadyTimers.clear(); releaseScienceLayers(); pool?.disposeScience();
 });
-const scienceMemory = () => ({ worker: pool?.stats.science ?? null, preparedBitmapBytes: scienceTiles.size * SCIENCE_TILE_BYTES, preparedBitmapBudget: SCIENCE_TILE_BUDGET });
+const scienceMemory = () => ({ worker: pool?.stats.science ?? null, preparedBitmapBytes: scienceTiles.size * SCIENCE_TILE_BYTES, preparedBitmapBudget: SCIENCE_TILE_BUDGET, preparedCache: { ...scienceTileStats }, preparedIdleMs: SCIENCE_IDLE_MS });
 (globalThis as unknown as { __moondaScienceMemory: unknown }).__moondaScienceMemory = scienceMemory;
 (globalThis as unknown as { __moondaScienceSnapshot: unknown }).__moondaScienceSnapshot = async () => { await workers().scienceControl(); return scienceMemory(); };
 (globalThis as unknown as { __moondaScienceDropDecoded: unknown }).__moondaScienceDropDecoded = async (dropCompressed = false) => {
@@ -899,7 +980,7 @@ const scienceMemory = () => ({ worker: pool?.stats.science ?? null, preparedBitm
 /** One switch can combine a global map and sharper maps near either pole. Later sources lie on top. */
 export function createScienceRasterProvider(o: { sources: ScienceRasterSource[]; credit: string; maximumLevel?: number }): ReprojectedImageryProvider {
   const sources = o.sources.map(absoluteScienceSource);
-  return new ScienceRasterProvider({
+  return new PreparedLayerProvider({
     rectangle: Rectangle.MAX_VALUE,
     maximumLevel: o.maximumLevel ?? 10,
     credit: o.credit,

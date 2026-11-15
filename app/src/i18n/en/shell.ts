@@ -100,6 +100,7 @@ export const shell = {
   'map.zoomIn': 'Zoom in',
   'map.zoomOut': 'Zoom out',
   'map.colours': 'Map colours',
+  'map.legend.hide': 'Hide {name}',
 
   'status.standing': 'Landed at {name}',
   'status.move': 'Move the pointer over the Moon to see where it is',

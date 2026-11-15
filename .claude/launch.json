@@ -1,0 +1,56 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "moonda-preview",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": [
+        "--prefix",
+        "app",
+        "vite",
+        "preview",
+        "app",
+        "--host",
+        "127.0.0.1",
+        "--port",
+        "5191",
+        "--strictPort"
+      ],
+      "port": 5191
+    },
+    {
+      "name": "moonda-dev",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": [
+        "--prefix",
+        "app",
+        "vite",
+        "app",
+        "--host",
+        "127.0.0.1",
+        "--port",
+        "5190",
+        "--strictPort"
+      ],
+      "port": 5190
+    },
+    {
+      "name": "moonda-steady",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": [
+        "--prefix",
+        "app",
+        "vite",
+        "app",
+        "--config",
+        "app/vite.steady.config.ts",
+        "--host",
+        "127.0.0.1",
+        "--port",
+        "5194",
+        "--strictPort"
+      ],
+      "port": 5194
+    }
+  ]
+}

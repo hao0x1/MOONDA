@@ -6,7 +6,7 @@
 //   science    the landing-site calculator (background worker) has the heights and has done one real calculation
 //   pole       a quick, invisible visit to the south-pole views people go to first (tiles, 3D ground, shaders)
 //   surface    the "Stand here" view: its ground scans, rock models and shaders (lander.prewarm() when present)
-//   layers     the files behind the Layers switches (south-pole science maps, Height colours), so they show at once
+//   layers     compact sources, decoded previews and cached tiles for the Layers switches
 //   music      the music file, so it can start the moment the person enters
 // (and "app": the app's own code, downloaded by the page before any of this starts; index.html shows it loading)
 // Each stage reports its real state (waiting / loading with a fraction when we can count it / done).
@@ -48,14 +48,14 @@ export interface PreloadDeps {
   imageryPending?: () => number;
   /** The "Stand here" view; prewarm() (when it exists) loads its textures and models and compiles its shaders. */
   lander?: { prewarm?: () => Promise<unknown> };
-  /** The files behind the Layers switches, downloaded into the browser cache so switching one on is instant. */
+  /** Small supporting files behind the Layers switches, downloaded into the browser cache. */
   layerFiles?: () => Promise<string[]>;
-  /** Fetch compact map bytes only. Decode work must not hold up the Enter button. */
+  /** Prepare bounded previews and projected tiles alongside the existing pole warm-up. False means some work continues later. */
   warmLayers?: (onFrac: (frac: number) => void) => Promise<boolean | void>;
   /** The view the user will see first. */
   startView: CameraPose;
   /** Views to visit invisibly (camera jumps there, tiles load, shaders compile), in order. Called once the height map is loaded. */
-  warmViews: () => { pose: CameraPose; label: string; maxMs: number }[];
+  warmViews: () => { pose: CameraPose; label: string; maxMs: number; warm?: () => void }[];
   onProgress(p: LoadProgress): void;
   /** Set to true (e.g. by a "Skip" button) to finish as soon as possible. */
   cancelled?: () => boolean;
@@ -243,10 +243,11 @@ export async function runPreload(viewer: Viewer, d: PreloadDeps): Promise<void> 
       const hour = 3600_000;
       return withTimeout(analyseSpotAsync({ lat: -89.45, lon: -136.7, mastM: 2, startMs: Math.floor(Date.now() / hour) * hour, days: 14 }, 40000), 40000, cancelled);
     });
-    // Only downloads belong to this row. Maps are decoded off the main thread when used.
+    // Small previews and the opening view's real layer tiles prepare during the pole visits.
+    // The warm callback bounds its additional work; slow sources remain marked "later".
     const layers = d.layerFiles || d.warmLayers
       ? stage('layers', async () => {
-        const downloads = (async () => {
+        const preparation = (async () => {
         let ok = true;
         let fetched = d.layerFiles ? 0 : 1, warmed = d.warmLayers ? 0 : 1;
         const report = () => frac('layers')(d.layerFiles && d.warmLayers ? fetched * 0.45 + warmed * 0.55 : d.layerFiles ? fetched : warmed);
@@ -255,7 +256,7 @@ export async function runPreload(viewer: Viewer, d: PreloadDeps): Promise<void> 
         await Promise.all([fetchJob, warmJob]);
         return ok;
         })();
-        return await withTimeout(downloads, 90000, cancelled) && await downloads;
+        return await withTimeout(preparation, 90000, cancelled) && await preparation;
       })
       : Promise.resolve(mark('layers', 'off'));
     const surface = stage('surface', async () => {
@@ -273,6 +274,8 @@ export async function runPreload(viewer: Viewer, d: PreloadDeps): Promise<void> 
         const t1 = performance.now();
         const got = await waitUntilLoaded(viewer, views[i].maxMs * POLE_TIME, d.imageryPending, d.cancelled, f => frac('pole')((i + f) / views.length));
         trace.push(`${views[i].label}: ${got ? 'sharp' : 'timed out'} after ${Math.round(performance.now() - t1)} ms, ${d.imageryPending?.() ?? 0} photo jobs left ${waitingKinds()}`);
+        // Some hidden layers need this view's settled tile levels. Schedule them before moving on.
+        if (got && !stop()) views[i].warm?.();
         ok = got && ok;
       }
       return ok;

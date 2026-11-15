@@ -55,7 +55,9 @@ export function installTips(): () => void {
     current = t;
     show(t);
   };
-  const key = (e: KeyboardEvent) => { if (e.key === 'Escape') hide(); };
+  // Escape closes a tip, and so does typing in a text box: its tip has done its job, and under the search box
+  // it would sit on top of the first result.
+  const key = (e: KeyboardEvent) => { if (e.key === 'Escape' || e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) hide(); };
   document.addEventListener('mouseover', over);
   document.addEventListener('focusin', focus);
   document.addEventListener('focusout', hide);

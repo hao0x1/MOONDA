@@ -18,6 +18,12 @@ function introReady(): Promise<void> {
   });
 }
 
+// Short windows: the panels and the bottom row are drawn a little smaller so everything fits without the visitor
+// zooming the browser out (styles.css, --z). Full size at 860 px of height and more, never under 0.78.
+const fitWindow = () => document.documentElement.style.setProperty('--z', Math.max(0.78, Math.min(1, window.innerHeight / 860)).toFixed(3));
+fitWindow();
+window.addEventListener('resize', fitWindow);
+
 // No StrictMode: it would build the heavy 3D globe twice in development.
 // Then the music (it plays on the start screen), then the app.
 void introReady().then(() => {

@@ -4,6 +4,8 @@ import { roverLink, SpotFrame, type Waypoint } from '../moon/roverLink';
 import type { Vec3 } from '../science/ephemeris';
 import type { RouteResult } from '../science/route';
 import type { LayerDef } from '../moon/layers';
+import type { MoonName } from '../data/names';
+import { cratersNear, craterSizeOpacity } from '../moon/craterLayer';
 import { exploreHeights } from './context';
 import { SurfaceProjection } from './surfaceProjection';
 import { BASE_PICTURES, MAP_DETAIL_SOURCES, MAP_R, POLAR_HALF, TREK_MAX_LEVEL, detailUrl, cropMapPhoto, getPhotoPreview, mapImagery, polarLatLon, polarXY, trekUrl, scienceTileRect, scienceHeightParts } from './mapImagery';
@@ -14,11 +16,17 @@ const ROUTE = '#85dcf0';
 const TRAIL = '#edbd83';
 const FONT = '"Google Sans Flex Variable",system-ui,sans-serif';
 type XY = [number, number];
+/** Once round the Moon. The flat map repeats sideways at this distance, like a printed world map joined at its ends. */
+const WORLD = MAP_R * TAU;
+/** The same distance east or west, taken the short way round. */
+const wrapWorld = (d: number) => d - WORLD * Math.round(d / WORLD);
 export interface MapPoint { lat: number; lon: number; heightM: number }
 export interface MapScale { metres: number; widthPx: number; label: string }
 export interface MapHover { kind: 'trail' | 'route'; lat: number; lon: number; sunPct?: number; earthPct?: number }
 export interface MapEngineOptions { round: boolean; follow?: boolean; acrossM?: number; onChange?: () => void }
-export interface MapEngineUpdate { layers?: Record<string,boolean>; opacity?: Record<string,number>; layerDefs?: LayerDef[]; realSun?: boolean; route?: RouteResult | null; bodies?: { sun: Vec3; earth: Vec3 }; overlays?: string[]; dimmed?: boolean; destination?: { lat: number; lon: number } | null }
+export interface MapEngineUpdate { layers?: Record<string,boolean>; opacity?: Record<string,number>; layerDefs?: LayerDef[]; realSun?: boolean; route?: RouteResult | null; bodies?: { sun: Vec3; earth: Vec3 }; overlays?: string[]; dimmed?: boolean; destination?: { lat: number; lon: number } | null; names?: MoonName[] | null;
+  /** Rectangles on the card (CSS px: left, top, right, bottom) covered by floating controls: no name is placed under them. */
+  keepClear?: number[][] }
 interface RoundPhoto {
   canvas: HTMLCanvasElement;
   cx: number; cy: number;
@@ -87,6 +95,16 @@ export class MapEngine {
   private interactiveUntil = 0;
   private reducedMotion = false;
   private wheelTimer: ReturnType<typeof setTimeout> | undefined;
+  private names: MoonName[] | null = null;
+  /** Each name's direction from the Moon's centre (x, y, z), so far-away names are skipped without any trigonometry. */
+  private nameUnits: Float32Array | null = null;
+  private nameWidths = new Map<string, number>();
+  /** Names on screen or fading: how visible each is (0 to 1) and whether it is wanted in this frame. */
+  private nameShown = new Map<number, { alpha: number; on: boolean; x: number; y: number }>();
+  private nameClock = 0;
+  private keepClear: number[][] = [];
+  /** The crater rims chosen for the view they were chosen in (lat, lon, km in threes): see drawCraters. */
+  private craterPick: { rings: Float32Array; across: number; centre: [number, number, number]; revision: number } | null = null;
 
   constructor(canvas: HTMLCanvasElement, options: MapEngineOptions) {
     this.canvas = canvas;
@@ -126,6 +144,11 @@ export class MapEngine {
     };
     canvas.addEventListener('wheel', rememberWheel, { capture: true, passive: true });
     this.off.push(() => canvas.removeEventListener('wheel', rememberWheel, true));
+    // The map draws only when something changes. A browser short of graphics memory, or one that put the tab
+    // aside, can hand the canvas back empty: nothing has changed then, so ask for the picture again ourselves.
+    const repaint = () => { if (!document.hidden) { this.photoDirty = true; this.requestDraw(); } };
+    canvas.addEventListener('contextrestored', repaint); document.addEventListener('visibilitychange', repaint);
+    this.off.push(() => { canvas.removeEventListener('contextrestored', repaint); document.removeEventListener('visibilitychange', repaint); });
     try { this.basePlane = new BasePlane(() => { this.photoDirty = true; this.requestDraw(); }); } catch { /* Canvas fallback still works without another GPU context. */ }
     this.syncAnchor();
     this.centre();
@@ -135,8 +158,16 @@ export class MapEngine {
     if (width <= 0 || height <= 0) return;
     this.width = width; this.height = height;
     this.dpr = Math.min(2.5, window.devicePixelRatio || 1);
-    this.canvas.width = Math.round(width * this.dpr); this.canvas.height = Math.round(height * this.dpr);
-    if (!this.options.round) this.across = Math.max(this.minAcross(), this.across);
+    // Setting a canvas's size wipes its picture, even to the size it already has. The page sends "resize" for
+    // other reasons too (a language switch does), and a wiped map then stood empty until it was next drawn.
+    const pixelWidth = Math.round(width * this.dpr), pixelHeight = Math.round(height * this.dpr);
+    if (this.canvas.width !== pixelWidth || this.canvas.height !== pixelHeight) { this.canvas.width = pixelWidth; this.canvas.height = pixelHeight; }
+    if (!this.options.round) {
+      const limits = this.getZoomLimits();
+      this.across = Math.max(limits.min, Math.min(limits.max, this.across));
+      if (this.zoomTarget !== null) this.zoomTarget = Math.max(limits.min, Math.min(limits.max, this.zoomTarget));
+      this.projection?.setAcross(this.across, false); this.clampView();
+    }
     this.options.onChange?.();
     this.requestDraw();
   }
@@ -155,6 +186,15 @@ export class MapEngine {
     if (value.overlays) this.overlays = value.overlays;
     if (value.dimmed !== undefined) this.dimmed = value.dimmed;
     if (value.bodies) this.sun = value.bodies.sun;
+    if (value.keepClear) this.keepClear = value.keepClear;
+    if ('names' in value && value.names !== this.names) {
+      this.names = value.names ?? null; this.nameShown.clear();
+      this.nameUnits = this.names ? new Float32Array(this.names.length * 3) : null;
+      this.names?.forEach((n, i) => {
+        const p = n.lat * DEG, l = n.lon * DEG, c = Math.cos(p);
+        this.nameUnits![i * 3] = c * Math.cos(l); this.nameUnits![i * 3 + 1] = c * Math.sin(l); this.nameUnits![i * 3 + 2] = Math.sin(p);
+      });
+    }
     this.requestDraw();
   }
 
@@ -180,7 +220,8 @@ export class MapEngine {
     const metres = (limit / power >= 5 ? 5 : limit / power >= 2 ? 2 : 1) * power;
     return { metres, widthPx: metres * ppm, label: metres >= 1000 ? `${metres / 1000} km` : `${metres} m` };
   }
-  getZoomLimits() { return { min: this.minAcross(), max: this.options.round ? 300000 : MAP_R * TAU }; }
+  /** Farthest out, the Moon fills the card from pole to pole (and at most once round, on a very wide card). */
+  getZoomLimits() { return { min: this.minAcross(), max: this.options.round ? 300000 : Math.min(WORLD, MAP_R * Math.PI * this.width / Math.max(1, this.height)) }; }
 
   /** Initial place/index sizing is immediate; user gestures always use the eased target. */
   setAcross(acrossM: number) {
@@ -283,10 +324,11 @@ export class MapEngine {
 
   private clampView() {
     if (this.options.round || !this.projection) return;
-    const reachX = Math.max(0, MAP_R * Math.PI - this.across / 2);
+    // Sideways the map goes round the Moon and comes back to where it started, so the view is never stopped
+    // there: its centre is only kept inside one turn. (It used to stop at an edge half way round from the rover.)
+    this.cx = wrapWorld(this.cx);
     const reachY = Math.max(0, MAP_R * Math.PI / 2 - this.across * this.height / this.width / 2);
     const middleY = -this.projection.offsetN();
-    this.cx = Math.max(-reachX, Math.min(reachX, this.cx));
     this.cy = Math.max(middleY - reachY, Math.min(middleY + reachY, this.cy));
   }
 
@@ -401,7 +443,8 @@ export class MapEngine {
   private unproject(e: number, n: number): XY { return this.projection?.unproject(e, n) ?? [0, 0]; }
 
   private screen(e: number, n: number): XY {
-    const ppm = this.width / this.across, x = (e - this.cx) * ppm, y = -(n - this.cy) * ppm;
+    // (of the repeating copies of a place, the one nearest the middle of the view)
+    const ppm = this.width / this.across, x = wrapWorld(e - this.cx) * ppm, y = -(n - this.cy) * ppm;
     const c = Math.cos(this.rotation), s = Math.sin(this.rotation);
     return [this.width / 2 + x * c - y * s, this.height / 2 + x * s + y * c];
   }
@@ -485,6 +528,7 @@ export class MapEngine {
     if(this.realSun&&this.sun)this.drawSunlight(g);
     if(this.dimmed){g.fillStyle='rgba(5,12,18,.24)';g.fillRect(0,0,w,h);}
     mapImagery.retain(this, this.photoKeys);
+    if (!this.options.round) { this.drawCraters(g); this.drawNames(g); }
     this.drawRocks(g);
     this.drawLine(g, this.routeXY, ROUTE, false);
     this.drawLine(g, this.trailXY, TRAIL, true);
@@ -573,12 +617,16 @@ export class MapEngine {
     const ppm = this.width / this.across, circumference = MAP_R * TAU;
     const centreU = ((projection.lon + 180) / 360 % 1 + 1) % 1;
     const westU = ((centreU - .5) % 1 + 1) % 1, first = 1 - westU;
-    const left = this.width / 2 - circumference * ppm / 2 - this.cx * ppm;
     const top = this.height / 2 - MAP_R * Math.PI * ppm / 2 + this.cy * ppm;
-    g.drawImage(image, westU * image.width, 0, first * image.width, image.height,
-      left, top, first * circumference * ppm, MAP_R * Math.PI * ppm);
-    if (westU > 1e-9) g.drawImage(image, 0, 0, westU * image.width, image.height,
-      left + first * circumference * ppm, top, westU * circumference * ppm, MAP_R * Math.PI * ppm);
+    // the rectangle repeats to the left and right, so scrolling sideways never reaches an end
+    for (const turn of [-1, 0, 1]) {
+      const left = this.width / 2 - circumference * ppm / 2 - this.cx * ppm + turn * circumference * ppm;
+      if (left >= this.width || left + circumference * ppm <= 0) continue;
+      g.drawImage(image, westU * image.width, 0, first * image.width, image.height,
+        left, top, first * circumference * ppm, MAP_R * Math.PI * ppm);
+      if (westU > 1e-9) g.drawImage(image, 0, 0, westU * image.width, image.height,
+        left + first * circumference * ppm, top, westU * circumference * ppm, MAP_R * Math.PI * ppm);
+    }
   }
 
   private drawBaseMesh(g: CanvasRenderingContext2D, image: ImageBitmap, farCells: number) {
@@ -892,9 +940,10 @@ export class MapEngine {
     if(!order.length)return;
     const visible=this.displayBounds();
     if(!visible)return;
+    const tileLimit=Math.min(32,Math.max(4,Math.floor(64/order.length)));
     let level=Math.max(0,Math.min(9,Math.ceil(Math.log2(Math.PI*MAP_R/(256*this.across/(this.width*this.dpr))))));
     const range=(z:number)=>{const n=2**z;return {x0:Math.max(0,Math.floor(visible.u0*n*2)),x1:Math.min(n*2-1,Math.floor(visible.u1*n*2)),y0:Math.max(0,Math.floor(visible.v0*n)),y1:Math.min(n-1,Math.floor(visible.v1*n))};};
-    while(level>0){const r=range(level);if((r.x1-r.x0+1)*(r.y1-r.y0+1)<=32)break;level--;}
+    while(level>0){const r=range(level);if((r.x1-r.x0+1)*(r.y1-r.y0+1)<=tileLimit)break;level--;}
     const leaves=range(level);
     const bounds=new Map<string,TileDraw>();
     for(let y=leaves.y0;y<=leaves.y1;y++)for(let x=leaves.x0;x<=leaves.x1;x++){
@@ -946,8 +995,13 @@ export class MapEngine {
       const p=this.project(Math.asin(Math.max(-1,Math.min(1,-Math.cos(lat)*Math.sin(lon))))/DEG,Math.atan2(Math.sin(lat),Math.cos(lat)*Math.cos(lon))/DEG);
       points.push(this.screen(p[0],p[1]));
     }
-    const x=Math.max(0,Math.floor(Math.min(...points.map(p=>p[0]))-4)),right=Math.min(this.width,Math.ceil(Math.max(...points.map(p=>p[0]))+4));
-    const y=Math.max(0,Math.floor(Math.min(...points.map(p=>p[1]))-4)),bottom=Math.min(this.height,Math.ceil(Math.max(...points.map(p=>p[1]))+4));
+    // A geographic pole has every longitude. Sampling just the grid corners misses its
+    // spread along the flat picture's edge and cuts little wedges out of the data there.
+    for(const [poleU,lat] of [[.25,89.999999],[.75,-89.999999]])if(u<=poleU+1e-10&&u+uw>=poleU-1e-10&&v<=.5+1e-10&&v+vh>=.5-1e-10){
+      for(let lon=-180;lon<=180;lon+=15){const p=this.project(lat,lon);points.push(this.screen(p[0],p[1]));}
+    }
+    const x=Math.max(0,Math.floor(Math.min(...points.map(p=>p[0]))-8)),right=Math.min(this.width,Math.ceil(Math.max(...points.map(p=>p[0]))+8));
+    const y=Math.max(0,Math.floor(Math.min(...points.map(p=>p[1]))-8)),bottom=Math.min(this.height,Math.ceil(Math.max(...points.map(p=>p[1]))+8));
     return {x,y,width:Math.max(0,right-x),height:Math.max(0,bottom-y)};
   }
 
@@ -975,6 +1029,138 @@ export class MapEngine {
     g.drawImage(mask,0,0,this.width,this.height);
   }
 
+  /**
+   * Measured crater rims (the Craters switch), as on the overview: thin pale rings, the 400 biggest that look at
+   * least 9 pixels across. This map had the switch but never drew anything for it. The choice among the
+   * catalogue's 1.3 million craters is made again only when the view has moved or zoomed enough to change it;
+   * in between, the same rings are simply put where their ground now is.
+   */
+  private drawCraters(g: CanvasRenderingContext2D) {
+    if (!this.layers.craters || !this.projection) { this.craterPick = null; return; }
+    const w = this.width, h = this.height, ppm = w / this.across, mid = this.unproject(this.cx, this.cy);
+    if (!Number.isFinite(mid[0] + mid[1])) return;
+    const minKm = Math.max(.03, CRATER_MIN_PX / ppm / 1000);
+    const reach = Math.min(Math.PI, Math.hypot(this.across, this.across * h / w) / 2 / MAP_R * 1.25 + .01);
+    const found = cratersNear(mid[0], mid[1], reach, minKm);
+    const p = mid[0] * DEG, l = mid[1] * DEG, centre: [number, number, number] = [Math.cos(p) * Math.cos(l), Math.cos(p) * Math.sin(l), Math.sin(p)];
+    let pick = this.craterPick;
+    if (!pick || pick.revision !== found.revision || Math.abs(Math.log(this.across / pick.across)) > .12
+      || pick.centre[0] * centre[0] + pick.centre[1] * centre[1] + pick.centre[2] * centre[2] < Math.cos(.1 * this.across / MAP_R)) {
+      // (a rim much wider than the card is only a stray arc across it)
+      const largest = Math.max(w, h) * 1.3 / ppm / 1000, near = reach >= Math.PI / 2 ? -2 : Math.cos(reach);
+      const all: number[] = [];
+      // (each array has its biggest craters first, so the scan of one stops at the first that is too small)
+      found.arrays.forEach((a, which) => {
+        for (let i = 0; i < a.length; i += 3) {
+          const km = a[i + 2];
+          if (km < minKm) break;
+          if (km > largest) continue;
+          const cp = a[i] * DEG, cl = a[i + 1] * DEG, c = Math.cos(cp);
+          if (c * Math.cos(cl) * centre[0] + c * Math.sin(cl) * centre[1] + Math.sin(cp) * centre[2] >= near) all.push(i, which);
+        }
+      });
+      const order = Array.from({ length: all.length / 2 }, (_, k) => k).sort((x, y) => found.arrays[all[y * 2 + 1]][all[y * 2] + 2] - found.arrays[all[x * 2 + 1]][all[x * 2] + 2]).slice(0, CRATER_MAX);
+      const rings = new Float32Array(order.length * 3);
+      order.forEach((k, n) => { const a = found.arrays[all[k * 2 + 1]], i = all[k * 2]; rings[n * 3] = a[i]; rings[n * 3 + 1] = a[i + 1]; rings[n * 3 + 2] = a[i + 2]; });
+      pick = this.craterPick = { rings, across: this.across, centre, revision: found.revision };
+    }
+    const lift = this.projection.offsetN(), longest = Math.max(w, h), rings = pick.rings;
+    g.save(); g.strokeStyle = 'rgba(235,241,247,.7)'; g.lineWidth = 1.25;
+    for (let i = 0; i < rings.length; i += 3) {
+      const en = this.project(rings[i], rings[i + 1]), at = this.screen(en[0], en[1]), r = rings[i + 2] * 500 * ppm;
+      // away from the middle line of this flat map everything is drawn wider, a round rim included
+      const wide = r / Math.max(.08, Math.cos((en[1] + lift) / MAP_R));
+      if (at[0] + wide < 0 || at[0] - wide > w || at[1] + r < 0 || at[1] - r > h) continue;
+      const alpha = craterSizeOpacity(2 * r, longest);
+      if (alpha <= 0) continue;
+      g.globalAlpha = alpha; g.beginPath(); g.ellipse(at[0], at[1], wide, r, 0, 0, TAU); g.stroke();
+    }
+    g.restore();
+    if (found.pending) this.fading = true; // more of the catalogue is on its way: look again next frame
+  }
+
+  /**
+   * Official place names, behaving as on the overview: a name appears once its feature looks big enough on the
+   * card, the bigger and more important features first, seas in spaced capitals, never one name over another,
+   * and names fade in and out instead of popping. Because the map repeats sideways, so do the names.
+   */
+  private drawNames(g: CanvasRenderingContext2D) {
+    const names = this.names, units = this.nameUnits;
+    const now = performance.now(), dt = Math.min(.1, Math.max(0, (now - this.nameClock) / 1000));
+    this.nameClock = now;
+    for (const entry of this.nameShown.values()) entry.on = false;
+    const w = this.width, h = this.height;
+    if (names && units && this.projection && this.layers.names !== false) {
+      const ppm = w / this.across, smallest = NAME_MIN_PX / ppm, largest = Math.max(w, h) * 2.2 / ppm;
+      // Only names within sight of the middle of the card are worth placing: one multiplication each rules out the rest.
+      const mid = this.unproject(this.cx, this.cy), reach = Math.hypot(this.across, this.across * h / w) / 2 / MAP_R * 1.3;
+      const p = mid[0] * DEG, l = mid[1] * DEG, ux = Math.cos(p) * Math.cos(l), uy = Math.cos(p) * Math.sin(l), uz = Math.sin(p);
+      const near = !Number.isFinite(ux + uy + uz) || reach >= Math.PI / 2 ? -2 : Math.cos(reach);
+      const found: { i: number; x: number; y: number; score: number }[] = [];
+      for (let i = 0; i < names.length; i++) {
+        const size = names[i].diameterKm * 1000;
+        if (size < smallest || size > largest) continue;
+        if (units[i * 3] * ux + units[i * 3 + 1] * uy + units[i * 3 + 2] * uz < near) continue;
+        const at = this.screenAt(names[i].lat, names[i].lon);
+        if (!at || at.x < 0 || at.x > w || at.y < 0 || at.y > h) continue;
+        // (a name already on screen gets a small bonus, so a little movement does not swap it for its neighbour)
+        const weight = (NAME_WEIGHT[names[i].kind] ?? .8) * (names[i].satellite ? .5 : 1) * (this.nameShown.has(i) ? 1.25 : 1);
+        found.push({ i, x: at.x, y: at.y, score: size * weight });
+      }
+      found.sort((a, b) => b.score - a.score || a.i - b.i);
+      // the rover, the destination and the other markers keep the ground under them clear of words
+      const taken = this.keepClear.map(b => [b[0], b[1], b[2], b[3]] as [number, number, number, number]);
+      const keepClear = (lat: number, lon: number, r: number) => { const at = this.screenAt(lat, lon); if (at) taken.push([at.x - r, at.y - r, at.x + r, at.y + r]); };
+      if (roverLink.pose.on) keepClear(roverLink.pose.lat, roverLink.pose.lon, 22);
+      if (this.destination) keepClear(this.destination.lat, this.destination.lon, 16);
+      for (const wp of roverLink.waypoints) if (wp.kind !== 'next') keepClear(wp.lat, wp.lon, 14);
+      const most = Math.round(Math.min(48, Math.max(10, w * h / 26000)));
+      let placed = 0;
+      for (const f of found) {
+        if (placed >= most) break;
+        const style = nameStyle(names[f.i]), half = this.nameWidth(g, style) / 2 + 5, tall = style.size / 2 + 4;
+        const box: [number, number, number, number] = [f.x - half, f.y - tall, f.x + half, f.y + tall];
+        if (box[0] < 4 || box[2] > w - 4 || box[1] < 4 || box[3] > h - 4) continue;
+        if (taken.some(b => box[0] < b[2] && box[2] > b[0] && box[1] < b[3] && box[3] > b[1])) continue;
+        taken.push(box); placed++;
+        const entry = this.nameShown.get(f.i);
+        if (entry) { entry.on = true; entry.x = f.x; entry.y = f.y; } else this.nameShown.set(f.i, { alpha: 0, on: true, x: f.x, y: f.y });
+      }
+    }
+    if (!this.nameShown.size) return;
+    const step = this.reducedMotion ? 1 : dt / .18, spaced = g as unknown as { letterSpacing: string };
+    g.save(); g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineJoin = 'round';
+    for (const [i, entry] of this.nameShown) {
+      const name = names?.[i];
+      entry.alpha = Math.max(0, Math.min(1, entry.alpha + (entry.on ? step : -step)));
+      if (!name || (!entry.on && entry.alpha <= 0)) { this.nameShown.delete(i); continue; }
+      if (!entry.on) {
+        // a name on its way out still rides on its own ground
+        const at = this.screenAt(name.lat, name.lon);
+        if (!at) { this.nameShown.delete(i); continue; }
+        entry.x = at.x; entry.y = at.y;
+      }
+      if (entry.alpha < 1 || !entry.on) this.fading = true;
+      const style = nameStyle(name);
+      g.font = style.font; spaced.letterSpacing = style.spacing; g.globalAlpha = entry.alpha;
+      g.lineWidth = 3.4; g.strokeStyle = 'rgba(5,7,11,.7)'; g.strokeText(style.text, entry.x, entry.y + .5);
+      g.fillStyle = style.colour; g.fillText(style.text, entry.x, entry.y + .5);
+    }
+    spaced.letterSpacing = '0px'; g.restore();
+  }
+
+  private nameWidth(g: CanvasRenderingContext2D, style: NameStyle) {
+    let width = this.nameWidths.get(style.text + style.font);
+    if (width === undefined) {
+      const spaced = g as unknown as { letterSpacing: string };
+      g.save(); g.font = style.font; spaced.letterSpacing = style.spacing;
+      width = g.measureText(style.text).width; spaced.letterSpacing = '0px'; g.restore();
+      // Before the app's own typeface has arrived the widths belong to the stand-in font: do not keep those.
+      if (document.fonts?.check?.(style.font) !== false) this.nameWidths.set(style.text + style.font, width);
+    }
+    return width;
+  }
+
   private drawRocks(g: CanvasRenderingContext2D) {
     if (!this.options.round || this.across > 160 || !this.anchor) return;
     const ppm = this.width / this.across;
@@ -990,14 +1176,16 @@ export class MapEngine {
     if (xy.length < 2) return;
     const breaks = trail ? new Set(roverLink.breaks) : null;
     g.beginPath();
-    let pen = false;
+    let pen = false, lastX = 0;
     const values = trail ? roverLink.trail : this.route?.path, stride = trail ? 3 : 2;
     for (let i = 0; i < xy.length; i += 2) {
       const index = i / 2;
       if (!this.options.round && values && !this.projection?.visible(values[index * stride], values[index * stride + 1])) { pen = false; continue; }
       const p = this.screen(xy[i], xy[i + 1]);
+      // (half a turn apart on screen means the two ends are on different copies of the map)
+      if (pen && !this.options.round && Math.abs(p[0] - lastX) > WORLD * this.width / this.across / 2) pen = false;
       if (!pen || breaks?.has(index)) g.moveTo(p[0], p[1]); else g.lineTo(p[0], p[1]);
-      pen = true;
+      pen = true; lastX = p[0];
     }
     if (trail && roverLink.pose.on && (this.options.round || this.projection?.visible(roverLink.pose.lat, roverLink.pose.lon))) {
       const en = this.project(roverLink.pose.lat, roverLink.pose.lon), p = this.screen(en[0], en[1]); g.lineTo(p[0], p[1]);
@@ -1077,6 +1265,23 @@ export class MapEngine {
   }
 
 
+}
+
+/** A rim must look at least this wide to be drawn, and at most this many are drawn (the overview's numbers: moon/craterLayer.ts). */
+const CRATER_MIN_PX = 9, CRATER_MAX = 400;
+/** A feature must look at least this wide on the card before it gets its name (the overview uses 30). */
+const NAME_MIN_PX = 26;
+/** How much each kind of feature counts when two names want the same room (the same order as the overview: moon/labels.ts). */
+const NAME_WEIGHT: Record<string, number> = {
+  'Dark plain (sea)': 2.4, Ocean: 2.6, 'Dark plain (marsh)': 2.0, Bay: 2.0, 'Small dark plain': 1.6,
+  Mountain: 1.5, Crater: 1.0, 'Small crater': 0.45,
+};
+interface NameStyle { text: string; font: string; spacing: string; colour: string; size: number }
+/** Seas are written in widely spaced capitals, like on a printed map; lettered side craters a little quieter. */
+function nameStyle(name: MoonName): NameStyle {
+  if (/^(Dark plain|Ocean|Bay|Small dark plain)/.test(name.kind)) return { text: name.name.toUpperCase(), font: `600 11px ${FONT}`, spacing: '1.7px', colour: 'rgba(233,238,244,.94)', size: 11 };
+  if (name.satellite || name.kind === 'Small crater') return { text: name.name, font: `500 11.5px ${FONT}`, spacing: '0px', colour: 'rgba(226,231,236,.86)', size: 11.5 };
+  return { text: name.name, font: `500 12.5px ${FONT}`, spacing: '0px', colour: '#f3f5f7', size: 12.5 };
 }
 
 function drawWaypoint(g: CanvasRenderingContext2D, wp: Waypoint, x: number, y: number, direction?: number) {
@@ -1180,7 +1385,8 @@ class BasePlane {
       out vec4 colour;
       const float R=1737400.0, PI=3.141592653589793;
       void main() {
-        if(abs(mapAngles.x)>PI || abs(mapAngles.y)>PI*0.5) { colour=vec4(0.0); return; }
+        // (no limit east or west: the cosines repeat by themselves, which is the map repeating sideways)
+        if(abs(mapAngles.y)>PI*0.5) { colour=vec4(0.0); return; }
         if(frame.w>1.5){float night=.78*(1.0-smoothstep(-0.052336,0.052336,sunDot));colour=vec4(0.0,0.0,0.0,night);return;}
         vec3 n=normalize(sourceVector);
         vec2 uv;
@@ -1250,7 +1456,7 @@ class BasePlane {
       const points:XY[]=[],ppm=width/across,c=Math.cos(rotation),s=Math.sin(rotation);
       for(let j=0;j<=4;j++)for(let i=0;i<=4;i++){
         const ll=polarLatLon(polar.x+polar.span*i/4,polar.y-polar.span*j/4),p=projection.project(ll[0],ll[1]);
-        const x=(p[0]-cx)*ppm,y=-(p[1]-cy)*ppm;
+        const x=wrapWorld(p[0]-cx)*ppm,y=-(p[1]-cy)*ppm;
         points.push([width/2+x*c-y*s,height/2+x*s+y*c]);
       }
       let x0=Math.max(0,Math.floor(Math.min(...points.map(p=>p[0]))-4)),x1=Math.min(width,Math.ceil(Math.max(...points.map(p=>p[0]))+4));
@@ -1291,7 +1497,7 @@ class BasePlane {
 
   private drawTiledBase(image:ImageBitmap,projection:FlatMapProjection,width:number,height:number,dpr:number,across:number,cx:number,cy:number,rotation:number):HTMLCanvasElement|null {
     const ppm=width/across,c=Math.cos(rotation),s=Math.sin(rotation),uv:XY[]=[];
-    const screen=(lat:number,lon:number):XY=>{const p=projection.project(lat,lon),x=(p[0]-cx)*ppm,y=-(p[1]-cy)*ppm;return [width/2+x*c-y*s,height/2+x*s+y*c];};
+    const screen=(lat:number,lon:number):XY=>{const p=projection.project(lat,lon),x=wrapWorld(p[0]-cx)*ppm,y=-(p[1]-cy)*ppm;return [width/2+x*c-y*s,height/2+x*s+y*c];};
     for(let j=0;j<=4;j++)for(let i=0;i<=4;i++){
       const x=width*(i/4-.5),y=height*(j/4-.5),ll=projection.unproject(cx+(x*c+y*s)/ppm,cy+(x*s-y*c)/ppm);
       if(!Number.isFinite(ll[0]+ll[1]))continue;
@@ -1457,8 +1663,9 @@ class FlatMapProjection {
   }
 
   unproject(e: number, n: number): XY {
+    // East and west the map repeats, so any distance that way is a real place; only north and south have an end.
     const longitude = e / MAP_R, latitude = (n + this.offset) / MAP_R;
-    if (!Number.isFinite(longitude + latitude) || Math.abs(longitude) > Math.PI + 1e-10 || Math.abs(latitude) > Math.PI / 2 + 1e-10) return [NaN, NaN];
+    if (!Number.isFinite(longitude + latitude) || Math.abs(latitude) > Math.PI / 2 + 1e-10) return [NaN, NaN];
     const p = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, latitude)), cp = Math.cos(p), a = cp * Math.cos(longitude), b = cp * Math.sin(longitude), c = Math.sin(p), f = this.frame;
     const x = f.up[0] * a + f.east[0] * b + f.north[0] * c;
     const y = f.up[1] * a + f.east[1] * b + f.north[1] * c;

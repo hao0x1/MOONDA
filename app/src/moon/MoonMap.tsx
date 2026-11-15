@@ -21,7 +21,7 @@ import { MoonHeights } from '../science/heights';
 import { cameraStore } from '../ui/stores';
 import { MOON_ELLIPSOID } from './ellipsoid';
 import { toCartesian, toTrueLatLon, trueToDisplayVec } from './frame';
-import { cancelOffscreenImagery, createBaseMosaicProvider, createMoonTrekProvider, createPolarPyramidProvider, createPolarRasterProvider, createScienceRasterProvider, createSeamFixProvider, imageryPending, imageryReloaded, releaseScienceLayers, setScienceLayersActive, warmScienceRasters } from './imagery';
+import { cancelOffscreenImagery, captureVisibleLayerTiles, createBaseMosaicProvider, createMoonTrekProvider, createPolarPyramidProvider, createPolarRasterProvider, createScienceRasterProvider, createSeamFixProvider, imageryPending, imageryReloaded, releaseScienceLayers, setScienceLayersActive, warmScienceRasters, warmVisibleLayerTiles, type ReprojectedImageryProvider } from './imagery';
 import { createCraterLayer } from './craterLayer';
 import { NameLabels } from './labels';
 import { LanderView, type LanderSpec, type SkyState } from './lander';
@@ -39,6 +39,7 @@ import { loadManifest } from '../science/layerValues';
 import { MapModes, type MapMode } from './mapMode';
 import { createDataDetailLayer } from './dataDetail';
 import { setExploreHeights } from '../explore/context';
+import { mapImagery, prefetchMapHeightAt } from '../explore/mapImagery';
 
 /** The Height colours layer's NASA Moon Trek map (globe, flat map and start-up preload use the same one).
  *  North of minTrueLat only: the sharper south-pole height map (data/layers/height.png) is drawn below it. */
@@ -63,6 +64,12 @@ export interface MoonMapHandle {
   setMapMode(mode: MapMode): void;
   /** Get the south-pole maps ready to show at once (called when the Layers box opens). */
   warmLayers(): void;
+  /**
+   * Stop (or start again) drawing the 3D view while something covers it. The big surface map does: with the 3D
+   * scene still being drawn behind it every frame, the map's own zoom ran at half the frame rate (measured
+   * 33 ms a frame against 17 ms with the scene held still). The last picture stays on screen while it is held.
+   */
+  setRenderPaused(paused: boolean): void;
 }
 export type { MapMode };
 
@@ -167,6 +174,32 @@ const tagOf = (id: unknown): Tag => (id as { moonda?: Tag } | undefined)?.moonda
 const WHOLE = { lat: -35, lon: 10, alt: 6_500_000 };
 
 const SCIENCE_SWITCHES = new Set(['psr', 'waterice', 'danger', 'slope', 'height']);
+const ALL_SCIENCE_SWITCHES = Object.fromEntries([...SCIENCE_SWITCHES].map(id => [id, true]));
+const LAYER_WARM_MS = 5000;
+
+/** Use the same sources and order for visible layers and their hidden preparation. */
+function flatLayerOverlays(defs: LayerDef[], layers: Record<string, boolean>, opacity: Record<string, number> = {}): FlatOverlay[] {
+  const over: FlatOverlay[] = [];
+  if (layers.height) {
+    const alpha = opacity.height ?? 0.7;
+    over.push({ id: 'height', kind: 'global', layer: HEIGHT_TREK.layer, ext: HEIGHT_TREK.ext, latMin: HEIGHT_TREK.minTrueLat, alpha });
+    if (defs.some(d => d.id === 'height')) over.push({ id: 'heightPolar', kind: 'polar', url: './data/layers/height.png', alpha });
+  }
+  for (const def of defs) if (def.id !== 'height' && layers[def.id]) over.push({ id: def.id, kind: 'polar', url: `./data/layers/${def.id}.png`, alpha: opacity[def.id] ?? 0.7 });
+  return over;
+}
+
+function switchableProviders(layers: Map<string, ImageryLayer>): ReprojectedImageryProvider[] {
+  return [...layers].filter(([id]) => id === 'heightPolar' || SCIENCE_SWITCHES.has(id)).map(([, layer]) => layer.imageryProvider as unknown as ReprojectedImageryProvider);
+}
+
+/** A slow remote height map can finish in the background without extending start-up. */
+function boundedLayerWarm(job: Promise<boolean>, maxMs: number): Promise<boolean> {
+  return new Promise(resolve => {
+    const timer = setTimeout(() => resolve(false), maxMs);
+    job.then(ok => { clearTimeout(timer); resolve(ok); }, () => { clearTimeout(timer); resolve(false); });
+  });
+}
 const scienceSources = (def: LayerDef): ScienceRasterSource[] => def.rasterSources ?? [{
   url: `./data/layers/${def.id}.png`, projection: 'polar', pole: 'south', extentM: POLAR_EXTENT_M, clipTrueLatDeg: -80.02,
 }];
@@ -283,7 +316,7 @@ export const MoonMap = forwardRef<MoonMapHandle, Props>(function MoonMap(props, 
     // Sharp south-pole photos: read from the local store first (public/data/polar/t), the remote server only where nothing is stored.
     // The layer names must match the stored set exactly.
     add('polarPhoto', new ImageryLayer(createPolarPyramidProvider({ layers: 'luna_wac_roi_south_summer,luna_nac_pole_control_south', minK: 4, credit: 'LROC NAC south-pole mosaic · NASA/GSFC/ASU' }) as never, { show: false }));
-    add('height', new ImageryLayer(createMoonTrekProvider({ ...HEIGHT_TREK, maxSourceLevel: 6, credit: 'NASA Moon Trek · LRO LOLA' }) as never, { show: false, alpha: 0.75 }));
+    add('height', new ImageryLayer(createMoonTrekProvider({ ...HEIGHT_TREK, maxSourceLevel: 6, cachePrepared: true, credit: 'NASA Moon Trek · LRO LOLA' }) as never, { show: false, alpha: 0.75 }));
 
     // After a failed download is retried, draw once so the refilled tiles start loading.
     const offReload = imageryReloaded.addEventListener(() => { if (!viewer.isDestroyed()) scene.requestRender(); });
@@ -467,6 +500,7 @@ export const MoonMap = forwardRef<MoonMapHandle, Props>(function MoonMap(props, 
       onCloser: (lat, lon) => { void modesRef.current?.toGlobe({ at: { lat, lon, km: 140 } }); },
     });
     flatRef.current = flat;
+    if (import.meta.env.DEV) debugHook.flat = flat;
     const modes = new MapModes(flat, {
       viewer, nav: navRef.current,
       heightAt: (lat, lon) => heights.heightAt(lat, lon, false),
@@ -499,27 +533,54 @@ export const MoonMap = forwardRef<MoonMapHandle, Props>(function MoonMap(props, 
       namesReady: new Promise<void>(res => { namesLoaded.current = res; }),
       startView: start,
       skyReady: sky.ready,
-      imageryPending,
+      imageryPending: () => imageryPending(false),
       lander: lander as { prewarm?: () => Promise<unknown> },
-      // Stored science bytes are downloaded once. Switching a map decodes only the blocks it needs.
+      // Compact sources, previews and the opening view's projected pixels prepare together.
       layerFiles: async () => [
         // the crater list behind the Craters layer and the route planner (1.4 MB)
         new URL('./data/features/craters.bin', document.baseURI).href, new URL('./data/features/craters-small-south.bin', document.baseURI).href,
       ],
       warmLayers: async onFrac => {
+        const began = performance.now(), deadline = began + LAYER_WARM_MS;
+        const opening = captureVisibleLayerTiles(viewer);
+        const currentDefs = cb.current.scienceLayers.filter(d => SCIENCE_SWITCHES.has(d.id));
+        prepareScienceLayers(viewer, imagery.current, currentDefs);
+        // Capture and queue this view before preload moves the camera to the pole.
+        let visible = warmVisibleLayerTiles(viewer, switchableProviders(imagery.current), LAYER_WARM_MS, opening);
+        let overlays = boundedLayerWarm(flat.warmOverlays(flatLayerOverlays(currentDefs, ALL_SCIENCE_SWITCHES)), LAYER_WARM_MS);
         const manifest = await loadManifest();
         const defs = manifest.map(scienceToLayer).filter(d => SCIENCE_SWITCHES.has(d.id));
         if (viewer.isDestroyed()) return false;
         prepareScienceLayers(viewer, imagery.current, defs);
+        if (defs.some(d => !currentDefs.some(current => current.id === d.id))) {
+          // The manifest can arrive after React's first frame. Its maps still warm the saved view.
+          const remaining = Math.max(0, deadline - performance.now());
+          const added = warmVisibleLayerTiles(viewer, switchableProviders(imagery.current), remaining, opening);
+          visible = Promise.all([visible, added]).then(results => results.every(Boolean));
+          const addedOverlays = boundedLayerWarm(flat.warmOverlays(flatLayerOverlays(defs, ALL_SCIENCE_SWITCHES)), remaining);
+          overlays = Promise.all([overlays, addedOverlays]).then(results => results.every(Boolean));
+        }
         // The small value files also stay available for a new spot after going offline.
         const values = manifest.flatMap(e => e.valueSources ?? []).filter(s => s.packed);
-        return warmScienceRasters([...defs.flatMap(scienceSources), ...values], onFrac);
+        const bytes = warmScienceRasters([...defs.flatMap(scienceSources), ...values], onFrac);
+        const [filesReady, globeReady, flatReady] = await Promise.all([bytes, visible, overlays]);
+        debugHook.layerWarm = { ms: Math.round(performance.now() - began), filesReady, globeReady, flatReady };
+        return filesReady && globeReady && flatReady;
       },
       warmViews: () => {
         const ridge = { lat: -89.45, lon: -136.7 }; // Shackleton – de Gerlache connecting ridge
         const g = heights.heightAt(ridge.lat, ridge.lon, false);
         return [
-          { pose: poseLookingAt(-90, 0, 0, 820_000, 0, -90), label: 'Getting the south pole ready…', maxMs: 6000 },
+          { pose: poseLookingAt(-90, 0, 0, 820_000, 0, -90), label: 'Getting the south pole ready…', maxMs: 6000, warm: () => {
+            const heightLayer = imagery.current.get('height');
+            if (!heightLayer || viewer.isDestroyed()) return;
+            const began = performance.now();
+            debugHook.poleHeightWarm = { ms: 0, ready: false, running: true };
+            // Only Height colours streams remote tiles here. Reuse this hidden visit without delaying Enter.
+            void warmVisibleLayerTiles(viewer, [heightLayer.imageryProvider as unknown as ReprojectedImageryProvider], 20000).then(ready => {
+              debugHook.poleHeightWarm = { ms: Math.round(performance.now() - began), ready, running: false };
+            }, () => { debugHook.poleHeightWarm = { ms: Math.round(performance.now() - began), ready: false, running: false }; });
+          } },
           { pose: poseLookingAt(ridge.lat, ridge.lon, g, 90_000, 20, -38), label: 'Building the 3D mountains…', maxMs: 5000 },
           { pose: poseLookingAt(ridge.lat, ridge.lon, g, 12_000, 60, -18), label: 'Sharpening the landing area…', maxMs: 4000 },
         ];
@@ -588,15 +649,7 @@ export const MoonMap = forwardRef<MoonMapHandle, Props>(function MoonMap(props, 
     if (flat) {
       flat.detail = props.layers.dataDetail ? 1 : 0;
       flat.photo = props.layers.photo !== false;
-      // the coloured layers, in the globe's order: Height colours first, then the south-pole maps
-      const over: FlatOverlay[] = [];
-      if (props.layers.height) {
-        const a = props.opacity.height ?? 0.7;
-        over.push({ id: 'height', kind: 'global', layer: HEIGHT_TREK.layer, ext: HEIGHT_TREK.ext, latMin: HEIGHT_TREK.minTrueLat, alpha: a });
-        if (props.scienceLayers.some(d => d.id === 'height')) over.push({ id: 'heightPolar', kind: 'polar', url: './data/layers/height.png', alpha: a });
-      }
-      for (const def of props.scienceLayers) if (def.id !== 'height' && props.layers[def.id]) over.push({ id: def.id, kind: 'polar', url: `./data/layers/${def.id}.png`, alpha: props.opacity[def.id] ?? 0.7 });
-      flat.setOverlays(over);
+      flat.setOverlays(flatLayerOverlays(props.scienceLayers, props.layers, props.opacity));
       flat.refreshLabels();
     }
     viewer.scene.requestRender();
@@ -747,6 +800,8 @@ export const MoonMap = forwardRef<MoonMapHandle, Props>(function MoonMap(props, 
     if (!lander || !nav) return;
     if (props.lander && props.sky) {
       const spec = props.lander, sky = props.sky;
+      void prefetchMapHeightAt(spec.lat, spec.lon);
+      void mapImagery.warmScienceAt(spec.lat, spec.lon, cb.current.scienceLayers);
       const go = () => { nav.enabled = false; lander.enter(spec, sky, spec.faceAz); };
       const modes = modesRef.current;
       // from the flat map: first a shortened move back to the globe at that spot
@@ -760,7 +815,15 @@ export const MoonMap = forwardRef<MoonMapHandle, Props>(function MoonMap(props, 
   useEffect(() => { if (props.sky) landerRef.current?.updateSky(props.sky); }, [props.sky]);
 
   const flatOn = () => modesRef.current?.mode === 'flat' && !modesRef.current.moving ? flatRef.current : null;
+  const heldRender = useRef(false);
   useImperativeHandle(ref, () => ({
+    setRenderPaused(paused) {
+      const v = viewerRef.current;
+      if (!v) return;
+      // only take the loop away if it is running (the flat 2D view stops it for itself), and give back only what was taken
+      if (paused) { if (v.useDefaultRenderLoop) { heldRender.current = true; v.useDefaultRenderLoop = false; } }
+      else if (heldRender.current) { heldRender.current = false; v.useDefaultRenderLoop = true; v.scene.requestRender(); }
+    },
     flyTo(lat, lon, heightKm = 60, tilted = false) {
       const v = viewerRef.current;
       if (!v || modesRef.current?.moving) return;
@@ -793,7 +856,13 @@ export const MoonMap = forwardRef<MoonMapHandle, Props>(function MoonMap(props, 
     },
     look(az, el) { landerRef.current?.look(az, el); },
     warmLayers() {
-      void warmScienceRasters(cb.current.scienceLayers.filter(d => SCIENCE_SWITCHES.has(d.id)).flatMap(scienceSources));
+      const viewer = viewerRef.current;
+      if (!viewer || viewer.isDestroyed()) return;
+      const defs = cb.current.scienceLayers.filter(d => SCIENCE_SWITCHES.has(d.id));
+      prepareScienceLayers(viewer, imagery.current, defs);
+      void warmScienceRasters(defs.flatMap(scienceSources));
+      void warmVisibleLayerTiles(viewer, switchableProviders(imagery.current), LAYER_WARM_MS);
+      void flatRef.current?.warmOverlays(flatLayerOverlays(defs, ALL_SCIENCE_SWITCHES));
     },
   }), []);
 

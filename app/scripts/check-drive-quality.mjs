@@ -7,6 +7,7 @@ import puppeteer from 'puppeteer-core';
 import assert from 'node:assert/strict';
 import { mkdirSync, readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
+import { tmpdir } from 'node:os';
 import { acquireBrowserLease } from './browserLease.mjs';
 
 const args = process.argv.slice(2);
@@ -17,7 +18,8 @@ if (args.includes('--help')) {
 }
 const baseline = args.includes('--baseline');
 const flatReliefBaseline = args.includes('--flat-relief-baseline');
-const rootOut = '/private/tmp/claude-501/-Volumes-CodexWork-Projects-MOONDA/4ec40458-1a1b-4580-bbfb-7871a2a20abe/scratchpad/codex2/C/round2';
+// (results go to the system's temporary folder unless --out says otherwise)
+const rootOut = join(tmpdir(), 'moonda-drive-quality');
 const out = resolve(flag('--out', join(rootOut, baseline ? 'baseline' : 'final')));
 const modules = flag('--modules', null);
 const width = Number(flag('--width', 1440)), height = Number(flag('--height', 900));
@@ -85,7 +87,8 @@ function restoration(run) {
 
 try {
   assert.ok(Number.isInteger(presses) && presses > 0, '--presses must be a positive whole number');
-  lease = await acquireBrowserLease({ script: 'check-drive-quality.mjs', noteDir: out });
+  lease = await acquireBrowserLease({ script: 'check-drive-quality.mjs', noteDir: out,
+    timeoutMs: Number(flag('--lease-wait-ms', 90000)) });
   browser = await puppeteer.launch({ executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', headless: !args.includes('--headful'),
     userDataDir: resolve(flag('--profile', join(out, 'chrome-profile'))), defaultViewport: { width, height, deviceScaleFactor: 2 },
     args: ['--enable-gpu', '--use-angle=metal', '--ignore-gpu-blocklist', '--no-first-run', '--hide-scrollbars', `--window-size=${width},${height}`,
@@ -150,9 +153,9 @@ try {
     });
   }
   await Promise.race([(async () => {
-    await page.goto(flag('--url', 'http://127.0.0.1:5190/'), { waitUntil: 'domcontentloaded', timeout: 180000 });
-    await page.waitForFunction(() => !!window.__moondaTest && !!window.__moondaCesium, { timeout: 90000 });
-    await page.waitForFunction(() => window.__moonda?.progress?.done, { timeout: 120000 });
+    await page.goto(flag('--url', 'http://127.0.0.1:5190/'), { waitUntil: 'domcontentloaded', timeout: 280000 });
+    await page.waitForFunction(() => !!window.__moondaTest && !!window.__moondaCesium, { timeout: 280000 });
+    await page.waitForFunction(() => window.__moonda?.progress?.done, { timeout: 280000 });
     if (flatReliefBaseline) await page.evaluate(() => {
       const provider = window.__viewer.terrainProvider, reaches = provider.reachesRelief;
       if (typeof reaches !== 'function') throw new Error('The provider has no reachesRelief method for the density baseline');

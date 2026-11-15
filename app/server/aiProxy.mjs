@@ -60,8 +60,8 @@ function guarded(upstream) {
 }
 
 /**
- * @param {{ messages: unknown[], tools?: unknown[] }} body  what the page sent
- * @param {{ key?: string, model?: string, baseUrl?: string }} env
+ * @param {{ messages: unknown[], tools?: unknown[], quick?: boolean }} body  what the page sent
+ * @param {{ key?: string, model?: string, baseUrl?: string, raw?: boolean }} env
  * @returns {Promise<Response>} a streaming Response (server-sent events) or a JSON error { error: code }
  */
 export async function proxyChat(body, env) {
@@ -82,8 +82,10 @@ export async function proxyChat(body, env) {
         model,
         messages: body.messages,
         tools: Array.isArray(body.tools) && body.tools.length ? body.tools : undefined,
-        thinking: { type: 'enabled' },
-        reasoning_effort: 'high',
+        // body.quick: the page asks again after an answer was cut by the hosting's time limit, and wants this
+        // one without the long thinking so that it fits
+        thinking: { type: body.quick === true ? 'disabled' : 'enabled' },
+        reasoning_effort: body.quick === true ? undefined : 'high',
         stream: true,
         max_tokens: 8192,
       }),
@@ -99,10 +101,14 @@ export async function proxyChat(body, env) {
   if (!upstream.ok || !upstream.body) {
     const text = await upstream.text().catch(() => '');
     log(`model answered ${upstream.status}:`, text.slice(0, 800));
+    // a conversation that has outgrown the model is its own, plain message on the page
+    if (upstream.status === 400 && /context length|maximum context|too many tokens|too long/i.test(text)) return json(413, { error: 'too-long' });
     const code = codeFor(upstream.status);
     return json(code === 'busy' ? 503 : 502, { error: code, status: upstream.status });
   }
-  return new Response(guarded(upstream.body), {
+  // env.raw (the edge route): hand the model's stream on untouched, so no script runs per chunk there;
+  // the page itself notices a stream that stalls or ends early.
+  return new Response(env.raw ? upstream.body : guarded(upstream.body), {
     status: 200,
     headers: { 'content-type': 'text/event-stream; charset=utf-8', 'cache-control': 'no-store', 'x-accel-buffering': 'no' },
   });

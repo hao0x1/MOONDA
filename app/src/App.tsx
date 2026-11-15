@@ -1,4 +1,4 @@
-import { Columns, Moon, Question, SpeakerHigh, SpeakerSlash, Stack, Target } from '@phosphor-icons/react';
+import { Columns, Moon, Question, SpeakerHigh, SpeakerSlash, Stack, Target, X } from '@phosphor-icons/react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { settings } from './app/settings';
 import { loadNames, type MoonName } from './data/names';
@@ -95,6 +95,12 @@ export default function App() {
   const [overviewStart, setOverviewStart] = useState<Pin | null>(null);
   const [overviewPrefer, setOverviewPrefer] = useState<RoutePrefer>('fastest');
   const [surfaceMapOpen, setSurfaceMapOpen] = useState(false);
+  // What is switched on inside the surface map belongs to that visit. It used to be the overview's own switches:
+  // Water ice turned on down there followed you back up, where its colour key then sat on the screen with (at
+  // most places) nothing on the Moon to explain it. The visit starts from the overview's switches and adds its own.
+  const [surfaceLayers, setSurfaceLayers] = useState<Record<string, boolean>>({});
+  const [surfaceOpacity, setSurfaceOpacity] = useState<Record<string, number>>({});
+  const [surfacePrefer, setSurfacePrefer] = useState<RoutePrefer>('fastest');
   useEffect(() => {
     try { localStorage.removeItem('moonda.drives.v1'); } catch { /* storage may be disabled */ }
   }, []);
@@ -205,6 +211,7 @@ export default function App() {
     setFaceAz(sunNow && sunNow.el > -3 ? sunNow.az : earthNow?.az ?? 0);
     setShowLayers(false); setShowCompare(false); setWelcome(false);
     setSurfaceMapOpen(false); setRoute(null);
+    setSurfaceLayers({}); setSurfaceOpacity({}); setSurfacePrefer('fastest');
     roverLink.startTrail();
     setStanding(true);
   };
@@ -263,10 +270,12 @@ export default function App() {
     const from = { lat: p.lat, lon: p.lon, label: title };
     // The generic flag name follows the language switch instead of keeping the tap's language.
     const to = { lat, lon, label: '' };
-    setRoute(r => askRoute(r, from, to, r?.prefer === 'balanced' ? 'fastest' : r?.prefer ?? 'fastest'));
+    setRoute(r => askRoute(r, from, to, surfacePrefer));
   };
+  // (the kind can be chosen before there is a destination: it is kept for the route that follows)
   const preferSurfaceRoute = (prefer: RoutePrefer) => {
     const p = roverLink.pose;
+    setSurfacePrefer(prefer);
     setRoute(r => r && p.on ? askRoute(r, { lat: p.lat, lon: p.lon, label: title }, r.to, prefer) : r);
   };
   // The route is worked out in the background whenever its ends or what to look for change.
@@ -357,6 +366,12 @@ export default function App() {
     if (document.pointerLockElement) document.exitPointerLock();
     setSurfaceMapOpen(true);
   }, []);
+  // The big surface map covers the 3D view: hold the 3D drawing still while it is open, so the map zooms smoothly.
+  useEffect(() => {
+    const held = standing && surfaceMapOpen;
+    map.current?.setRenderPaused(held);
+    return () => { if (held) map.current?.setRenderPaused(false); };
+  }, [standing, surfaceMapOpen]);
   const keyState = useRef({ standing, surfaceMapOpen });
   keyState.current = { standing, surfaceMapOpen };
   useEffect(() => {
@@ -479,6 +494,8 @@ export default function App() {
     };
   });
 
+  const mapLayersHere = useMemo(() => ({ ...layers, ...surfaceLayers }), [layers, surfaceLayers]);
+  const mapOpacityHere = useMemo(() => ({ ...opacity, ...surfaceOpacity }), [opacity, surfaceOpacity]);
   const activeLegends = sciencePanelLayers.filter(l => layers[l.id] && l.legend);
   const heightLegend = layers.height ? heightDef : undefined;
 
@@ -548,13 +565,15 @@ export default function App() {
       {standing && selection && (
         <LanderHud name={title} sun={sunNow} earth={earthNow} earthNeverRises={earthNever} mastM={mastM} timeline={timeline} cursor={cursor}
           onLook={(az, el) => map.current?.look(az, el)} onExit={requestExit}
-          layers={layers} opacity={opacity} layerDefs={panelGroups(scienceLayers, { ...heightDef, rasterSources: scienceLayers.find(l => l.id === 'height')?.rasterSources })[0].layers}
+          layers={mapLayersHere} opacity={mapOpacityHere} layerDefs={panelGroups(scienceLayers, { ...heightDef, rasterSources: scienceLayers.find(l => l.id === 'height')?.rasterSources })[0].layers}
           bodies={bodies} timeKey={minute} route={routeHere?.result?.ok ? routeHere.result : null} names={names} onOpenMap={openSurfaceMap} />
       )}
       {standing && surfaceMapOpen && (
         <SurfaceMap placeName={title} bodies={bodies} timeKey={minute} mastM={mastM} names={names}
-          layers={layers} opacity={opacity} layerDefs={panelGroups(scienceLayers, { ...heightDef, rasterSources: scienceLayers.find(l => l.id === 'height')?.rasterSources })[0].layers} onLayersChange={setLayers}
-          route={routeView} onClose={() => setSurfaceMapOpen(false)} onPlan={planSurfaceRoute}
+          layers={mapLayersHere} opacity={mapOpacityHere} layerDefs={panelGroups(scienceLayers, { ...heightDef, rasterSources: scienceLayers.find(l => l.id === 'height')?.rasterSources })[0].layers}
+          onLayersChange={change => setSurfaceLayers(cur => { const all = { ...layers, ...cur }, next = typeof change === 'function' ? change(all) : change; return Object.fromEntries(Object.entries(next).filter(([id, on]) => on !== !!layers[id])); })}
+          onOpacityChange={change => setSurfaceOpacity(cur => { const all = { ...opacity, ...cur }; return typeof change === 'function' ? change(all) : change; })}
+          route={routeView} prefer={surfacePrefer} onClose={() => setSurfaceMapOpen(false)} onPlan={planSurfaceRoute}
           onPrefer={preferSurfaceRoute} onClear={() => setRoute(null)} />
       )}
 
@@ -569,8 +588,12 @@ export default function App() {
 
       {!showLayers && !standing && (activeLegends.length > 0 || heightLegend) && (
         <div className="legend-float panel" aria-label={t('map.colours')}>
-          {heightLegend && <div className="legend-item"><b>{layerTitle(heightLegend)}</b><LayerLegend layer={heightLegend} /></div>}
-          {activeLegends.map(l => <div key={l.id} className="legend-item"><b>{layerTitle(l)}</b><LayerLegend layer={l} /></div>)}
+          {/* each key can switch its own map off: the key is often the only sign that a map is on at all */}
+          {[...(heightLegend ? [heightLegend] : []), ...activeLegends].map(l => <div key={l.id} className="legend-item">
+            <b>{layerTitle(l)}<button type="button" className="legend-hide" aria-label={t('map.legend.hide', { name: layerTitle(l) })} data-tip={t('map.legend.hide', { name: layerTitle(l) })}
+              onClick={() => setLayers(cur => ({ ...cur, [l.id]: false }))}><X size={13} /></button></b>
+            <LayerLegend layer={l} />
+          </div>)}
         </div>
       )}
 

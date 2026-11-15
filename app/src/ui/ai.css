@@ -2,7 +2,12 @@
    Calm and monochrome: hairlines instead of boxes, sizes from the type scale, tabular numbers. */
 .ai-panel {
   position: absolute; top: var(--top); right: var(--m); z-index: 13;
-  width: var(--ai-w); height: calc(100% - var(--top) - var(--dock-r) - var(--m));
+  /* On a short window it is drawn a little smaller, by --z, like the other panels (styles.css): the map's
+     buttons are moved aside by the same scaled width, so they sit beside it, never under it. */
+  width: var(--ai-w); height: calc((100% - var(--top) - var(--dock-r) - var(--m)) / var(--z, 1));
+  scale: var(--z, 1); transform-origin: 100% 0;
+  /* a long read over a bright Moon: darker and nearly solid, so nothing behind shows through the text */
+  --glass: rgba(17, 18, 21, .965); background: var(--glass);
   display: flex; flex-direction: column; overflow: hidden; animation: ai-in .24s var(--ease);
 }
 .ai-panel[hidden] { display: none; }
@@ -222,5 +227,5 @@
 .ai-send.stop:hover { background: var(--surface-3); }
 .ai-foot { padding: 8px 4px 0; font-size: var(--fs-11); line-height: 1.45; color: var(--text-3); text-align: center; }
 
-@media (max-width: 900px) { .ai-panel { right: var(--m); left: var(--m); width: auto; } }
+@media (max-width: 900px) { .ai-panel { right: var(--m); left: auto; width: calc((100% - var(--m) * 2) / var(--z, 1)); } }
 @media (prefers-reduced-motion: reduce) { .ai-panel, .ai-trace, .ai-step, .ai-results, .ai-shimmer, .ai-spin, .ai-node.think.run, .ai-bar.indet i, .ai-caret-blink { animation: none; } .ai-shimmer { color: var(--text); background: none; } }

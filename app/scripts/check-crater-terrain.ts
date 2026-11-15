@@ -209,6 +209,207 @@ function availabilityBudget(provider: InstanceType<typeof LolaTerrainProvider>, 
   return { rows, possibleFixedTriangles, previousFixedTriangles };
 }
 
+/** Exercise the real refresh pipeline with deferred CPU meshes and counted, non-GPU draw handles. */
+async function checkRefreshLifecycle() {
+  const lat = -89.45, lon = -137.3, frame = { ...trueENU(lat, lon), origin: toCartesian(lat, lon, heights.heightAt(lat, lon, true)) };
+  const relief = { centre: { lat, lon }, radius: 600, frame, heightAt: craterRelief };
+  const provider = new LolaTerrainProvider(heights, relief);
+  const display = trueToDisplayLatLon(lat, lon), xy = provider.tilingScheme.positionToTileXY(C.Cartographic.fromRadians(display.lon, display.lat), 18)!;
+  const oldData: any = await request(provider, xy.x, xy.y, 18);
+  oldData._createdByUpsampling = true;
+  let released = 0, uploaded = 0, workerCalls = 0;
+  class Surface {
+    terrainState = 6; terrainData: any; mesh: any; vertexArray: any; imagery: unknown[] = [];
+    boundingVolumeSourceTile: unknown; boundingVolumeIsFromMesh = false; fill: any;
+    get renderedMesh() { return this.vertexArray ? this.mesh : this.fill?.mesh; }
+    freeVertexArray() { if (this.vertexArray) { released++; this.vertexArray = undefined; } }
+    static _createVertexArrayForMesh(_context: unknown, mesh: unknown) { uploaded++; return { mesh, ready: true }; }
+  }
+  const tile = (level: number, x: number, y: number, parent?: any) => {
+    const data = new Surface(); data.terrainData = oldData; data.mesh = { old: true }; data.vertexArray = { old: true }; data.imagery = [{ photo: true }];
+    // A ready photograph makes Cesium's tile flag false even when its terrain is still cut up.
+    return { level, x, y, parent, data, state: 2, renderable: true, upsampledFromParent: false, clearPositionCache() {} };
+  };
+  const source = tile(18, xy.x, xy.y), child = tile(19, xy.x * 2, xy.y * 2, source), leaf = tile(20, xy.x * 4, xy.y * 4, child);
+  const coarseXY = provider.tilingScheme.positionToTileXY(C.Cartographic.fromRadians(display.lon, display.lat), 12)!;
+  const coarse = tile(12, coarseXY.x, coarseXY.y), far = tile(12, coarseXY.x + 1, coarseXY.y);
+  const genuine: any = await request(provider, xy.x, xy.y, 18);
+  const received = tile(18, xy.x, xy.y), transformed = tile(18, xy.x, xy.y);
+  for (const [pending, state] of [[received, 3], [transformed, 5]] as const) {
+    pending.data.terrainData = genuine; pending.data.terrainState = state;
+    pending.data.vertexArray = undefined; pending.data.mesh = state === 5 ? { readyCPU: true } : undefined;
+  }
+  const transformedMesh = transformed.data.mesh;
+  const oldChildSurface = child.data, photos = child.data.imagery, oldVA = source.data.vertexArray, oldMesh = source.data.mesh;
+  const callbacks = new Set<() => void>();
+  const loaded = [far, coarse, source, child, leaf, received, transformed];
+  const surface: any = { _tilesToRender: [leaf], forEachLoadedTile(fn: (t: any) => void) { loaded.forEach(fn); } };
+  const scene: any = { globe: { _surface: surface }, context: {}, isDestroyed: () => false, requestRender() {},
+    postRender: { addEventListener(fn: () => void) { callbacks.add(fn); return () => callbacks.delete(fn); } } };
+  const emit = () => { for (const fn of [...callbacks]) fn(); };
+  const refresh = provider.refreshSceneTiles.bind(provider);
+  let refreshCalls = 0;
+  provider.refreshSceneTiles = (...args) => { refreshCalls++; return refresh(...args); };
+  const proto: any = C.QuantizedMeshTerrainData.prototype, original = proto.createMesh;
+  const jobs: { finish: () => void; promise: Promise<unknown>; key: string }[] = [];
+  proto.createMesh = function (options: any) {
+    workerCalls++;
+    let finish!: () => void;
+    const promise = new Promise(resolve => { finish = () => {
+      const mesh = { ready: true, id: workerCalls }; this._mesh = mesh;
+      this._quantizedVertices = this._encodedNormals = this._indices = undefined;
+      resolve(mesh);
+    }; });
+    jobs.push({ finish, promise, key: `${options.level}/${options.x}/${options.y}` }); return promise;
+  };
+  try {
+    provider.prepareAhead(scene); emit();
+    check(received.data.terrainData === genuine && received.data.terrainState === 3,
+      'refresh discarded a genuine received source before its mesh could start');
+    check(transformed.data.terrainData === genuine && transformed.data.mesh === transformedMesh && transformed.data.terrainState === 5,
+      'refresh discarded a genuine transformed source before its draw handle could be made');
+    loaded.splice(0, loaded.length, source, child, leaf);
+    check(source.data.vertexArray === oldVA && source.data.mesh === oldMesh && released === 0,
+      'refinement discarded a drawn mesh while its replacement was still pending');
+    const sourceKey = `18/${xy.x}/${xy.y}`, beforeLoaderCalls = workerCalls;
+    check(jobs[0].key === sourceKey && (provider as any).meshJobs <= 2,
+      'the wheel patch did not prepare first or preparation exceeded two workers');
+    const warmed: any = await provider.requestTileGeometry(xy.x, xy.y, 18);
+    const task = warmed.createMesh({ tilingScheme: provider.tilingScheme, x: xy.x, y: xy.y, level: 18 });
+    check(workerCalls === beforeLoaderCalls, 'the normal loader duplicated an already prepared mesh worker');
+    jobs[0].finish(); await task;
+    check(source.data.vertexArray === oldVA, 'ready CPU mesh replaced the draw handle outside the frame boundary');
+    const beforeSwapRefreshes = refreshCalls;
+    emit();
+    check(uploaded === 1 && source.data.vertexArray !== oldVA && source.renderable, 'ready replacement was not installed atomically');
+    check(refreshCalls > beforeSwapRefreshes, 'an atomic parent swap waited for the next 250 ms refresh');
+    check(child.data !== oldChildSurface && child.data.imagery === photos && !child.renderable,
+      'old cut-up child was retained or its photos were discarded');
+    oldChildSurface.mesh = { staleWorker: true }; oldChildSurface.terrainState = 6;
+    check(child.data.mesh === undefined, 'an old child worker resurrected its detached mesh');
+    const beforeReadyCalls = workerCalls;
+    await warmed.createMesh({});
+    check(workerCalls === beforeReadyCalls, 'ready createMesh tried to read freed raw arrays again');
+    const installed = source.data.vertexArray;
+    provider.setRelief(null);
+    for (const job of jobs) job.finish(); await Promise.all(jobs.map(job => job.promise)); await Promise.resolve(); await Promise.resolve();
+    emit();
+    check(source.data.vertexArray === installed && callbacks.size === 0, 'obsolete warm jobs installed a mesh or kept a callback after exit');
+    provider.setRelief(relief);
+    const angle = 120 / 1737400, away = toTrueLatLon(new C.Cartesian3(
+      frame.up.x * Math.cos(angle) + frame.east.x * Math.sin(angle),
+      frame.up.y * Math.cos(angle) + frame.east.y * Math.sin(angle),
+      frame.up.z * Math.cos(angle) + frame.east.z * Math.sin(angle)));
+    relief.centre.lat = away.lat; relief.centre.lon = away.lon;
+    surface._tilesToRender = [source];
+    provider.refreshSceneTiles(scene, 'moving');
+    check(source.data.vertexArray === installed && source.renderable, 'coarsening discarded a currently drawn source');
+    surface._tilesToRender = []; source.data.terrainState = 4;
+    provider.refreshSceneTiles(scene, 'moving');
+    surface._tilesToRender = [source]; source.data.terrainState = 6; emit();
+    check(source.data.vertexArray === installed, 'deferred coarsening did not recheck current visibility');
+    surface._tilesToRender = []; source.data.terrainState = 4;
+    provider.refreshSceneTiles(scene, 'moving');
+    (source as any).data = undefined; emit();
+    check((provider as any).pendingRefresh.size === 0 && callbacks.size === 0, 'an evicted tile stayed in the pending refresh set');
+    relief.centre.lat = lat; relief.centre.lon = lon;
+    const next = new LolaTerrainProvider(heights, relief), predicted = tile(18, xy.x, xy.y), keptVA = predicted.data.vertexArray;
+    const nextCallbacks = new Set<() => void>();
+    const nextScene: any = { ...scene, globe: { _surface: { _tilesToRender: [predicted], forEachLoadedTile(fn: (t: any) => void) { fn(predicted); } } },
+      postRender: { addEventListener(fn: () => void) { nextCallbacks.add(fn); return () => nextCallbacks.delete(fn); } } };
+    const beforePredictionJobs = jobs.length;
+    next.prepareAhead(nextScene); for (const fn of [...nextCallbacks]) fn();
+    const predictedJob = jobs.slice(beforePredictionJobs).find(job => job.key === sourceKey)!;
+    relief.centre.lat = away.lat; relief.centre.lon = away.lon;
+    predictedJob.finish(); await predictedJob.promise; await Promise.resolve(); await Promise.resolve();
+    for (const fn of [...nextCallbacks]) fn();
+    check(predicted.data.vertexArray === keptVA && (next as any).upgrades.size === 0,
+      'an obsolete prediction replaced the old drawn mesh after a turn');
+    next.setRelief(null);
+    relief.centre.lat = lat; relief.centre.lon = lon;
+    for (const state of [3, 5]) {
+      const finishing = new LolaTerrainProvider(heights, relief), support = tile(18, xy.x, xy.y);
+      support.data.terrainData = genuine; support.data.terrainState = state;
+      support.data.vertexArray = undefined; support.data.mesh = state === 5 ? { oldCPU: true } : undefined;
+      const drawn = tile(19, xy.x * 2, xy.y * 2, support), oldDrawn = drawn.data, keptPhotos = support.data.imagery;
+      const finishCallbacks = new Set<() => void>();
+      const finishScene: any = { ...scene,
+        globe: { _surface: { _tilesToRender: [drawn], forEachLoadedTile(fn: (t: any) => void) { [support, drawn].forEach(fn); } } },
+        postRender: { addEventListener(fn: () => void) { finishCallbacks.add(fn); return () => finishCallbacks.delete(fn); } } };
+      const frame = () => { for (const fn of [...finishCallbacks]) fn(); };
+      const beforeFinishJobs = jobs.length;
+      finishing.prepareAhead(finishScene); frame();
+      const finishJob = jobs.slice(beforeFinishJobs).find(job => job.key === sourceKey)!;
+      finishJob.finish(); await finishJob.promise; await Promise.resolve(); await Promise.resolve();
+      support.data.terrainState = state === 3 ? 4 : 2;
+      frame();
+      check(!support.data.vertexArray && drawn.data === oldDrawn,
+        `finishing a support parent interrupted an active state ${support.data.terrainState} owner`);
+      support.data.terrainState = state;
+      frame();
+      check(support.data.terrainState === 6 && !!support.data.vertexArray && support.data.imagery === keptPhotos,
+        `a genuine state ${state} support parent did not consume its prepared mesh`);
+      check(drawn.data !== oldDrawn && drawn.data.mesh === undefined,
+        `finishing a state ${state} support parent left its old cut-up descendant live`);
+      finishing.setRelief(null);
+      for (const job of jobs) job.finish(); await Promise.all(jobs.map(job => job.promise));
+      await Promise.resolve(); await Promise.resolve();
+      check(finishCallbacks.size === 0, `a state ${state} support-parent fixture kept a callback after exit`);
+    }
+    for (const [buildMs, expectedStarts] of [[0.4, 2], [2.1, 1]]) {
+      const budget = new LolaTerrainProvider(heights, relief), budgetCallbacks = new Set<() => void>();
+      const budgetScene: any = { ...scene, globe: { _surface: { _tilesToRender: [], forEachLoadedTile() {} } },
+        postRender: { addEventListener(fn: () => void) { budgetCallbacks.add(fn); return () => budgetCallbacks.delete(fn); } } };
+      budget.prepareAhead(budgetScene);
+      let clock = 0, builds = 0;
+      // Isolate dispatch from file downloads: these held CPU meshes need only the worker API.
+      (budget as any).buildTileData = () => { builds++; clock += buildMs; return { createMesh: proto.createMesh }; };
+      const now = performance.now, beforeBudgetJobs = jobs.length;
+      try {
+        performance.now = () => clock;
+        for (const fn of [...budgetCallbacks]) fn();
+      } finally { performance.now = now; }
+      check(builds === expectedStarts && jobs.length - beforeBudgetJobs === expectedStarts,
+        `the 2 ms preparation slice started ${builds} grids/${jobs.length - beforeBudgetJobs} workers with ${buildMs} ms builds`);
+      check((budget as any).meshJobs === expectedStarts && (budget as any).meshJobs <= 2,
+        `preparation has ${(budget as any).meshJobs} active workers, expected ${expectedStarts} within its two-worker limit`);
+      if (expectedStarts === 2) {
+        const heldJobs = jobs.length;
+        for (const fn of [...budgetCallbacks]) fn();
+        check(jobs.length === heldJobs, 'a later frame started a third worker while two were active');
+      }
+      budget.setRelief(null);
+      for (const job of jobs) job.finish(); await Promise.all(jobs.map(job => job.promise));
+      await Promise.resolve(); await Promise.resolve();
+    }
+    const apolloLat = 0.674, apolloLon = 23.473;
+    const apolloRelief = { centre: { lat: apolloLat, lon: apolloLon }, radius: 600,
+      frame: { ...trueENU(apolloLat, apolloLon), origin: toCartesian(apolloLat, apolloLon, heights.heightAt(apolloLat, apolloLon, true)) }, heightAt: craterRelief };
+    const lower = new LolaTerrainProvider(heights, apolloRelief), ordinary = new LolaTerrainProvider(heights);
+    const apolloDisplay = trueToDisplayLatLon(apolloLat, apolloLon), apolloCarto = C.Cartographic.fromRadians(apolloDisplay.lon, apolloDisplay.lat);
+    const lowerTiles: any[] = [];
+    for (let level = 8; level <= 12; level++) {
+      const point = lower.tilingScheme.positionToTileXY(apolloCarto, level)!;
+      lowerTiles.push(tile(level, point.x, point.y, lowerTiles.at(-1)));
+      if (level < 12) check(!ordinary.getTileDataAvailable(point.x, point.y, level) && lower.getTileDataAvailable(point.x, point.y, level),
+        `Apollo L${level} fixture did not exercise a source made available only by relief`);
+    }
+    const lowerCallbacks = new Set<() => void>();
+    const lowerScene: any = { ...scene, globe: { _surface: { _tilesToRender: [lowerTiles.at(-1)], forEachLoadedTile(fn: (t: any) => void) { lowerTiles.forEach(fn); } } },
+      postRender: { addEventListener(fn: () => void) { lowerCallbacks.add(fn); return () => lowerCallbacks.delete(fn); } } };
+    lower.prepareAhead(lowerScene);
+    for (const ancestor of lowerTiles.slice(0, -1)) check((lower as any).upgrades.has(ancestor)
+      && (lower as any).prepared.has(`${ancestor.level}/${ancestor.x}/${ancestor.y}`),
+    `explicit Apollo L${ancestor.level} relief-only source upgrade did not queue`);
+    lower.setRelief(null);
+    check(lowerCallbacks.size === 0, 'explicit lower-level upgrades retained a listener after exit');
+    for (const job of jobs) job.finish(); await Promise.all(jobs.map(job => job.promise));
+    console.log(JSON.stringify({ refreshLifecycle: 'passed', uploaded, released, workerCalls, cacheLimit: (provider as any).prepared.size }));
+  } finally {
+    provider.setRelief(null); proto.createMesh = original;
+  }
+}
+
 for (const [lat, lon] of [[-89.45, -137.3], [0.674, 23.473]]) {
   await heights.loadTilesAround(lat, lon, 4000);
   const frame = { ...trueENU(lat, lon), origin: toCartesian(lat, lon, heights.heightAt(lat, lon, true)) };
@@ -299,5 +500,6 @@ for (const [lat, lon] of [[-89.45, -137.3], [0.674, 23.473]]) {
   console.log(JSON.stringify({ lat, lon, worstFieldError, worstEdgeError, normalChanges, outsideSphere, outsideBox, awayError, timings, boundaries, lod, budget }));
 }
 
+await checkRefreshLifecycle();
 console.log(failures ? `${failures} CHECK(S) FAILED` : 'ALL CRATER TERRAIN CHECKS PASSED');
 process.exitCode = failures ? 1 : 0;

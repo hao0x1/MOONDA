@@ -49,6 +49,8 @@ const RELIEF_MIN_LEVEL = 12, RELIEF_MAX_LEVEL = 18; // 21 m down to 0.33 m betwe
 function reliefRadius(radius: number, level: number): number {
   return radius / 2 ** Math.max(0, level - RELIEF_MIN_LEVEL);
 }
+
+
 const DETAIL_MIN_LEVEL = 8;
 // MoonHeights switches to the polar maps (80 m, or 240 m when detail is off) south of true -80°.
 const DETAIL_LAT = -80;
@@ -165,25 +167,38 @@ function chordGap(h: Float64Array, nodes: Float64Array, step: number): number {
 /** The field keeps its landing frame; only the area in which we make new fine tiles follows the rover. */
 export interface TerrainRelief {
   centre: { lat: number; lon: number };
+  ahead?: { lat: number; lon: number };
   radius: number;
   frame: { east: Cartesian3; north: Cartesian3; origin: Cartesian3 };
   heightAt(e: number, n: number): number;
+  changed?: () => void;
 }
 
 // These are the small part of Cesium's private tile API needed to refresh terrain without throwing
 // away the already-loaded Moon photos. Kept here so the rest of the app need not know its states.
+interface SurfaceData {
+  terrainState: number; terrainData?: QuantizedMeshTerrainData; mesh?: unknown; renderedMesh?: unknown; vertexArray?: unknown;
+  boundingVolumeSourceTile?: unknown; boundingVolumeIsFromMesh: boolean;
+  fill?: { destroy(): undefined };
+  freeVertexArray(): void;
+}
 interface RefreshTile {
   x: number; y: number; level: number; state: number; renderable: boolean; upsampledFromParent: boolean;
   parent?: RefreshTile;
   clearPositionCache(): void;
-  data?: {
-    terrainState: number; terrainData?: QuantizedMeshTerrainData; mesh?: unknown;
-    boundingVolumeSourceTile?: unknown; boundingVolumeIsFromMesh: boolean;
-    fill?: { destroy(): undefined };
-    freeVertexArray(): void;
-  };
+  data?: SurfaceData;
 }
-interface RefreshSurface { forEachLoadedTile(visit: (tile: RefreshTile) => void): void }
+interface RefreshSurface { forEachLoadedTile(visit: (tile: RefreshTile) => void): void; _tilesToRender?: RefreshTile[] }
+interface PreparedData extends QuantizedMeshTerrainData {
+  _mesh?: unknown;
+  createMesh(options: Record<string, unknown>): Promise<unknown> | undefined;
+}
+interface PreparedTile {
+  key: string; x: number; y: number; level: number; epoch: number; data?: PreparedData; mesh?: unknown;
+  task?: Promise<unknown>; failed?: boolean; retryAt: number;
+}
+interface Upgrade { tile: RefreshTile; old: SurfaceData; oldData?: QuantizedMeshTerrainData; prepared: PreparedTile }
+const PREPARED_LIMIT = 24, UPGRADE_LIMIT = 8, MESH_JOB_LIMIT = 2;
 
 export class LolaTerrainProvider implements TerrainProvider {
   readonly tilingScheme = new GeographicTilingScheme({ ellipsoid: MOON_ELLIPSOID });
@@ -206,6 +221,13 @@ export class LolaTerrainProvider implements TerrainProvider {
   private reliefOnlyData = new WeakSet<QuantizedMeshTerrainData>();
   private physicalData = new WeakSet<QuantizedMeshTerrainData>();
   private removeRefreshListener: (() => void) | undefined;
+  private retireRefresh = new Set<RefreshTile>();
+  private prepared = new Map<string, PreparedTile>();
+  private upgrades = new Map<RefreshTile, Upgrade>();
+  private epoch = 0;
+  private meshJobs = 0;
+  private removePrepareListener: (() => void) | undefined;
+  private prepareRetry: ReturnType<typeof setTimeout> | undefined;
 
   constructor(heights: MoonHeights, relief: TerrainRelief | null = null) {
     this.heights = heights;
@@ -221,6 +243,13 @@ export class LolaTerrainProvider implements TerrainProvider {
 
   /** Called under the black curtain. Existing coarse terrain and photos can stay in memory. */
   setRelief(relief: TerrainRelief | null): void {
+    this.epoch++;
+    this.prepared.clear(); this.upgrades.clear(); this.retireRefresh.clear();
+    this.pendingRefresh.clear();
+    this.removeRefreshListener?.(); this.removeRefreshListener = undefined;
+    this.removePrepareListener?.(); this.removePrepareListener = undefined;
+    if (this.prepareRetry !== undefined) clearTimeout(this.prepareRetry);
+    this.prepareRetry = undefined;
     this.relief = relief;
     this.centreLat = this.centreLon = NaN;
   }
@@ -234,10 +263,12 @@ export class LolaTerrainProvider implements TerrainProvider {
   refreshSceneTiles(scene: Scene, mode: 'changed' | 'moving' = 'moving'): number {
     const surface = (scene.globe as unknown as { _surface?: RefreshSurface })._surface;
     if (!surface) return 0;
+    const protectedTiles = this.protectedTiles(surface);
+    const refine: RefreshTile[] = [];
     const retired = new Set<RefreshTile>();
     if (mode === 'moving' && this.relief) surface.forEachLoadedTile(tile => {
       if (tile.data?.terrainData && this.physicalData.has(tile.data.terrainData)
-        && !this.getTileDataAvailable(tile.x, tile.y, tile.level)) retired.add(tile);
+        && !this.getTileDataAvailable(tile.x, tile.y, tile.level) && !protectedTiles.has(tile)) retired.add(tile);
     });
     surface.forEachLoadedTile(tile => {
       if (tile.level < DETAIL_MIN_LEVEL || !tile.data) return;
@@ -246,24 +277,45 @@ export class LolaTerrainProvider implements TerrainProvider {
       // coarser mesh. Its crater field stays pinned to exactly the same landing coordinates.
       let oldBranch = retired.has(tile);
       for (let parent = tile.parent; !oldBranch && parent && parent.level >= RELIEF_MIN_LEVEL; parent = parent.parent) oldBranch = retired.has(parent);
-      if (oldBranch) { this.pendingRefresh.add(tile); return; }
+      if (oldBranch) { this.pendingRefresh.add(tile); this.retireRefresh.add(tile); return; }
       // An upsample worker can still be running before Cesium sets upsampledFromParent. Its
       // parent's data mask has already chosen that old path, so include unfinished tiles too.
-      const interpolated = tile.upsampledFromParent || tile.data.terrainState !== 6;
+      // Cesium's tile flag also includes imagery: a new photo can make it false while the
+      // terrain is still a cut-up parent. Ask the terrain data itself as well.
+      const terrain = tile.data.terrainData;
+      // A real source can be waiting for a mesh or its draw handle. Do not throw that new work
+      // away just because it has not reached READY yet; only old cut-up or empty data need help.
+      const interpolated = terrain ? terrain.wasCreatedByUpsampling()
+        : tile.upsampledFromParent || tile.data.terrainState !== 6;
       const reliefEdge = tile.level === MAX_LEVEL && (this.reliefSkirtData.has(tile.data.terrainData!)
         || (this.relief && this.reachesRelief(this.tilingScheme.tileXYToRectangle(tile.x, tile.y, tile.level), true)));
       // Away from the polar map, relief also needs real L8–11 ancestors. Return those tiles to
       // their original cut-up meshes on exit; unfinished jobs are included before their data arrives.
       const reliefOnly = this.reliefOnlyData.has(tile.data.terrainData!);
       if (mode === 'changed' && (tile.level >= RELIEF_MIN_LEVEL || reliefEdge || reliefOnly || (interpolated
-        && (tile.data.terrainState !== 6 || this.getTileDataAvailable(tile.x, tile.y, tile.level))))) this.pendingRefresh.add(tile);
-      else if (this.relief && tile.level <= RELIEF_MAX_LEVEL && interpolated
-        && this.getTileDataAvailable(tile.x, tile.y, tile.level)) this.pendingRefresh.add(tile);
+        && (tile.data.terrainState !== 6 || this.getTileDataAvailable(tile.x, tile.y, tile.level))))) {
+        this.pendingRefresh.add(tile); this.retireRefresh.delete(tile);
+      }
+      else if (this.relief && tile.level <= RELIEF_MAX_LEVEL
+        && this.getTileDataAvailable(tile.x, tile.y, tile.level)) {
+        // Cesium may keep drawing an old cut-up descendant and stop advancing its real parent.
+        // Finish that support parent from our prepared mesh instead of leaving it at RECEIVED
+        // or TRANSFORMED for ever. Neither state has a worker that could overwrite the swap.
+        const finishSource = terrain && !terrain.wasCreatedByUpsampling() && protectedTiles.has(tile)
+          && (tile.data.terrainState === 3 || tile.data.terrainState === 5);
+        if (finishSource || (interpolated && tile.data.terrainState === 6 && tile.data.renderedMesh)) refine.push(tile);
+        else if (interpolated && !tile.data.renderedMesh && tile.data.terrainState !== 2 && tile.data.terrainState !== 4) this.pendingRefresh.add(tile);
+      }
     });
-    const refreshed = this.finishRefresh();
+    // Finish the wheel's own chain before spending slots on the surrounding ring. Its parents
+    // still go first, because a cached cut-up parent can hide its real children from Cesium.
+    refine.sort((a, b) => this.roverPriority(a) - this.roverPriority(b) || a.level - b.level);
+    for (const tile of refine) this.queueUpgrade(tile);
+    if (this.upgrades.size) this.ensurePrepare(scene);
+    const refreshed = this.finishRefresh(scene);
     if (this.pendingRefresh.size && !this.removeRefreshListener) {
       this.removeRefreshListener = scene.postRender.addEventListener(() => {
-        if (this.finishRefresh()) scene.requestRender();
+        if (this.finishRefresh(scene)) scene.requestRender();
         if (!this.pendingRefresh.size) { this.removeRefreshListener?.(); this.removeRefreshListener = undefined; }
       });
     }
@@ -271,12 +323,24 @@ export class LolaTerrainProvider implements TerrainProvider {
     return refreshed;
   }
 
-  private finishRefresh(): number {
+  private protectedTiles(surface: RefreshSurface): Set<RefreshTile> {
+    const protectedTiles = new Set<RefreshTile>();
+    for (const drawn of surface._tilesToRender ?? []) for (let tile: RefreshTile | undefined = drawn; tile; tile = tile.parent) protectedTiles.add(tile);
+    return protectedTiles;
+  }
+
+  private finishRefresh(scene: Scene): number {
     let refreshed = 0;
+    const surface = (scene.globe as unknown as { _surface?: RefreshSurface })._surface;
+    const protectedTiles = surface ? this.protectedTiles(surface) : new Set<RefreshTile>();
     for (const tile of this.pendingRefresh) {
       const data = tile.data;
+      if (!data) { this.pendingRefresh.delete(tile); this.retireRefresh.delete(tile); continue; }
+      if (this.retireRefresh.has(tile) && protectedTiles.has(tile)) {
+        this.pendingRefresh.delete(tile); this.retireRefresh.delete(tile); continue;
+      }
       // 2 = receiving, 4 = mesh worker running. All other states have no asynchronous owner.
-      if (!data || data.terrainState === 2 || data.terrainState === 4) continue;
+      if (data.terrainState === 2 || data.terrainState === 4) continue;
       data.freeVertexArray();
       data.fill = data.fill?.destroy();
       data.terrainData = undefined; data.mesh = undefined;
@@ -285,9 +349,200 @@ export class LolaTerrainProvider implements TerrainProvider {
       data.terrainState = this.getTileDataAvailable(tile.x, tile.y, tile.level) ? 1 : 0;
       tile.state = 1; tile.renderable = false; tile.upsampledFromParent = false;
       for (let parent: RefreshTile | undefined = tile; parent; parent = parent.parent) parent.clearPositionCache();
-      this.pendingRefresh.delete(tile); refreshed++;
+      this.pendingRefresh.delete(tile); this.retireRefresh.delete(tile); refreshed++;
     }
     return refreshed;
+  }
+
+  /** Prepare a short path before the wheels reach it. Safe to call about four times a second. */
+  prepareAhead(scene: Scene): void {
+    if (!this.relief) return;
+    this.refreshSceneTiles(scene, 'moving');
+    const surface = (scene.globe as unknown as { _surface?: RefreshSurface })._surface;
+    const ready = new Set<string>();
+    surface?.forEachLoadedTile(tile => {
+      if (tile.data?.terrainState === 6 && tile.data.mesh && tile.data.terrainData
+        && !tile.data.terrainData.wasCreatedByUpsampling()) ready.add(`${tile.level}/${tile.x}/${tile.y}`);
+    });
+    const from = trueToDisplayLatLon(this.relief.centre.lat, this.relief.centre.lon);
+    const end = this.relief.ahead ?? this.relief.centre, to = trueToDisplayLatLon(end.lat, end.lon);
+    const turn = Math.atan2(Math.sin(to.lon - from.lon), Math.cos(to.lon - from.lon));
+    for (const t of [0, 0.5, 1]) {
+      const c = new Cesium.Cartographic(from.lon + turn * t, CMath.lerp(from.lat, to.lat, t));
+      for (let level = DETAIL_MIN_LEVEL; level <= RELIEF_MAX_LEVEL; level++) {
+        const xy = this.tilingScheme.positionToTileXY(c, level);
+        if (!xy) continue;
+        const reach = level === RELIEF_MAX_LEVEL ? 1 : 0;
+        for (let dx = -reach; dx <= reach; dx++) for (let dy = -reach; dy <= reach; dy++) {
+          const x = xy.x + dx, y = xy.y + dy, key = `${level}/${x}/${y}`;
+          if (!ready.has(key) && this.getTileDataAvailable(x, y, level)) this.preparedTile(x, y, level);
+        }
+      }
+    }
+    this.ensurePrepare(scene);
+  }
+
+  private preparedTile(x: number, y: number, level: number): PreparedTile | undefined {
+    const key = `${level}/${x}/${y}`, existing = this.prepared.get(key);
+    if (existing && !existing.failed) return existing;
+    if (existing) this.prepared.delete(key);
+    if (this.prepared.size >= PREPARED_LIMIT) {
+      const used = new Set([...this.upgrades.values()].map(u => u.prepared));
+      const stale = [...this.prepared.values()].filter(p => (!p.task || p.mesh || p.failed) && !used.has(p))
+        .sort((a, b) => this.roverPriority(b) - this.roverPriority(a))[0];
+      if (!stale) return undefined;
+      this.prepared.delete(stale.key);
+    }
+    const entry: PreparedTile = { key, x, y, level, epoch: this.epoch, retryAt: 0 };
+    this.prepared.set(key, entry);
+    return entry;
+  }
+
+  private queueUpgrade(tile: RefreshTile): void {
+    if (this.upgrades.has(tile) || this.upgrades.size >= UPGRADE_LIMIT || !tile.data) return;
+    const prepared = this.preparedTile(tile.x, tile.y, tile.level);
+    if (prepared) this.upgrades.set(tile, { tile, old: tile.data, oldData: tile.data.terrainData, prepared });
+  }
+
+  private ensurePrepare(scene: Scene): void {
+    if (!this.removePrepareListener) this.removePrepareListener = scene.postRender.addEventListener(() => this.prepareWork(scene));
+    scene.requestRender();
+  }
+
+  /** The current wheel patch comes before a prediction or the distant edge ring. */
+  private roverPriority(tile: { x: number; y: number; level: number }): number {
+    if (!this.relief) return 2;
+    const c = trueToDisplayLatLon(this.relief.centre.lat, this.relief.centre.lon);
+    const rect = this.tilingScheme.tileXYToRectangle(tile.x, tile.y, tile.level);
+    const insideLon = [c.lon, c.lon - 2 * Math.PI, c.lon + 2 * Math.PI].some(lon => lon >= rect.west && lon <= rect.east);
+    const latGap = Math.max(0, rect.south - c.lat, c.lat - rect.north);
+    const lonGap = insideLon ? 0 : Math.min(Math.abs(Math.atan2(Math.sin(c.lon - rect.west), Math.cos(c.lon - rect.west))),
+      Math.abs(Math.atan2(Math.sin(c.lon - rect.east), Math.cos(c.lon - rect.east))));
+    if (latGap === 0 && lonGap === 0) return 0;
+    return Math.hypot(latGap, lonGap * Math.cos(c.lat)) * R <= 2 ? 1 : 2;
+  }
+
+  private prepareWork(scene: Scene): void {
+    if (!this.relief) return;
+    const deadline = performance.now() + 2;
+    let swapped = false;
+    for (const [tile, upgrade] of this.upgrades) {
+      const p = upgrade.prepared, data = tile.data;
+      if (p.epoch !== this.epoch || p.failed || data !== upgrade.old || data?.terrainData !== upgrade.oldData) {
+        this.upgrades.delete(tile); continue;
+      }
+      if (!this.getTileDataAvailable(tile.x, tile.y, tile.level)) {
+        // A turn can make yesterday's prediction obsolete while its worker is still running.
+        // Keep the old drawn mesh instead of installing extra detail outside the new path.
+        this.upgrades.delete(tile); this.prepared.delete(p.key); continue;
+      }
+      if (!p.mesh || !p.data || ![3, 5, 6].includes(data.terrainState)) continue;
+      const maker = Object.getPrototypeOf(data).constructor as {
+        _createVertexArrayForMesh(context: unknown, mesh: unknown): unknown;
+      };
+      // The replacement exists before the old draw resource is released. Doing this after the
+      // frame also keeps the mesh read by physics paired with the vertex array that was drawn.
+      const vertexArray = maker._createVertexArrayForMesh((scene as unknown as { context: unknown }).context, p.mesh);
+      data.freeVertexArray(); data.fill = data.fill?.destroy();
+      data.vertexArray = vertexArray; data.mesh = p.mesh; data.terrainData = p.data;
+      data.terrainState = 6;
+      data.boundingVolumeSourceTile = undefined; data.boundingVolumeIsFromMesh = false;
+      tile.renderable = true; tile.state = 1; tile.upsampledFromParent = false;
+      this.resetOldCuts(scene, tile);
+      for (let parent: RefreshTile | undefined = tile; parent; parent = parent.parent) parent.clearPositionCache();
+      this.upgrades.delete(tile); this.prepared.delete(p.key);
+      swapped = true;
+      this.relief.changed?.(); scene.requestRender();
+      if (performance.now() >= deadline) break;
+    }
+    // A parent swap exposes more old cuts. Pick those up now rather than add a 250 ms wait at
+    // every level of the cold Apollo chain. Keep this outside the upgrades Map iteration.
+    if (swapped) this.refreshSceneTiles(scene, 'moving');
+    if (performance.now() >= deadline) { scene.requestRender(); return; }
+    const urgent = new Set([...this.upgrades.values()].map(u => u.prepared));
+    // Have the wheel patch ready before its source is first visited. Preparing the whole cold
+    // L8–17 chain first made Apollo wait ten extra frame turns for its finest mesh. This changes
+    // mesh dispatch only; the parent-first upgrade queue and the two-worker cap stay the same.
+    const work = [...this.prepared.values()].filter(p => p.epoch === this.epoch && !p.failed && !p.mesh)
+      .map(p => ({ p, priority: this.roverPriority(p) }))
+      .sort((a, b) => Number(b.p.level === RELIEF_MAX_LEVEL && b.priority < 2) - Number(a.p.level === RELIEF_MAX_LEVEL && a.priority < 2)
+        || a.priority - b.priority || Number(urgent.has(b.p)) - Number(urgent.has(a.p)) || a.p.level - b.p.level)
+      .map(({ p }) => p);
+    let starts = 0;
+    for (const p of work) {
+      if (p.task || p.retryAt > performance.now()) continue;
+      // A quick first grid should not leave the second worker idle for a whole frame. Tile
+      // builds cannot be interrupted, so check the slice before each additional start.
+      if (starts >= MESH_JOB_LIMIT || this.meshJobs >= MESH_JOB_LIMIT || performance.now() >= deadline) break;
+      starts++;
+      if (!p.data) {
+        const data = this.buildTileData(p.x, p.y, p.level);
+        if (!data) { p.retryAt = performance.now() + 200; continue; }
+        p.data = data as PreparedData;
+        const original = p.data.createMesh.bind(p.data);
+        // Cesium frees the raw arrays after createMesh. A warmed tile can be requested again by
+        // its normal loader, so return the same ready mesh or task instead of building it twice.
+        p.data.createMesh = options => {
+          if (p.data?._mesh) return Promise.resolve(p.data._mesh);
+          if (p.task) return p.task;
+          if (this.meshJobs >= MESH_JOB_LIMIT) return undefined;
+          const task = original({ ...options, throttle: false });
+          if (!task) return undefined;
+          this.meshJobs++;
+          p.task = Promise.resolve(task).then(mesh => {
+            if (p.epoch === this.epoch) p.mesh = mesh;
+            return mesh;
+          }, error => { p.failed = true; throw error; }).finally(() => {
+            this.meshJobs--; if (p.epoch === this.epoch) scene.requestRender();
+          });
+          return p.task;
+        };
+      }
+      if (this.meshJobs < MESH_JOB_LIMIT) {
+        const task = p.data.createMesh({ tilingScheme: this.tilingScheme, x: p.x, y: p.y, level: p.level, throttle: false });
+        void task?.catch(() => { /* keep the old mesh; a later pass can try again */ });
+      }
+      scene.requestRender();
+    }
+    if (work.length && !this.prepareRetry && work.some(p => !p.task && p.retryAt > performance.now())) {
+      const epoch = this.epoch;
+      this.prepareRetry = setTimeout(() => {
+        this.prepareRetry = undefined;
+        if (epoch === this.epoch && this.relief && !scene.isDestroyed()) scene.requestRender();
+      }, 210);
+    }
+  }
+
+  private resetOldCuts(scene: Scene, source: RefreshTile): void {
+    const surface = (scene.globe as unknown as { _surface?: RefreshSurface })._surface;
+    surface?.forEachLoadedTile(tile => {
+      if (tile === source || !tile.data) return;
+      const old = tile.data;
+      if (old.terrainData && !old.terrainData.wasCreatedByUpsampling()) return;
+      let ancestor = tile.parent;
+      while (ancestor && ancestor !== source) {
+        if (ancestor.data?.terrainData && !ancestor.data.terrainData.wasCreatedByUpsampling()) return;
+        ancestor = ancestor.parent;
+      }
+      if (ancestor !== source) return;
+      const Constructor = Object.getPrototypeOf(old).constructor as new () => SurfaceData;
+      const fresh = new Constructor();
+      const a = old as unknown as Record<string, unknown>, b = fresh as unknown as Record<string, unknown>;
+      // The bounding region is NOT carried over. A new surface object starts with its horizon point
+      // at (0, 0, 0), which Cesium reads as "behind the Moon", and only works the point out again
+      // when it has to rebuild the region. With the old region copied in, a tile waiting to be cut
+      // from its parent kept the zero point, was culled, and a culled tile is never loaded: a hole
+      // in the far ground that showed the stars (Tycho's floor seen from its wall).
+      for (const key of ['imagery', 'waterMaskTexture', 'waterMaskTranslationAndScale', 'vectorData', 'clippingPolygonData', 'isClipped', 'clippedByBoundaries']) b[key] = a[key];
+      // Old worker promises close over `old`, not the new surface object. They can finish safely
+      // without putting an obsolete cut-up mesh back under the wheels after this replacement.
+      a.imagery = []; a.waterMaskTexture = a.vectorData = a.clippingPolygonData = undefined;
+      old.freeVertexArray(); old.fill = old.fill?.destroy();
+      fresh.terrainState = this.getTileDataAvailable(tile.x, tile.y, tile.level) ? 1 : 0;
+      tile.data = fresh; tile.state = 1; tile.renderable = false; tile.upsampledFromParent = false;
+      tile.clearPositionCache();
+      this.pendingRefresh.delete(tile); this.retireRefresh.delete(tile); this.upgrades.delete(tile);
+    });
   }
 
   /** Exact nearest distance from the moving centre to a display-frame spherical rectangle. */
@@ -304,11 +559,35 @@ export class LolaTerrainProvider implements TerrainProvider {
     const south = Math.max(-Math.PI / 2, rect.south - growLat), north = Math.min(Math.PI / 2, rect.north + growLat);
     const west = rect.west - growLon, east = rect.east + growLon;
     const wrapDistance = (a: number) => Math.abs(Math.atan2(Math.sin(a), Math.cos(a)));
-    const insideLon = [c.lon, c.lon - 2 * Math.PI, c.lon + 2 * Math.PI].some(lon => lon >= west && lon <= east);
-    const dLon = insideLon ? 0 : Math.min(wrapDistance(c.lon - west), wrapDistance(c.lon - east));
-    const sl = Math.sin(c.lat), cl = Math.cos(c.lat), cd = Math.cos(dLon);
-    const nearestLat = Math.max(south, Math.min(north, Math.atan2(sl, cl * cd)));
-    return sl * Math.sin(nearestLat) + cl * Math.cos(nearestLat) * cd >= Math.cos(reliefRadius(relief.radius, level) / R);
+    const closest = (sl: number, cl: number, lon: number) => {
+      const inside = [lon, lon - 2 * Math.PI, lon + 2 * Math.PI].some(v => v >= west && v <= east);
+      const dLon = inside ? 0 : Math.min(wrapDistance(lon - west), wrapDistance(lon - east)), cd = Math.cos(dLon);
+      const nearestLat = Math.max(south, Math.min(north, Math.atan2(sl, cl * cd)));
+      return sl * Math.sin(nearestLat) + cl * Math.cos(nearestLat) * cd;
+    };
+    const sl = Math.sin(c.lat), cl = Math.cos(c.lat), radius = reliefRadius(relief.radius, level);
+    const atStart = closest(sl, cl, c.lon);
+    if (atStart >= Math.cos(radius / R)) return true;
+    if (!relief.ahead) return false;
+    const a = trueToDisplayLatLon(relief.ahead.lat, relief.ahead.lon), ac = Math.cos(a.lat);
+    const x0 = cl * Math.cos(c.lon), y0 = cl * Math.sin(c.lon), z0 = sl;
+    const x1 = ac * Math.cos(a.lon), y1 = ac * Math.sin(a.lon), z1 = Math.sin(a.lat);
+    const lead = 2 * R * Math.asin(Math.min(1, Math.hypot(x1 - x0, y1 - y0, z1 - z0) / 2));
+    // A teleport is not a prediction. Keep lookahead bounded even if a caller hands us an old pose.
+    if (lead < 0.05 || lead > 40 || atStart < Math.cos((radius + lead + 0.1) / R)) return false;
+    const along = (t: number) => {
+      const x = CMath.lerp(x0, x1, t), y = CMath.lerp(y0, y1, t), z = CMath.lerp(z0, z1, t), inv = 1 / Math.hypot(x, y, z);
+      return closest(z * inv, Math.hypot(x, y) * inv, Math.atan2(y, x));
+    };
+    if (along(1) >= Math.cos(radius / R)) return true;
+    // Distance to this short spherical segment is unimodal. Its 5 cm allowance covers the
+    // search's final interval; no extra ground is added when the rover is standing still.
+    let lo = 0, hi = 1;
+    for (let i = 0; i < 16; i++) {
+      const p = (2 * lo + hi) / 3, q = (lo + 2 * hi) / 3;
+      if (along(p) > along(q)) hi = q; else lo = p;
+    }
+    return along((lo + hi) / 2) >= Math.cos((radius + 0.05) / R);
   }
 
   /**
@@ -339,13 +618,23 @@ export class LolaTerrainProvider implements TerrainProvider {
    * or the 80 m map files this tile reads, are still downloading.
    */
   requestTileGeometry(x: number, y: number, level: number): Promise<QuantizedMeshTerrainData> | undefined {
+    const key = `${level}/${x}/${y}`, prepared = this.prepared.get(key);
+    if (prepared?.data && prepared.epoch === this.epoch && !prepared.failed) {
+      this.prepared.delete(key);
+      return Promise.resolve(prepared.data);
+    }
+    const data = this.buildTileData(x, y, level);
+    return data ? Promise.resolve(data) : undefined;
+  }
+
+  private buildTileData(x: number, y: number, level: number): QuantizedMeshTerrainData | undefined {
     if (!this.heights.global || !this.heights.overview) return undefined;
     const rect = this.tilingScheme.tileXYToRectangle(x, y, level);
     // A queued tile may be built after the rover has moved away. Its data must still agree with
     // its neighbours, so an active surface provider always uses the same LOLA source at this level.
     const detail = level >= DETAIL_MIN_LEVEL && (!!this.relief || this.getTileDataAvailable(x, y, level));
     if (detail && !this.detailFilesReady(`${level}/${x}/${y}`, rect)) return undefined;
-    return Promise.resolve(this.build(x, y, level, rect, detail));
+    return this.build(x, y, level, rect, detail);
   }
 
   /** True when every 80 m map file the tile reads is in memory; otherwise starts the download (once). */
@@ -486,17 +775,18 @@ export class LolaTerrainProvider implements TerrainProvider {
       if (this.getTileDataAvailable(2 * x + 1, 2 * y, level + 1)) childTileMask |= 8;
     }
 
-    // 6. Skirts sized from the data (see skirtHeight). If only some children are available, Cesium
-    // cuts this mesh along its middle lines for the others, and those pieces get half of our shortest
-    // skirt along the cut, right next to a real child tile. So every skirt is at least twice the
-    // largest step between our straight middle lines and the ground halfway between their vertices
-    // (exactly what the real child draws there). Such tiles never reach the 80 m map (a sibling of a
-    // tile that does is in its ring), so those middle lines lie on the global map at both levels.
+    // 6. Skirts sized from the data (see skirtHeight). Cesium's cut children get half of our
+    // shortest skirt along their middle edges. A cached cut can remain next to a genuine child
+    // even when all children are now available, or when a moving ring changed an old mask of 0.
+    // While the surface is open, measure these inner gaps for every local source parent rather
+    // than trust its child mask. The plain map keeps its established partial-mask rule.
     // Even if all our own children are cut up, a neighbouring parent's child can have real data.
     // Our outer skirts must therefore sample that finer field too.
     const finerRelief = level + 1 >= RELIEF_MIN_LEVEL && level < RELIEF_MAX_LEVEL
       && (level >= RELIEF_MIN_LEVEL || this.reachesRelief(rect, true)) ? this.relief : null;
-    const split = childTileMask !== 0 && childTileMask !== 15 ? 2 * this.middleStep(rect, detail, finerRelief) : 0;
+    const canKeepCuts = !!this.relief && level >= DETAIL_MIN_LEVEL && level < RELIEF_MAX_LEVEL;
+    const split = canKeepCuts || (childTileMask !== 0 && childTileMask !== 15)
+      ? 2 * this.middleStep(rect, detail, finerRelief) : 0;
     const nearDetailMap = minTrueLat < DETAIL_LAT;
     // The ring guarantees a cut-up neighbour has a real direct parent. Its middle samples above
     // therefore measure that gap exactly: a full-depth curtain on every fine tile is unnecessary
@@ -616,4 +906,230 @@ export class LolaTerrainProvider implements TerrainProvider {
     const pad = this.relief && level >= RELIEF_MIN_LEVEL ? 0.02 + 0.008 * spacing : 1;
     return Math.max(coarse, bump, guess, floor) + range / MAX_Q + pad;
   }
+}
+
+/** The small part of a selected Cesium surface needed by the exact source-grid pick. */
+export interface RegularSourceSurface {
+  mesh?: unknown; renderedMesh?: unknown;
+  terrainData?: { wasCreatedByUpsampling?(): boolean };
+}
+interface RegularSourceMesh {
+  vertices: Float32Array; indices: ArrayLike<number>;
+  vertexCountWithoutSkirts: number; indexCountWithoutSkirts: number;
+  encoding: { getExaggeratedPosition(vertices: Float32Array, index: number, result: Cartesian3): Cartesian3 };
+}
+const gridPickChecked = new WeakMap<object, boolean>();
+const gridPickVertices = Array.from({ length: 16 }, () => new Cartesian3());
+const gridPickRadial = new Cartesian3(), gridPickCross = new Cartesian3();
+const gridRayTriangle = (Cesium.IntersectionTests as unknown as {
+  rayTriangleParametric(ray: Cesium.Ray, a: Cartesian3, b: Cartesian3, c: Cartesian3, cull: boolean): number | undefined;
+}).rayTriangleParametric;
+
+/**
+ * Exact top-down triangle pick for this provider's genuine 65 x 65 grids. Cuts, fill, tile edges
+ * and polar cells use Cesium's normal picker instead. Undefined always means "use that picker".
+ * Cesium's decoder already returns world positions, including exaggeration: never add mesh.center.
+ */
+export function pickRegularSourceGrid(surface: RegularSourceSurface, rectangle: Rectangle, level: number,
+  place: Cesium.Cartographic, ray: Cesium.Ray, result: Cartesian3): Cartesian3 | undefined {
+  const raw = surface.mesh;
+  if (!raw || typeof raw !== 'object' || raw !== surface.renderedMesh || level < DETAIL_MIN_LEVEL
+    || Math.abs(place.latitude) >= 80 * DEG || rectangle.east <= rectangle.west
+    || typeof surface.terrainData?.wasCreatedByUpsampling !== 'function' || surface.terrainData.wasCreatedByUpsampling()) return undefined;
+  const mesh = raw as RegularSourceMesh;
+  if (mesh.vertexCountWithoutSkirts !== N * N || mesh.indexCountWithoutSkirts !== INDICES.length
+    || !mesh.vertices || !mesh.indices || mesh.indices.length < INDICES.length
+    || typeof mesh.encoding?.getExaggeratedPosition !== 'function') return undefined;
+  // The worker keeps our grid order. Check it once so another provider's coincidentally equal
+  // vertex count cannot turn this into a guess about which triangles it draws.
+  let regular = gridPickChecked.get(raw);
+  if (regular === undefined) {
+    regular = true;
+    for (let i = 0; i < INDICES.length; i++) if (mesh.indices[i] !== INDICES[i]) { regular = false; break; }
+    gridPickChecked.set(raw, regular);
+  }
+  if (!regular) return undefined;
+  const u = (place.longitude - rectangle.west) / (rectangle.east - rectangle.west);
+  const v = (place.latitude - rectangle.south) / (rectangle.north - rectangle.south);
+  if (!(u > 0 && u < 1 && v > 0 && v < 1)) return undefined;
+  let col = Math.floor(u * (N - 1)), row = Math.floor(v * (N - 1));
+  while (col > 0 && u < Q[col] / MAX_Q) col--;
+  while (col < N - 2 && u >= Q[col + 1] / MAX_Q) col++;
+  while (row > 0 && v < Q[row] / MAX_Q) row--;
+  while (row < N - 2 && v >= Q[row + 1] / MAX_Q) row++;
+  if (col < 1 || col > N - 3 || row < 1 || row > N - 3) return undefined;
+  // This helper is for the radial rays used to seat the rover and rocks, never camera rays.
+  const cl = Math.cos(place.latitude);
+  Cartesian3.fromElements(cl * Math.cos(place.longitude), cl * Math.sin(place.longitude), Math.sin(place.latitude), gridPickRadial);
+  const directionLength = Cartesian3.magnitude(ray.direction);
+  if (!(directionLength > 0) || Cartesian3.dot(ray.direction, gridPickRadial) >= 0
+    || Cartesian3.magnitude(Cartesian3.cross(ray.direction, gridPickRadial, gridPickCross)) > directionLength * 1e-12
+    || Cartesian3.magnitude(Cartesian3.cross(ray.origin, gridPickRadial, gridPickCross)) > 1e-5) return undefined;
+  // Position compression and spherical chords can cross a UV cell boundary. Its eight neighbours
+  // keep the candidate set conservative; the intersections themselves use the exact drawn vertices.
+  for (let y = 0; y < 4; y++) for (let x = 0; x < 4; x++) {
+    mesh.encoding.getExaggeratedPosition(mesh.vertices, (row - 1 + y) * N + col - 1 + x, gridPickVertices[y * 4 + x]);
+  }
+  let closest = Infinity;
+  for (let y = 0; y < 3; y++) for (let x = 0; x < 3; x++) {
+    const sw = y * 4 + x, se = sw + 1, nw = sw + 4, ne = nw + 1;
+    const a = gridRayTriangle(ray, gridPickVertices[sw], gridPickVertices[se], gridPickVertices[ne], false);
+    const b = gridRayTriangle(ray, gridPickVertices[sw], gridPickVertices[ne], gridPickVertices[nw], false);
+    if (a !== undefined && a >= 0) closest = Math.min(closest, a);
+    if (b !== undefined && b >= 0) closest = Math.min(closest, b);
+  }
+  return Number.isFinite(closest) ? Cesium.Ray.getPoint(ray, closest, result) : undefined;
+}
+
+interface BinnedPickMesh extends RegularSourceMesh {
+  encoding: RegularSourceMesh['encoding'] & {
+    stride: number; exaggeration?: number; exaggerationRelativeHeight?: number;
+  };
+}
+interface BinnedPickCache {
+  positions: Float64Array; offsets: Uint32Array; triangles: Uint32Array; seen: Uint32Array; stamp: number;
+}
+interface BinnedPickEntry {
+  vertices: Float32Array; indices: ArrayLike<number>; encoding: BinnedPickMesh['encoding'];
+  stride: number; exaggeration: number | undefined; relativeHeight: number | undefined;
+  west: number; south: number; east: number; north: number; cache?: BinnedPickCache;
+}
+const BIN_SIDE = 16, BIN_COUNT = BIN_SIDE * BIN_SIDE, BIN_PAD = 1e-12;
+const binnedPicks = new WeakMap<object, BinnedPickEntry>();
+const binPickPosition = new Cartesian3(), binPickRadial = new Cartesian3(), binPickCross = new Cartesian3();
+const binPickA = new Cartesian3(), binPickB = new Cartesian3(), binPickC = new Cartesian3();
+function pickBin(fraction: number): number { return Math.max(0, Math.min(BIN_SIDE - 1, Math.floor(fraction * BIN_SIDE))); }
+
+/** Actual latitude extremum along a straight world-space triangle edge, when it lies inside it. */
+function edgeLatitude(positions: Float64Array, i: number, j: number): number | undefined {
+  // One common scale preserves the straight edge even when its endpoint heights differ.
+  const ax = positions[i] / R, ay = positions[i + 1] / R, az = positions[i + 2] / R;
+  const dx = (positions[j] - positions[i]) / R, dy = (positions[j + 1] - positions[i + 1]) / R;
+  const dz = (positions[j + 2] - positions[i + 2]) / R;
+  const aa = ax * ax + ay * ay + az * az, ad = ax * dx + ay * dy + az * dz;
+  const dd = dx * dx + dy * dy + dz * dz, denominator = dz * ad - az * dd;
+  if (denominator === 0) return undefined;
+  const t = (az * ad - dz * aa) / denominator;
+  if (!(t > 0 && t < 1)) return undefined;
+  return Math.atan2(az + t * dz, Math.hypot(ax + t * dx, ay + t * dy));
+}
+
+function makeBinnedPick(mesh: BinnedPickMesh, rectangle: Rectangle): BinnedPickCache | undefined {
+  const { vertices, indices, encoding } = mesh;
+  const stride = encoding.stride, count = vertices.length / stride, triangleCount = indices.length / 3;
+  // Keep a first pick bounded. Larger or unfamiliar meshes retain Cesium's picker.
+  if (!Number.isInteger(stride) || stride < 3 || stride > 32 || !Number.isInteger(count) || count < 3 || count > 10_000
+    || !Number.isInteger(triangleCount) || triangleCount < 1 || triangleCount > 20_000
+    || !Number.isInteger(mesh.vertexCountWithoutSkirts) || mesh.vertexCountWithoutSkirts < 3 || mesh.vertexCountWithoutSkirts > count
+    || !Number.isInteger(mesh.indexCountWithoutSkirts) || mesh.indexCountWithoutSkirts < 3
+    || mesh.indexCountWithoutSkirts > indices.length || mesh.indexCountWithoutSkirts % 3 !== 0) return undefined;
+  const positions = new Float64Array(count * 3), longitudes = new Float64Array(count), latitudes = new Float64Array(count);
+  const width = rectangle.east - rectangle.west, height = rectangle.north - rectangle.south;
+  const middle = (rectangle.west + rectangle.east) / 2, turn = Math.PI * 2;
+  for (let i = 0; i < count; i++) {
+    encoding.getExaggeratedPosition(vertices, i, binPickPosition);
+    const { x, y, z } = binPickPosition, radius = Math.hypot(x, y, z);
+    let longitude = Math.atan2(y, x);
+    longitude += turn * Math.round((middle - longitude) / turn);
+    const latitude = Math.atan2(z, Math.hypot(x, y));
+    // This small non-polar cone excludes the poles and the origin. A triangle's radial image
+    // therefore has longitude extrema at vertices and latitude extrema on its three edges.
+    if (!Number.isFinite(radius) || radius < R / 2 || radius > R * 2
+      || Math.abs(longitude - middle) > 0.03 || Math.abs(latitude) >= 81 * DEG) return undefined;
+    positions[i * 3] = x; positions[i * 3 + 1] = y; positions[i * 3 + 2] = z;
+    longitudes[i] = longitude; latitudes[i] = latitude;
+  }
+  const counts = new Uint32Array(BIN_COUNT), ranges = new Uint8Array(triangleCount * 4);
+  let references = 0;
+  for (let triangle = 0; triangle < triangleCount; triangle++) {
+    const at = triangle * 3, a = indices[at], b = indices[at + 1], c = indices[at + 2];
+    if (!Number.isInteger(a) || !Number.isInteger(b) || !Number.isInteger(c)
+      || a < 0 || b < 0 || c < 0 || a >= count || b >= count || c >= count) return undefined;
+    const minLon = Math.min(longitudes[a], longitudes[b], longitudes[c]) - BIN_PAD;
+    const maxLon = Math.max(longitudes[a], longitudes[b], longitudes[c]) + BIN_PAD;
+    let minLat = Math.min(latitudes[a], latitudes[b], latitudes[c]);
+    let maxLat = Math.max(latitudes[a], latitudes[b], latitudes[c]);
+    const ab = edgeLatitude(positions, a * 3, b * 3), bc = edgeLatitude(positions, b * 3, c * 3);
+    const ca = edgeLatitude(positions, c * 3, a * 3);
+    if (ab !== undefined) { minLat = Math.min(minLat, ab); maxLat = Math.max(maxLat, ab); }
+    if (bc !== undefined) { minLat = Math.min(minLat, bc); maxLat = Math.max(maxLat, bc); }
+    if (ca !== undefined) { minLat = Math.min(minLat, ca); maxLat = Math.max(maxLat, ca); }
+    const x0 = pickBin((minLon - rectangle.west) / width), x1 = pickBin((maxLon - rectangle.west) / width);
+    const y0 = pickBin((minLat - BIN_PAD - rectangle.south) / height), y1 = pickBin((maxLat + BIN_PAD - rectangle.south) / height);
+    const offset = triangle * 4;
+    ranges[offset] = x0; ranges[offset + 1] = x1; ranges[offset + 2] = y0; ranges[offset + 3] = y1;
+    references += (x1 - x0 + 1) * (y1 - y0 + 1);
+    if (references > 200_000) return undefined;
+    for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) counts[y * BIN_SIDE + x]++;
+  }
+  const offsets = new Uint32Array(BIN_COUNT + 1), triangles = new Uint32Array(references);
+  for (let i = 0; i < BIN_COUNT; i++) offsets[i + 1] = offsets[i] + counts[i];
+  counts.set(offsets.subarray(0, BIN_COUNT));
+  for (let triangle = 0; triangle < triangleCount; triangle++) {
+    const offset = triangle * 4;
+    for (let y = ranges[offset + 2]; y <= ranges[offset + 3]; y++) for (let x = ranges[offset]; x <= ranges[offset + 1]; x++) {
+      triangles[counts[y * BIN_SIDE + x]++] = triangle;
+    }
+  }
+  return { positions, offsets, triangles, seen: new Uint32Array(triangleCount), stamp: 0 };
+}
+
+/**
+ * Exact radial pick for source or cut terrain, including skirts. Bounds come from the decoded
+ * world triangles, rather than their texture coordinates: compression and spherical chords cannot
+ * move a hit outside its bin. The cache is weak and is rebuilt when Cesium replaces its buffers or
+ * changes exaggeration. Fill, oblique rays and unsupported geometry keep Cesium's normal picker.
+ */
+export function pickBinnedTerrain(surface: RegularSourceSurface, rectangle: Rectangle, level: number,
+  place: Cesium.Cartographic, ray: Cesium.Ray, result: Cartesian3): Cartesian3 | undefined {
+  const raw = surface.mesh, width = rectangle.east - rectangle.west, height = rectangle.north - rectangle.south;
+  if (!raw || typeof raw !== 'object' || raw !== surface.renderedMesh || !Number.isInteger(level) || level < GLOBAL_MAX_LEVEL || level > 24
+    || !(width > 0 && width < 0.025 && height > 0 && height < 0.025) || Math.abs(place.latitude) >= 80 * DEG
+    || typeof surface.terrainData?.wasCreatedByUpsampling !== 'function') return undefined;
+  const mesh = raw as BinnedPickMesh;
+  if (!(mesh.vertices instanceof Float32Array) || !mesh.indices || typeof mesh.encoding?.getExaggeratedPosition !== 'function') return undefined;
+  const u = (place.longitude - rectangle.west) / width, v = (place.latitude - rectangle.south) / height;
+  // The small outer band also admits the real outward skirts; more distant queries use Cesium.
+  if (!(u >= -0.01 && u <= 1.01 && v >= -0.01 && v <= 1.01)) return undefined;
+  const cl = Math.cos(place.latitude);
+  Cartesian3.fromElements(cl * Math.cos(place.longitude), cl * Math.sin(place.longitude), Math.sin(place.latitude), binPickRadial);
+  const directionLength = Cartesian3.magnitude(ray.direction);
+  if (!(directionLength > 0) || Cartesian3.dot(ray.direction, binPickRadial) >= 0
+    || Cartesian3.magnitude(Cartesian3.cross(ray.direction, binPickRadial, binPickCross)) > directionLength * 1e-12
+    || Cartesian3.magnitude(Cartesian3.cross(ray.origin, binPickRadial, binPickCross)) > 1e-5) return undefined;
+  let entry = binnedPicks.get(raw);
+  if (!entry || entry.vertices !== mesh.vertices || entry.indices !== mesh.indices || entry.encoding !== mesh.encoding
+    || entry.stride !== mesh.encoding.stride
+    || entry.exaggeration !== mesh.encoding.exaggeration || entry.relativeHeight !== mesh.encoding.exaggerationRelativeHeight
+    || entry.west !== rectangle.west || entry.south !== rectangle.south || entry.east !== rectangle.east || entry.north !== rectangle.north) {
+    entry = { vertices: mesh.vertices, indices: mesh.indices, encoding: mesh.encoding, stride: mesh.encoding.stride,
+      exaggeration: mesh.encoding.exaggeration, relativeHeight: mesh.encoding.exaggerationRelativeHeight,
+      west: rectangle.west, south: rectangle.south, east: rectangle.east, north: rectangle.north,
+      cache: makeBinnedPick(mesh, rectangle) };
+    binnedPicks.set(raw, entry);
+  }
+  const cache = entry.cache;
+  if (!cache) return undefined;
+  const { positions, offsets, triangles, seen } = cache, x = pickBin(u), y = pickBin(v);
+  if (++cache.stamp === 0x1_0000_0000) { seen.fill(0); cache.stamp = 1; }
+  let closest = Infinity;
+  // Neighbour bins absorb roundoff at a bound; every test still uses Cesium's actual world
+  // triangle intersection and the nearest non-negative result, exactly like its full scan.
+  for (let by = Math.max(0, y - 1); by <= Math.min(BIN_SIDE - 1, y + 1); by++) {
+    for (let bx = Math.max(0, x - 1); bx <= Math.min(BIN_SIDE - 1, x + 1); bx++) {
+      const bin = by * BIN_SIDE + bx;
+      for (let j = offsets[bin]; j < offsets[bin + 1]; j++) {
+        const triangle = triangles[j];
+        if (seen[triangle] === cache.stamp) continue;
+        seen[triangle] = cache.stamp;
+        const at = triangle * 3, a = mesh.indices[at] * 3, b = mesh.indices[at + 1] * 3, c = mesh.indices[at + 2] * 3;
+        Cartesian3.fromElements(positions[a], positions[a + 1], positions[a + 2], binPickA);
+        Cartesian3.fromElements(positions[b], positions[b + 1], positions[b + 2], binPickB);
+        Cartesian3.fromElements(positions[c], positions[c + 1], positions[c + 2], binPickC);
+        const hit = gridRayTriangle(ray, binPickA, binPickB, binPickC, false);
+        if (hit !== undefined && hit >= 0) closest = Math.min(closest, hit);
+      }
+    }
+  }
+  return Number.isFinite(closest) ? Cesium.Ray.getPoint(ray, closest, result) : undefined;
 }

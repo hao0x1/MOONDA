@@ -2,6 +2,8 @@
 [build]
   publish = "dist"
   functions = "netlify/functions"
+  # /api/ai is answered at the edge (no 30 s cut on a streaming answer); the function is the fallback
+  edge_functions = "netlify/edge-functions"
 
 [functions]
   node_bundler = "esbuild"

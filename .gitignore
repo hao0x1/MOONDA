@@ -22,3 +22,7 @@ assets-codex/features/downloads/
 assets-codex/quickmap-input/
 shots/
 chrome-profile/
+
+# One person's editor settings, and the output of browser checks run without --out
+.vscode/
+scratchpad/

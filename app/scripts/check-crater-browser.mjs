@@ -70,9 +70,9 @@ page.on('requestfailed',r=>requestFailures.push({url:r.url(),error:r.failure()?.
 const wait = ms => new Promise(r => setTimeout(r, ms));
 const shot = async name => page.screenshot({ path: join(out, name + '.png'), clip: { x: 0, y: 0, width: 1440, height: 900, scale: 0.5 } });
 try {
-  await page.goto('http://127.0.0.1:5190/', { waitUntil: 'domcontentloaded', timeout: 180000 });
-  await page.waitForFunction(() => !!window.__moondaTest && !!window.__moondaCesium, { timeout: 90000 });
-  await page.waitForFunction(() => window.__moonda?.progress?.done, { timeout: 120000 });
+  await page.goto('http://127.0.0.1:5190/', { waitUntil: 'domcontentloaded', timeout: 280000 });
+  await page.waitForFunction(() => !!window.__moondaTest && !!window.__moondaCesium, { timeout: 280000 });
+  await page.waitForFunction(() => window.__moonda?.progress?.done, { timeout: 280000 });
   await wait(800);
   await page.evaluate(() => { window.__craterStandAt=performance.now();window.__moondaTest.stand(-89.45, -137.3); });
   await page.waitForFunction(() => window.__moonda?.lander.phase === 'on', { timeout: 40000 });

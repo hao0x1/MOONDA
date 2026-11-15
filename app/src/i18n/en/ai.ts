@@ -5,6 +5,7 @@ export const ai = {
   'ai.err.busy': 'The AI service is busy right now. Wait a few seconds and try again.',
   'ai.err.network': 'Could not reach the AI service. Check the internet connection and try again.',
   'ai.err.stall': 'The AI stopped answering, so this was ended. Try again.',
+  'ai.err.cut': 'The answer was cut off before it finished. Try again.',
   'ai.err.tooLong': 'This took too long, so it was stopped. Try again, or ask a more specific question.',
   'ai.err.service': 'The AI service had a problem with this request. Try again in a moment.',
   'ai.err.chatTooLong': 'This chat has become too long. Start a new chat to keep going.',

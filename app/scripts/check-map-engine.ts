@@ -19,10 +19,40 @@ mkdirSync(outDir, { recursive: true });
 const require = createRequire(join(app, 'package.json'));
 if (args.includes('--math')) { runMathChecks(); process.exit(0); }
 if (args.includes('--round5-report')) { runRound5Report(); process.exit(0); }
+if (args.includes('--trace-report')) { runTraceReport(); process.exit(0); }
 const round5 = args.includes('--round5'), variant = flag('--variant', 'baseline');
-if (round5 && !['baseline', 'no-blur', 'no-3d', 'no-blur-no-3d', 'dpr1', 'final', 'no-3d-final'].includes(variant)) throw Error('Unknown round-5 variant');
-const scenario = [{ do: 'engine:boot' }, { do: 'ready', timeout: 280000 }, { do: 'engine:check', phase, round5, variant, proof: args.includes('--round5-proof'), extras: args.includes('--extras'), shotsOnly: args.includes('--shots'), driveOnly: args.includes('--drive') }];
+if (round5 && !['baseline', 'no-blur', 'no-3d', 'no-blur-no-3d', 'dpr1', 'final', 'no-3d-final', 'no-blur-no-3d-final', 'no-3d-no-blur-no-polar', 'no-3d-no-blur-no-light', 'no-3d-no-blur-gpu-polar', 'no-3d-no-blur-no-react'].includes(variant)) throw Error('Unknown round-5 variant');
+const scenario = [{ do: 'engine:boot' }, { do: 'ready', timeout: 280000 }, { do: 'engine:check', phase, round5, variant, trace: args.includes('--trace'), proof: args.includes('--round5-proof') || args.includes('--round5-layer-extra'), layerExtra: args.includes('--round5-layer-extra'), extras: args.includes('--extras'), shotsOnly: args.includes('--shots'), driveOnly: args.includes('--drive') }];
 writeFileSync(join(outDir, 'scenario.json'), JSON.stringify(scenario, null, 2));
+
+function runTraceReport() {
+  const trace=JSON.parse(readFileSync(join(outDir,'performance-trace.json'),'utf8')),raw=trace.traceEvents??trace;
+  const names=new Map(raw.filter(e=>e.ph==='M'&&e.name==='thread_name').map(e=>[`${e.pid}/${e.tid}`,e.args?.name??'']));
+  const mark=raw.find(e=>e.name==='map-check:start');if(!mark)throw Error('No map-check:start marker in trace');
+  const mainKey=`${mark.pid}/${mark.tid}`,timing=JSON.parse(readFileSync(join(outDir,'whole-frame-timings.json'),'utf8')),offset=mark.ts-timing.checkStartMs*1000;
+  const events=raw.filter(e=>e.ph==='X'&&e.dur>0),threads=new Map(),slow=timing.frames.filter(f=>f.frameMs>20);
+  const overlap=(e,a,b)=>Math.max(0,Math.min(b,e.ts+e.dur)-Math.max(a,e.ts));
+  const describe=e=>({name:e.name,category:e.cat,pid:e.pid,tid:e.tid,thread:names.get(`${e.pid}/${e.tid}`),durationMs:e.dur/1000,timeMs:(e.ts-mark.ts)/1000,args:e.args});
+  const bounds=[mark.ts,mark.ts+(timing.frames.at(-1)?.elapsedMs??11000)*1000],inRange=events.filter(e=>e.ts<bounds[1]&&e.ts+e.dur>bounds[0]);
+  for(const e of inRange){const key=`${e.pid}/${e.tid}`,thread=threads.get(key)??{pid:e.pid,tid:e.tid,name:names.get(key)??'',events:0,byName:{}};thread.events++;const a=thread.byName[e.name]??={calls:0,totalMs:0,maxMs:0};a.calls++;a.totalMs+=e.dur/1000;a.maxMs=Math.max(a.maxMs,e.dur/1000);threads.set(key,thread);}
+  const threadTable=[...threads.values()].map(t=>({...t,byName:Object.entries(t.byName).map(([name,x])=>({name,...x})).sort((a,b)=>b.totalMs-a.totalMs).slice(0,18)}));
+  const main=inRange.filter(e=>`${e.pid}/${e.tid}`===mainKey),tasks=main.filter(e=>/RunTask|ProcessTaskFromWorkQueue/.test(e.name));
+  const gpuWaits=inRange.filter(e=>/IOSurfaceImageBacking::WaitForCommandsToBeScheduled/.test(e.name)),gpuTasks=inRange.filter(e=>(names.get(`${e.pid}/${e.tid}`)??'')==='CrGpuMain'&&/RunTask/.test(e.name));
+  const unionMs=(list,a,b)=>{const intervals=list.map(e=>[Math.max(a,e.ts),Math.min(b,e.ts+e.dur)]).filter(p=>p[1]>p[0]).sort((a,b)=>a[0]-b[0]);let end=-Infinity,sum=0;for(const [lo,hi]of intervals){sum+=Math.max(0,hi-Math.max(lo,end));end=Math.max(end,hi);}return sum/1000;};
+  const slowFrames=slow.map(f=>{const end=offset+f.nowMs*1000,start=end-f.frameMs*1000,seen=main.filter(e=>overlap(e,start,end)>0),top=seen.slice().sort((a,b)=>overlap(b,start,end)-overlap(a,start,end)).slice(0,10).map(e=>({...describe(e),overlapMs:overlap(e,start,end)/1000}));return {phase:f.phase,frame:f.frame,acrossM:f.acrossM,frameMs:f.frameMs,mainBusyMs:unionMs(tasks,start,end),gpuWaitMs:unionMs(gpuWaits,start,end),gpuTaskMs:unionMs(gpuTasks,start,end),gpuTop:gpuWaits.filter(e=>overlap(e,start,end)>0).sort((a,b)=>overlap(b,start,end)-overlap(a,start,end)).slice(0,2).map(e=>({...describe(e),overlapMs:overlap(e,start,end)/1000})),mapMs:f.mapMs,top};});
+  const expensiveMain=main.filter(e=>e.dur>=3000).sort((a,b)=>b.dur-a.dur).slice(0,40).map(describe);
+  const specific=main.filter(e=>/FunctionCall|EvaluateScript|RunMicrotasks|GC|Layout|Paint|Decode|Image|Commit|Raster|Composite|UpdateLayer|v8.execute/i.test(e.name)).sort((a,b)=>b.dur-a.dur).slice(0,60).map(describe);
+  const zoomSlow=slowFrames.filter(f=>f.phase==='zoom-in'),gpuWaitCoverage=zoomSlow.reduce((n,f)=>n+f.gpuWaitMs,0)/Math.max(1,zoomSlow.reduce((n,f)=>n+f.frameMs,0));
+  const report={gpuWaitCoverageOfSlowZoomIn:gpuWaitCoverage,source:join(outDir,'performance-trace.json'),variant:timing.variant,main:{pid:mark.pid,tid:mark.tid,name:names.get(mainKey)},eventCount:raw.length,completeEventCount:events.length,traceRangeMs:(bounds[1]-bounds[0])/1000,slowFrameCount:slowFrames.length,slowFrames,expensiveMain,specific,threads:threadTable};
+  writeFileSync(join(outDir,'TRACE-RESULTS.json'),JSON.stringify(report,null,2));
+  const text=['# Residual frame trace','',`Renderer main thread: ${mark.pid}/${mark.tid} (${names.get(mainKey)}). ${raw.length} trace events; ${slowFrames.length} measured frame intervals over 20 ms.`, '', `GPU IOSurface scheduling waits cover ${(gpuWaitCoverage*100).toFixed(1)}% of the combined slow zoom-in intervals. The trace shows GPU-side waiting; it does not identify the exact resource or driver cause.`, '', 'Main-thread busy time is the union of top-level tasks overlapping each frame interval; nested event totals are not added together. Trace capture itself has overhead.','', '| Phase | Frame | Width m | Interval ms | Main busy ms | GPU IOSurface wait ms | Timed map ms | Largest main event |','| --- | ---: | ---: | ---: | ---: | ---: | ---: | --- |'];
+  for(const f of slowFrames)text.push(`| ${f.phase} | ${f.frame} | ${f.acrossM.toFixed(0)} | ${f.frameMs.toFixed(1)} | ${f.mainBusyMs.toFixed(2)} | ${f.gpuWaitMs.toFixed(2)} | ${f.mapMs.toFixed(2)} | ${f.top[0]?.name??''} |`);
+  text.push('', '## Longest main-thread events','', '| Event | Duration ms | Time after check start ms | Source |','| --- | ---: | ---: | --- |');
+  for(const e of specific.slice(0,25)){const d=e.args?.data??{};text.push(`| ${e.name} | ${e.durationMs.toFixed(2)} | ${e.timeMs.toFixed(1)} | ${d.functionName??''} ${d.url??d.scriptName??''}:${d.lineNumber??''} |`);}
+  text.push('', '## Threads','');for(const t of threadTable){text.push(`- ${t.pid}/${t.tid} ${t.name}: `+t.byName.slice(0,5).map(x=>`${x.name} ${x.totalMs.toFixed(1)} ms total / ${x.maxMs.toFixed(1)} ms max`).join('; '));}
+  writeFileSync(join(outDir,'TRACE-RESULTS.md'),text.join('\n')+'\n');
+  console.log(JSON.stringify({main:report.main,events:raw.length,slowFrames:slowFrames.length,longestMain:expensiveMain.slice(0,8)},null,2));
+}
 
 function runRound5Report() {
   const runs=[];
@@ -33,7 +63,7 @@ function runRound5Report() {
     runs.push({folder:entry.name,variant:value.variant,setup:value.setup,appliedSetup:value.appliedSetup??value.setup?.applied??null,source:file,
       table:value.table.map(row=>({phase:row.phase,...row.frames,mapMeanMs:row.mapWork.meanMs,mapMaxMs:row.mapWork.maxMs,sceneMeanMs:row.sceneWork.meanMs,sceneMaxMs:row.sceneWork.maxMs,landerMeanMs:row.landerWork.meanMs}))});
   }
-  const order=['baseline','no-blur','no-3d','no-blur-no-3d','dpr1','final','no-3d-final'];
+  const order=['baseline','no-blur','no-3d','no-blur-no-3d','dpr1','final','no-3d-final','no-blur-no-3d-final','no-3d-no-blur-no-polar','no-3d-no-blur-no-light','no-3d-no-blur-gpu-polar','no-3d-no-blur-no-react'];
   runs.sort((a,b)=>(order.indexOf(a.variant)-order.indexOf(b.variant))||a.folder.localeCompare(b.folder));
   const text=['# Whole-frame map checks','', 'Actual requestAnimationFrame intervals at devicePixelRatio 2. Each comparable gesture lasts 3 seconds; final endpoint holds are listed separately. The map remains over the real surface view.','',
     '| Variant | Gesture | Frames | Median ms | P95 ms | Max ms | Over 20 ms | Map mean / max ms | Scene mean ms |','| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |'];
@@ -292,12 +322,15 @@ async function engineStep(step) {
         const m=window.__moondaSurfaceMap,mini=window.__moondaMinimap;
         return {name,source,time:new Date().toISOString(),elapsedMs:performance.now(),app:window.__moondaTest.state(),
           full:m?.getDiagnostics?.(),mini:mini?.getDiagnostics?.(),sun:m?.sun?{...m.sun}:null,
-          chips:Object.fromEntries(ids.map(id=>[id,document.querySelector('.sm-data-'+id)?.getAttribute('aria-pressed')??null])),
+          chips:Object.fromEntries(ids.map(id=>[id,document.querySelector('.sm-layers #layer-'+id)?.checked??null])),
           strength:Object.fromEntries(ids.map(id=>[id,document.querySelector('#layer-'+id)?.closest('.layer')?.querySelector('input[type=range]')?.value??null])),
           box:Object.fromEntries(ids.map(id=>[id,document.querySelector('#layer-'+id)?.checked??null]))};
       },{name,source,ids:mapIds});states.push(state);writeFileSync(join(out,'layer-states.json'),JSON.stringify(states,null,2));return state;};
       const layers=async wanted=>{
-        for(const id of mapIds){const target=wanted.includes(id);await page.evaluate(({id,target})=>{const button=document.querySelector('.sm-data-'+id);if(!button)throw Error('Missing map chip: '+id);if((button.getAttribute('aria-pressed')==='true')!==target)button.click();},{id,target});}
+        // The big map's switches are in its Layers box now (the row of chips is gone): open the box, then use them.
+        await page.evaluate(()=>{const open=document.querySelector('.sm-layers-btn');if(!open)throw Error('Missing the map\'s Layers button');if(open.getAttribute('aria-expanded')!=='true')open.click();});
+        await page.waitForSelector('.sm-layers',{timeout:5000});
+        for(const id of mapIds){const target=wanted.includes(id);await page.evaluate(({id,target})=>{const box=document.querySelector('.sm-layers #layer-'+id);if(!box)throw Error('Missing map switch: '+id);if(box.checked!==target)box.click();},{id,target});}
         await page.waitForFunction(wanted=>{const d=window.__moondaSurfaceMap?.getDiagnostics?.();return d&&['psr','waterice','danger','slope','craters','height'].every(id=>d.layers.includes(id)===wanted.includes(id));},{timeout:5000},wanted);
       };
       const rasterReady=async(name,engine='__moondaSurfaceMap')=>{
@@ -307,8 +340,9 @@ async function engineStep(step) {
           if(!m||!d||!retained)return false;
           const ids=['psr','waterice','danger','slope','height'].filter(id=>d.layers.includes(id)),checks=[];
           for(const id of ids){
-            const stats=d.imagery.scienceByLayer?.[id],data=retained[id]??{tiles:0,nonzeroAlphaSamples:0,alphaSum:0};
-            checks.push({id,stats:stats??null,visibleCachedTiles:data.tiles,examinedTiles:data.tiles,nonzeroAlphaSamples:data.nonzeroAlphaSamples,alphaSum:data.alphaSum});
+            const sourceLayers=id==='height'?['height','heightGlobal','heightPolar']:[id],stats={tiles:0,bytes:0,pending:0},data={tiles:0,nonzeroAlphaSamples:0,alphaSum:0};
+            for(const source of sourceLayers){const a=d.imagery.scienceByLayer?.[source],b=retained[source];if(a){stats.tiles+=a.tiles??0;stats.bytes+=a.bytes??0;stats.pending+=a.pending??0;}if(b){data.tiles+=b.tiles;data.nonzeroAlphaSamples+=b.nonzeroAlphaSamples;data.alphaSum+=b.alphaSum;}}
+            checks.push({id,sourceLayers,stats,visibleCachedTiles:data.tiles,examinedTiles:data.tiles,nonzeroAlphaSamples:data.nonzeroAlphaSamples,alphaSum:data.alphaSum});
           }
           const pixels=new OffscreenCanvas(Math.min(512,m.canvas.width),Math.max(1,Math.round(Math.min(512,m.canvas.width)*m.canvas.height/m.canvas.width))),pctx=pixels.getContext('2d',{willReadFrequently:true});
           pctx.drawImage(m.canvas,0,0,pixels.width,pixels.height);const rgba=pctx.getImageData(0,0,pixels.width,pixels.height).data;
@@ -322,6 +356,11 @@ async function engineStep(step) {
         pixelChecks.push({name,...detail});writeFileSync(join(out,'raster-pixels.json'),JSON.stringify(pixelChecks,null,2));if(detail.glErrors.length)throw Error('WebGL errors after '+name+': '+JSON.stringify(detail.glErrors));
       };
       const frame=async(across,name)=>{await page.evaluate(across=>{const m=window.__moondaSurfaceMap;m.setAcross(across==='whole'?m.getZoomLimits().max:across);m.centre();},across);await rasterReady(name);await record(name,'shared app state and nonzero cached/rendered raster pixels');await photograph(name);};
+      if(step.layerExtra){
+        await land(-5.3,63.48);await layers(['slope']);await frame('whole','whole-moon-slope-poles-fixed');
+        await layers(['height']);await frame(300000,'mid-height-colours');
+        result.evals.layerExtra={screenshots,rasterPixels:join(out,'raster-pixels.json'),states:join(out,'layer-states.json')};save();return JSON.stringify(result.evals.layerExtra);
+      }
       await land(-89.45,-137.3);
       await layers([]);
       let recorder;
@@ -379,51 +418,61 @@ async function engineStep(step) {
         if(variant==='dpr1'){m.dpr=1;m.canvas.width=Math.round(m.width);m.canvas.height=Math.round(m.height);m.photoDirty=true;m.requestDraw();}
         if(variant.includes('no-blur')&&backdrop){style=backdrop.style.cssText;backdrop.style.setProperty('backdrop-filter','none','important');backdrop.style.setProperty('-webkit-backdrop-filter','none','important');}
         if(variant.includes('no-3d')){viewer.useDefaultRenderLoop=false;cancelAnimationFrame(lander.raf);lander.raf=0;lander.tick=()=>{lander.raf=0;};}
-        const applied={deviceDpr:devicePixelRatio,canvasDpr:m.dpr,canvas:[m.canvas.width,m.canvas.height],css:[m.width,m.height],backdropFilter:backdrop?getComputedStyle(backdrop).backdropFilter:null,viewerLoop:viewer.useDefaultRenderLoop,landerRaf:lander.raf};
+        if(variant.includes('no-react')){const onChange=m.options.onChange;originals.push(()=>m.options.onChange=onChange);m.options.onChange=()=>{};}
+        if(variant.includes('no-polar')){const drawPolar=m.drawPolar;originals.push(()=>m.drawPolar=drawPolar);m.drawPolar=()=>{};m.photoDirty=true;m.requestDraw();}
+        if(variant.includes('no-light')){const realSun=m.realSun,drawSunlight=m.drawSunlight;originals.push(()=>{m.realSun=realSun;m.drawSunlight=drawSunlight;m.requestDraw();});m.realSun=false;m.drawSunlight=()=>{};m.requestDraw();}
+        if(variant.includes('gpu-polar')){const drawPolar=m.drawPolar;originals.push(()=>m.drawPolar=drawPolar);m.drawPolar=function(...args){const projection=this.projection,blend=projection?.blend;if(projection&&blend===0)projection.blend=Number.EPSILON;try{return drawPolar.apply(this,args);}finally{if(projection)projection.blend=blend;}};m.photoDirty=true;m.requestDraw();}
+        const applied={deviceDpr:devicePixelRatio,canvasDpr:m.dpr,canvas:[m.canvas.width,m.canvas.height],css:[m.width,m.height],backdropFilter:backdrop?getComputedStyle(backdrop).backdropFilter:null,viewerLoop:viewer.useDefaultRenderLoop,landerRaf:lander.raf,realSun:m.realSun,polarDetailSuppressed:variant.includes('no-polar'),polarGpuForced:variant.includes('gpu-polar'),lightDrawSuppressed:variant.includes('no-light'),reactChangeSuppressed:variant.includes('no-react')};
         window.__round5={timing,initial,applied,holdEnds:variant.endsWith('final'),restore(){if(variant==='dpr1'){m.dpr=originalDensity.dpr;m.canvas.width=originalDensity.width;m.canvas.height=originalDensity.height;m.photoDirty=true;m.requestDraw();}if(backdrop&&variant.includes('no-blur'))backdrop.style.cssText=style;if(variant.includes('no-3d')){lander.tick=tick;lander.lastTick=performance.now();viewer.useDefaultRenderLoop=loop;lander.kick();}for(const restore of originals.reverse())restore();}};
         return {...initial,applied};
       }, step.variant);
       result.evals.round5Setup=setup;
+      let tracing=false;
       try {
+        if(step.trace){await page.tracing.start({path:join(out,'performance-trace.json'),screenshots:false,categories:['devtools.timeline','toplevel','v8','cc','gpu','blink.user_timing','disabled-by-default-devtools.timeline','disabled-by-default-devtools.timeline.frame']});tracing=true;await page.evaluate(()=>window.__round5.trace=true);result.evals.performanceTrace=join(out,'performance-trace.json');}
         const measured=await page.evaluate(async () => {
           const m=window.__moondaSurfaceMap,state=window.__round5, frames=[], start=performance.now();
+          if(state.trace)performance.mark('map-check:start');
           const phases=[['zoom-out',200,m.getZoomLimits().max],['zoom-in',m.getZoomLimits().max,200],['pan',10000,10000]], duration=3000;
           let previous=0, frame=0, lastCounts={map:0,mini:0,scene:0,lander:0};
           for(const [name,from,to] of phases){
             m.stopMotion();m.setAcross(from);m.centre();
             if(name==='pan')await new Promise(resolve=>setTimeout(resolve,200));
             const phaseStart=performance.now();let previousProgress=0;previous=0;
+            if(state.trace)performance.mark('map-check:'+name+':start');
             await new Promise(resolve=>{
               const step=now=>{
                 const progress=Math.min(1,(now-phaseStart)/duration), target=from*Math.exp(Math.log(to/from)*progress);
                 if(name==='pan'){const delta=progress-previousProgress;m.pan(Math.cos(progress*Math.PI*2)*delta*m.width*.7,Math.sin(progress*Math.PI*2)*delta*m.height*.5);}
                 else m.zoomAt((m.zoomTarget??m.getAcross())/target,m.width*.5,m.height*.5);
                 const costs={};for(const bucket of ['map','mini','scene','lander']){const values=state.timing[bucket];costs[bucket+'Ms']=values.slice(lastCounts[bucket]).reduce((sum,d)=>sum+d.ms,0);costs[bucket+'Calls']=values.length-lastCounts[bucket];lastCounts[bucket]=values.length;}
-                frames.push({phase:name,frame:frame++,elapsedMs:now-start,phaseMs:now-phaseStart,frameMs:previous?now-previous:0,acrossM:m.getAcross(),targetM:target,...costs});
+                if(state.trace&&previous&&now-previous>20)performance.mark('map-check:slow',{detail:{phase:name,frame,acrossM:m.getAcross(),frameMs:now-previous}});
+                frames.push({phase:name,frame:frame++,nowMs:now,elapsedMs:now-start,phaseMs:now-phaseStart,frameMs:previous?now-previous:0,acrossM:m.getAcross(),targetM:target,...costs});
                 previous=now;previousProgress=progress;
                 if(progress<1)requestAnimationFrame(step);else resolve();
               };requestAnimationFrame(step);
             });
+            if(state.trace){performance.mark('map-check:'+name+':end');performance.measure('map-check:'+name,'map-check:'+name+':start','map-check:'+name+':end');}
             if(state.holdEnds&&name!=='pan'){
               const holdStart=performance.now();
               await new Promise(resolve=>{const hold=now=>{
                 const costs={};for(const bucket of ['map','mini','scene','lander']){const values=state.timing[bucket];costs[bucket+'Ms']=values.slice(lastCounts[bucket]).reduce((sum,d)=>sum+d.ms,0);costs[bucket+'Calls']=values.length-lastCounts[bucket];lastCounts[bucket]=values.length;}
-                frames.push({phase:name+'-hold',frame:frame++,elapsedMs:now-start,phaseMs:now-holdStart,frameMs:now-previous,acrossM:m.getAcross(),targetM:to,...costs});previous=now;
+                frames.push({phase:name+'-hold',frame:frame++,nowMs:now,elapsedMs:now-start,phaseMs:now-holdStart,frameMs:now-previous,acrossM:m.getAcross(),targetM:to,...costs});previous=now;
                 if(now-holdStart<700)requestAnimationFrame(hold);else resolve();
               };requestAnimationFrame(hold);});
             }
           }
-          return {frames,timing:state.timing,diagnostics:m.getDiagnostics?.(),setup:state.initial,appliedSetup:state.applied};
+          return {frames,timing:state.timing,diagnostics:m.getDiagnostics?.(),setup:state.initial,appliedSetup:state.applied,checkStartMs:start};
         });
         const summarise=values=>{const sorted=values.slice().sort((a,b)=>a-b);return {count:values.length,meanMs:values.reduce((a,b)=>a+b,0)/Math.max(1,values.length),medianMs:sorted[Math.floor(sorted.length*.5)]??0,p95Ms:sorted[Math.floor(sorted.length*.95)]??0,maxMs:sorted.at(-1)??0,over20ms:values.filter(x=>x>20).length,over33ms:values.filter(x=>x>33.34).length};};
         const table=[...new Set(measured.frames.map(frame=>frame.phase))].map(phase=>{const values=measured.frames.filter(f=>f.phase===phase&&f.frameMs>0);return {phase,frames:summarise(values.map(f=>f.frameMs)),mapWork:summarise(values.map(f=>f.mapMs)),sceneWork:summarise(values.map(f=>f.sceneMs)),landerWork:summarise(values.map(f=>f.landerMs)),miniWork:summarise(values.map(f=>f.miniMs))};});
         const report={variant:step.variant,setup,table,...measured};
         writeFileSync(join(out,'whole-frame-timings.json'),JSON.stringify(report,null,2));
-        const keys=['phase','frame','elapsedMs','phaseMs','frameMs','acrossM','targetM','mapMs','mapCalls','miniMs','miniCalls','sceneMs','sceneCalls','landerMs','landerCalls'];
+        const keys=['phase','frame','nowMs','elapsedMs','phaseMs','frameMs','acrossM','targetM','mapMs','mapCalls','miniMs','miniCalls','sceneMs','sceneCalls','landerMs','landerCalls'];
         writeFileSync(join(out,'whole-frame-timings.csv'),keys.join(',')+'\n'+measured.frames.map(f=>keys.map(k=>f[k]).join(',')).join('\n')+'\n');
         result.evals.round5={variant:step.variant,setup,table};
         return JSON.stringify(result.evals.round5);
-      } finally {await page.evaluate(()=>window.__round5?.restore());}
+      } finally {if(tracing)await page.tracing.stop().catch(error=>{result.evals.traceStopError=String(error);});await page.evaluate(()=>window.__round5?.restore());}
     }
     if(step.driveOnly) {
       await land(-89.45,-137.3);await page.keyboard.press('m');await sleep(350);

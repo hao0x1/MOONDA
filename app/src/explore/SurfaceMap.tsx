@@ -1,13 +1,16 @@
-// Layout sketch: a square photo card at the right, with the rover view still visible beside it.
-// Its small glass controls float over the photo; a tap places the destination straight away.
-import { Crosshair, Minus, Plus, X } from '@phosphor-icons/react';
+// The big surface map: a wide photo card over the blurred rover view. Its glass controls float over the photo:
+// the place and a Layers button top left (the same Layers box as on the overview), zoom top right, the route
+// bar along the bottom. A tap places the destination straight away. The map carries the official place names
+// and repeats sideways, so you can scroll right round the Moon.
+import { Crosshair, Minus, Plus, Stack, X } from '@phosphor-icons/react';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from 'react';
 import type { MoonName } from '../data/names';
-import { useT, type Key } from '../i18n';
-import { CLASS_LAYERS, layerCoverage, layerHelp, layerLine, layerTitle, type LayerDef } from '../moon/layers';
+import { useT } from '../i18n';
+import { MARKER_LAYERS, layerTitle, type LayerDef } from '../moon/layers';
 import type { Vec3 } from '../science/ephemeris';
 import type { RoutePrefer } from '../science/route';
 import { EarthGlyph, SunGlyph } from '../ui/glyphs';
+import { LayerLegend, LayersPanel } from '../ui/LayersPanel';
 import { MapEngine } from './MapEngine';
 import { probeAt } from './probe';
 import { RoutePanel, type RouteView } from './RoutePanel';
@@ -19,12 +22,14 @@ interface Props {
   opacity: Record<string, number>;
   layerDefs: LayerDef[];
   onLayersChange: Dispatch<SetStateAction<Record<string, boolean>>>;
+  onOpacityChange: Dispatch<SetStateAction<Record<string, number>>>;
   timeKey: number;
   mastM: number;
   names: MoonName[] | null;
   placeName: string;
   onClose(): void;
   route: RouteView | null;
+  prefer: RoutePrefer;
   onPlan(lat: number, lon: number): void;
   onPrefer(p: RoutePrefer): void;
   onClear(): void;
@@ -60,7 +65,9 @@ function miniMotion(full: { left: number; top: number; width: number; height: nu
 }
 const valid = (at: Destination | null | undefined): at is Destination => !!at && Number.isFinite(at.lat) && Number.isFinite(at.lon);
 
-export function SurfaceMap({ bodies, layers, opacity, layerDefs, onLayersChange, timeKey, mastM, placeName, onClose, route, onPlan, onPrefer, onClear }: Props) {
+const NAMES_LAYER = MARKER_LAYERS.filter(l => l.id === 'names');
+
+export function SurfaceMap({ bodies, layers, opacity, layerDefs, onLayersChange, onOpacityChange, timeKey, mastM, names, placeName, onClose, route, prefer, onPlan, onPrefer, onClear }: Props) {
   const t = useT();
   const canvas = useRef<HTMLCanvasElement>(null);
   const engine = useRef<MapEngine | null>(null);
@@ -78,6 +85,9 @@ export function SurfaceMap({ bodies, layers, opacity, layerDefs, onLayersChange,
   const [pointer, setPointer] = useState<{ lat: number; lon: number; heightM: number } | null>(null);
   const [hover, setHover] = useState<Hover | null>(null);
   const [draggingFlag, setDraggingFlag] = useState(false);
+  const [showLayers, setShowLayers] = useState(false);
+  const closeLayers = useRef<(() => void) | null>(null);
+  useLayoutEffect(() => { closeLayers.current = showLayers ? () => setShowLayers(false) : null; }, [showLayers]);
   const routeRef = useRef(route);
   const callbacks = useRef({ onPlan, onClear });
   useLayoutEffect(() => { routeRef.current = route; callbacks.current = { onPlan, onClear }; }, [route, onPlan, onClear]);
@@ -168,6 +178,8 @@ export function SurfaceMap({ bodies, layers, opacity, layerDefs, onLayersChange,
     const key = (ev: KeyboardEvent) => {
       if ((ev.target as Element | null)?.closest?.('input,textarea,select,[contenteditable],[role=slider]')) return false;
       if (ev.key === 'Escape') {
+        // the top-most open thing first: the Layers box, then the route's further figures, then (App) the map itself
+        if (closeLayers.current) { closeLayers.current(); return true; }
         const popoverClose = paneButton('[data-sm-route-info-close]');
         if (popoverClose) { popoverClose.click(); return true; }
       }
@@ -192,6 +204,23 @@ export function SurfaceMap({ bodies, layers, opacity, layerDefs, onLayersChange,
     engine.current?.update({ route: route?.result?.ok ? route.result : null, destination, bodies,
       layers, opacity, layerDefs, realSun: layers.realSun !== false });
   }, [route?.result, route?.to, bodies, layers, opacity, layerDefs]);
+  useEffect(() => { engine.current?.update({ names }); }, [names]);
+  // Place names keep clear of the controls that float over the photo: a word half under a button reads as a fault.
+  // Measured after every render (the controls change size with their contents), told to the map only when changed.
+  const clearSeen = useRef('');
+  useEffect(() => {
+    const cv = canvas.current, area = cv?.parentElement, base = cv?.getBoundingClientRect();
+    if (!cv || !area || !base?.width || !base.height) return;
+    // (while the card is still growing out of the round map its rectangles are scaled: count in the card's own pixels)
+    const sx = cv.clientWidth / base.width, sy = cv.clientHeight / base.height;
+    const boxes = [...area.querySelectorAll('.sm-top>*, .sm-layers, .sm-legend, .sm-navigation, .sm-route, .sm-route-sheet, .sm-status-pill, .sm-photo-credit')].map(el => {
+      const r = el.getBoundingClientRect();
+      return [Math.round((r.left - base.left) * sx) - 6, Math.round((r.top - base.top) * sy) - 4, Math.round((r.right - base.left) * sx) + 6, Math.round((r.bottom - base.top) * sy) + 4];
+    });
+    const seen = boxes.join(';');
+    if (seen === clearSeen.current) return;
+    clearSeen.current = seen; engine.current?.update({ keepClear: boxes });
+  });
 
   const point = (ev: { clientX: number; clientY: number }) => ({ x: ev.clientX - bounds.current.left, y: ev.clientY - bounds.current.top });
   const restoreDestination = () => engine.current?.update({ destination: routeRef.current?.to ?? null });
@@ -299,25 +328,23 @@ export function SurfaceMap({ bodies, layers, opacity, layerDefs, onLayersChange,
             }
             lastTap.current = null; engine.current?.zoomAt(2, p.x, p.y);
           }} />
-        <div className="sm-map-name">{placeName}</div>
-        <div className="sm-data-tools">
-          <div className="sm-data-chips" role="group" aria-label={t('ex.map.layers')}>
-            {mapLayers.map(l => <button type="button" key={l.id} className={`sm-chip sm-data-${l.id}`} aria-pressed={!!layers[l.id]}
-              data-tip={[layerHelp(l), layerCoverage(l)].filter(Boolean).join(' ')}
-              onClick={() => onLayersChange(cur => ({ ...cur, [l.id]: !cur[l.id] }))}><i />{layerTitle(l)}</button>)}
-          </div>
-          {activeLayers.length > 0 && <div className="sm-data-key">
-            {activeLayers.map(l => {
-              const classes = CLASS_LAYERS[l.id], stops = l.legend;
-              return <div key={l.id} className="sm-key-row" data-tip={layerHelp(l)} tabIndex={0}>
-                {classes ? classes.map(c => <span key={c.key} className="sm-key-row"><i className="sm-key-swatch" style={{ background: c.color }} /><span>{t(c.key as Key)}</span></span>)
-                  : stops && stops.length > 2 ? <><i className="sm-key-gradient" style={{ background: `linear-gradient(90deg, ${stops.map(s => `${s.color} ${(s.value - stops[0].value) / (stops[stops.length - 1].value - stops[0].value || 1) * 100}%`).join(', ')})` }} /><span>{stops[0].value}{l.units} – {stops[stops.length - 1].value}{l.units} · {layerLine(l)}</span></>
-                    : <><i className="sm-key-swatch" style={{ background: stops?.[stops.length - 1]?.color }} /><span>{l.id === 'psr' ? t('layers.neverLit') : layerLine(l)}</span></>}
-              </div>;
-            })}
-            {activeLayers.length > 2 && <p className="sm-key-hint">{t('ex.map.legend.oneAtATime')}</p>}
-          </div>}
+        <div className="sm-top">
+          <div className="sm-map-name">{placeName}</div>
+          <button type="button" className="sm-layers-btn" aria-pressed={showLayers} aria-expanded={showLayers}
+            data-tip={showLayers ? undefined : t('top.layers.tip')} onClick={() => setShowLayers(v => !v)}>
+            <Stack size={17} />{t('top.layers')}{activeLayers.length > 0 && <span className="sm-layers-count">{activeLayers.length}</span>}
+          </button>
         </div>
+        {showLayers && <LayersPanel className="sm-layers" helpSide="right"
+          groups={[{ title: 'Maps', group: 'science', layers: mapLayers }, { title: 'Names and markers', group: 'markers', layers: NAMES_LAYER }]}
+          state={layers} opacity={opacity}
+          onToggle={(id, on) => onLayersChange(cur => ({ ...cur, [id]: on }))}
+          onOpacity={(id, v) => onOpacityChange(cur => ({ ...cur, [id]: v }))}
+          onClose={() => setShowLayers(false)} />}
+        {/* with the box closed, the colours of the maps that are on still need their key */}
+        {!showLayers && activeLayers.some(l => l.legend) && <div className="sm-legend" aria-label={t('map.colours')}>
+          {activeLayers.filter(l => l.legend).map(l => <div key={l.id} className="legend-item"><b>{layerTitle(l)}</b><LayerLegend layer={l} /></div>)}
+        </div>}
         <div className="sm-navigation">
           <button ref={close} type="button" className="sm-close" aria-label={t('ex.map.close')} data-tip={t('ex.map.close')} data-tip-side="left" onClick={onClose}><X size={18} /></button>
           <button type="button" aria-label={t('ex.map.zoomIn')} data-tip={t('ex.map.zoomIn')} data-tip-side="left" onClick={() => engine.current?.zoomAt(2)}><Plus size={18} /></button>
@@ -335,7 +362,7 @@ export function SurfaceMap({ bodies, layers, opacity, layerDefs, onLayersChange,
           </div>
           <div className="sm-photo-credit">{t('ex.map.photos')}</div>
         </div>
-        <RoutePanel route={route} onPrefer={onPrefer} onClear={clear} />
+        <RoutePanel route={route} prefer={prefer} onPrefer={onPrefer} onClear={clear} />
         {hover && <div className="sm-probe" style={{ left: Math.min(viewSize.width - 216, Math.max(12, hover.x + 15)), top: Math.min(viewSize.height - 210, Math.max(58, hover.y - 30)) }} role="status">
           <div className="sm-probe-title">{t(hover.kind === 'trail' ? 'ex.hover.trail' : 'ex.hover.route')}</div>
           {probe && <><div className={`sm-probe-body${probe.sunPart <= .001 ? ' sm-off' : ''}`}><SunGlyph size={15} off={probe.sunPart <= .001} />{t(probe.sunPart >= .999 ? 'ex.hover.sunYes' : probe.sunPart > .001 ? 'ex.hover.sunPart' : 'ex.hover.sunNo')}</div>

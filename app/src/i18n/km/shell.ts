@@ -101,6 +101,7 @@ export const shell: Partial<Record<keyof typeof en, string>> = {
   'map.zoomIn': 'ពង្រីក',
   'map.zoomOut': 'បង្រួម',
   'map.colours': 'ពណ៌លើផែនទី',
+  'map.legend.hide': 'លាក់ {name}',
 
   'status.standing': 'បានចុះចតនៅ {name}',
   'status.move': 'រំកិលព្រួញកណ្ដុរលើព្រះច័ន្ទ ដើម្បីដឹងថាវានៅត្រង់ណា',

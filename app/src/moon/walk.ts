@@ -18,7 +18,7 @@
 // so compass readings, the Sun and Earth marks and the view all stay consistent while you walk.
 
 import { Cartesian3 } from 'cesium';
-import { BODY_CELLS, BODY_REACH, rockRadiusAt, rockTopAt } from './robotBody';
+import { BODY_ZONES, BODY_REACH, rockRadiusAt, rockTopAt } from './robotBody';
 
 export const WALK = {
   /** eye height above the ground (m) */
@@ -292,6 +292,8 @@ export const WHEELS: readonly { name: string; x: number; z: number }[] = [
   { name: 'wheel_RF', x: -1.0624, z: 1.095 }, { name: 'wheel_RM', x: -1.1845, z: -0.09 }, { name: 'wheel_RB', x: -1.0624, z: -1.165 },
 ];
 export const WHEEL_AXLE_Y = 0.2636, WHEEL_R = 0.2627;
+/** Actual tyre width from rover-moonda.glb (model metres); the shadow grid is too coarse for contacts. */
+export const WHEEL_WIDTH = 0.335606;
 
 export const DRIVE = {
   scale: S,
@@ -344,6 +346,35 @@ const WF = WHEELS.map(w => w.z * S), WR = WHEELS.map(w => -w.x * S);
 const SUM_R2 = WR.reduce((a, r) => a + r * r, 0);
 const MEAN_F = WF.reduce((a, f) => a + f, 0) / 6;
 const SUM_F2C = WF.reduce((a, f) => a + (f - MEAN_F) ** 2, 0);
+const TYRE_SLICES = Array.from({ length: 9 }, (_, i) => {
+  const angle = (i - 4) * Math.PI / 10;
+  return { span: Math.cos(angle), rise: 1 + Math.sin(angle) };
+});
+const zoneHit = { depth: 0, nf: 0, nr: 0, af: 0, ar: 0 };
+
+/** A smooth, rounded rectangle meets a circular slice of a rock. Rounding stays inside its measured bounds. */
+function roundedContact(rf: number, rr: number, radius: number, f0: number, f1: number, r0: number, r1: number, rounding: number): number {
+  const corner = Math.min(rounding, (f1 - f0) * 0.49, (r1 - r0) * 0.49);
+  const loF = f0 + corner, hiF = f1 - corner, loR = r0 + corner, hiR = r1 - corner;
+  let cf = Math.max(loF, Math.min(hiF, rf)), cr = Math.max(loR, Math.min(hiR, rr));
+  const df = cf - rf, dr = cr - rr, distance = Math.hypot(df, dr);
+  let depth: number, nf: number, nr: number;
+  if (distance > 1e-8) { depth = radius + corner - distance; nf = df / distance; nr = dr / distance; }
+  else {
+    // A rock is inside this part of the plan (for example after a large tile change). The nearest
+    // edge gives the shortest safe way out, rather than a normal chosen from a shadow-grid cell.
+    const front = hiF - rf, rear = rf - loF, right = hiR - rr, left = rr - loR;
+    const escape = Math.min(front, rear, right, left);
+    depth = radius + corner + escape; nf = nr = 0;
+    if (escape === front) { nf = -1; cf = hiF; }
+    else if (escape === rear) { nf = 1; cf = loF; }
+    else if (escape === right) { nr = -1; cr = hiR; }
+    else { nr = 1; cr = loR; }
+  }
+  zoneHit.depth = depth; zoneHit.nf = nf; zoneHit.nr = nr;
+  zoneHit.af = cf - nf * corner; zoneHit.ar = cr - nr * corner;
+  return depth;
+}
 
 export class Driver {
   /** the ground point under the middle of the rover, and the flat local frame there (world) */
@@ -404,6 +435,8 @@ export class Driver {
   private rockHold = 0;
   private restless = false;
   private wheelTerrain = new Float64Array(6);
+  private syncTerrain = new Float64Array(6);
+  private syncWheels = new Float64Array(6);
   private comp = new Float64Array(6);
   private prevGround = new Float64Array(6);
   private gRate = new Float64Array(6);
@@ -443,6 +476,40 @@ export class Driver {
 
   /** Straight-line distance from the landing spot (m). */
   distanceFromStart(): number { return Cartesian3.distance(this.feet, this.origin); }
+
+  /**
+   * Cesium may choose a different mesh after the driving step. Stand on that drawn mesh in the
+   * same frame, without taking another step or turning a tile change into spring launch speed.
+   * Compare bare terrain, not rocks or the body's springs: small real bumps keep their motion.
+   */
+  syncGround(env: WalkEnv): boolean {
+    const centreBefore = Cartesian3.magnitude(this.feet) - R;
+    const terrainBefore = this.syncTerrain;
+    terrainBefore.set(this.wheelTerrain);
+    this.syncWheels.set(this.wheelGround);
+    const centre = env.ground(this.feet);
+    this.sampleWheels(env, env.obstacles());
+    let change = Math.abs(centre - centreBefore);
+    for (let i = 0; i < 6; i++) change = Math.max(change, Math.abs(this.wheelTerrain[i] - terrainBefore[i]));
+    if (change <= 0.01) {
+      // Keep the last accepted support, so several small tile changes still add up to a reseat.
+      this.wheelTerrain.set(terrainBefore); this.wheelGround.set(this.syncWheels);
+      return false;
+    }
+    this.place(this.feet, centre);
+    this.sampleWheels(env, env.obstacles());
+    this.rest();
+    // An uneven new facet can push one wheel beyond its spring travel. Driver.step handles
+    // that stop during integration; here apply only its positional lift before drawing.
+    let push = 0;
+    for (let i = 0; i < 6; i++) push = Math.max(push, this.comp[i] - DRIVE.travelUp);
+    if (push > 0) { this.bodyH += push; this.contacts(); }
+    this.gRate.fill(0);
+    this.groundPlane();
+    this.orient();
+    this.landed = 0;
+    return true;
+  }
 
   /** The plane through the bare ground under the six wheels (least squares): what gravity and grip act on. */
   private groundPlane() {
@@ -620,7 +687,7 @@ export class Driver {
   /**
    * Keep every part of the robot out of the rocks. `next` is where it is about to be (moved out of the rocks here),
    * F / Rt its flat forward and right; this.speed / slide / yawRate are its motion (changed here).
-   * Each rock touched gives one contact: the deepest ball of the robot's outline in it. The robot is moved straight
+   * Each rock touched gives one contact: its deepest touch with a tyre or a measured body zone. The robot is moved straight
    * out by that depth (position only: no speed comes from it), then the touching point's speed into the rock is
    * taken away by an impulse there (a rigid body of mass 1, harder to turn than a free one because its wheels hold
    * it), with friction along the rock. A rock low enough to drive over (DRIVE.climb) is left to the wheels (see sampleWheels).
@@ -642,21 +709,34 @@ export class Driver {
         if (o.h <= DRIVE.climb) continue; // low enough to drive over: the wheels ride up it (sampleWheels), nothing is stopped
         const rockGround = Cartesian3.magnitude(o.p) - R;
         let deep = 0, nf = 0, nr = 0, af = 0, ar = 0;
-        for (const c of BODY_CELLS) {
-          const cf = c.f * S, cr = c.r * S, rad = c.rad * S;
-          // the ball's bottom over the rock's ground, with the body's tilt (and the wheel's own travel)
-          const bottom = this.bodyH + cf * tp + cr * tr + c.y * S + (c.wheel >= 0 ? this.wheelLift[c.wheel] : 0) - rockGround;
+        for (const zone of BODY_ZONES) {
+          const f0 = zone.f0 * S, f1 = zone.f1 * S, r0 = zone.r0 * S, r1 = zone.r1 * S;
+          const cf = Math.max(f0, Math.min(f1, rf)), cr = Math.max(r0, Math.min(r1, rr));
+          const bottom = this.bodyH - this.sink + cf * tp + cr * tr + zone.y * S
+            + (zone.wheel !== undefined ? this.wheelLift[zone.wheel] : 0) - rockGround;
           if (bottom >= o.h) continue;
-          const df = cf - rf, dr = cr - rr, D = Math.hypot(df, dr);
-          const pen = rockRadiusAt(o.r, o.h, bottom, o.pow) + rad - D;
+          const pen = roundedContact(rf, rr, rockRadiusAt(o.r, o.h, bottom, o.pow), f0, f1, r0, r1, zone.round * S);
           if (pen <= deep) continue;
-          deep = pen;
-          if (D > 1e-6) { nf = df / D; nr = dr / D; } else { nf = -Math.sign(rf) || 1; nr = 0; }
-          af = cf - nf * rad; ar = cr - nr * rad;
+          deep = pen; nf = zoneHit.nf; nr = zoneHit.nr; af = zoneHit.af; ar = zoneHit.ar;
+        }
+        // Six actual tyres, each a cylinder: its forward span grows from zero at the bottom to
+        // the full radius at the axle. A stone between the tyres does not meet an invisible slab.
+        const rw = WHEEL_R * S, hw = WHEEL_WIDTH * S / 2;
+        for (let wheel = 0; wheel < 6; wheel++) {
+          const wf = WF[wheel], wr = WR[wheel];
+          if (Math.abs(rr - wr) > o.r + hw || Math.abs(rf - wf) > o.r + rw) continue;
+          for (const slice of TYRE_SLICES) {
+            const span = slice.span * rw;
+            const bottom = this.bodyH - this.sink + wf * tp + wr * tr + this.wheelLift[wheel] + slice.rise * rw - rockGround;
+            if (bottom >= o.h) continue;
+            const pen = roundedContact(rf, rr, rockRadiusAt(o.r, o.h, bottom, o.pow), wf - span, wf + span, wr - hw, wr + hw, 0.02 * S);
+            if (pen <= deep) continue;
+            deep = pen; nf = zoneHit.nf; nr = zoneHit.nr; af = zoneHit.af; ar = zoneHit.ar;
+          }
         }
         // (a millimetre of touch is kept below, so a rock that holds the robot is felt on every step, not every other one)
         if (deep <= 0.0004) continue;
-        any = true; pressing = true;
+        any = true;
         // out of the rock (keeping a millimetre of touch so the contact holds without jitter)
         const out = Math.max(0, deep - 0.001);
         Cartesian3.add(next, Cartesian3.add(Cartesian3.multiplyByScalar(F, nf * out, d1), Cartesian3.multiplyByScalar(Rt, nr * out, d2), d1), next);
@@ -664,6 +744,9 @@ export class Driver {
         const pf = vF - w * ar, ps = vS + w * af;
         const vn = pf * nf + ps * nr;
         if (vn >= 0) continue;
+        // Sliding along a face or reversing away must stay free. Friction is paid only by an
+        // inward push, and a separating touch must not keep the "rock in the way" state alive.
+        pressing = true;
         const arm = -ar * nf + af * nr; // how the push turns the body
         const j = -vn / (1 + arm * arm / I);
         // friction along the rock, at most rockFriction x the push
