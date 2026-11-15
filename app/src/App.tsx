@@ -34,6 +34,7 @@ import { setExploreNames } from './explore/context';
 import { probeAt } from './explore/probe';
 import type { RouteView } from './explore/RoutePanel';
 import { SurfaceMap } from './explore/SurfaceMap';
+import { RenderStopped } from './ui/RenderStopped';
 
 const DEFAULT_ARRIVAL = Date.UTC(2026, 10, 18, 2, 0);
 const sameSpot = (a: { lat: number; lon: number }, b: { lat: number; lon: number }) => Math.abs(a.lat - b.lat) < 1e-6 && Math.abs(a.lon - b.lon) < 1e-6;
@@ -95,6 +96,7 @@ export default function App() {
   const [overviewStart, setOverviewStart] = useState<Pin | null>(null);
   const [overviewPrefer, setOverviewPrefer] = useState<RoutePrefer>('fastest');
   const [surfaceMapOpen, setSurfaceMapOpen] = useState(false);
+  const [renderError, setRenderError] = useState<string | null>(null);
   // What is switched on inside the surface map belongs to that visit. It used to be the overview's own switches:
   // Water ice turned on down there followed you back up, where its colour key then sat on the screen with (at
   // most places) nothing on the Moon to explain it. The visit starts from the overview's switches and adds its own.
@@ -531,7 +533,7 @@ export default function App() {
         selectedPin={sel} pins={pins} bodies={bodies} timeMs={minute} lander={lander} sky={standing ? sky : null}
         overviewRoute={overviewRoute?.result ?? null} routeDestination={overviewRoute?.to ?? null}
         choosingDestination={routeArmed && !standing} onRouteDestination={chooseOverviewDestination}
-        onSelect={onSelect} onHover={hoverStore.set} onLoadProgress={onLoadProgress} onMapMode={setMapMode} />
+        onSelect={onSelect} onHover={hoverStore.set} onLoadProgress={onLoadProgress} onMapMode={setMapMode} onRenderError={setRenderError} />
       <div id="cesium-credits" hidden />
 
       {!standing && (
@@ -629,6 +631,7 @@ export default function App() {
           onPole={() => { closeWelcome(); map.current?.flyPole(); }} onExplore={() => { closeWelcome(); map.current?.flyWhole(); }} />
       )}
       {loading && <StartScreen progress={load} leaving={entered && load.done} onEnter={enterApp} onSkip={skipLoading} />}
+      {renderError && <RenderStopped message={renderError} />}
     </div>
   );
 }

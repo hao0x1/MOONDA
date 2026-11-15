@@ -70,6 +70,8 @@ export const places: Partial<Record<keyof typeof en | `pl.${string}`, string>> =
   'welcome.step.look.text': 'អូសដើម្បីរំកិល រមូរដើម្បីពង្រីក អូសដោយប៊ូតុងស្ដាំដើម្បីផ្អៀង។',
   'welcome.step.click': 'ចុចកន្លែងណាមួយ',
   'welcome.step.click.text': 'មើលថាពេលណាវាមានពន្លឺព្រះអាទិត្យ និងមើលឃើញផែនដី រួចចុះចតនៅទីនោះ។',
+  'welcome.step.look.text.touch': 'អូសដើម្បីរំកិល ប្រើម្រាមដៃពីរដើម្បីពង្រីក។',
+  'welcome.step.click.touch': 'ប៉ះកន្លែងមួយ',
   'welcome.step.compare': 'ប្រៀបធៀបផែនការ',
   'welcome.step.compare.text': 'ដាក់ផែនការចុះចតរហូតដល់បួនទន្ទឹមគ្នា ហើយមើលថាមួយណាល្អ។',
   'welcome.toPole': 'នាំខ្ញុំទៅប៉ូលខាងត្បូង',

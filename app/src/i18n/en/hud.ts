@@ -63,4 +63,7 @@ export const hud = {
   'hud.view.first.tip': 'From the rover’s mast camera (V)',
   'hud.lights': 'Headlights (L)',
   'hud.hint': 'Drag to look around · scroll to zoom · W to drive the rover',
+  'hud.hint.touch': 'Drag to look around · pinch to zoom · use the pad to drive',
+  'hud.pad': 'Drive pad: push up to go forward, sideways to turn',
+  'hud.fast': 'Fast',
 } as const;

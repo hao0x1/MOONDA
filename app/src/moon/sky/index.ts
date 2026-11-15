@@ -416,7 +416,7 @@ export class SpaceSky {
     const milkyJob = (async () => {
       // small picture first (fast), then the sharp one if this GPU takes it
       const small = await loadBitmap(this.base + 'milkyway_4k.jpg');
-      if (this.dead) return;
+      if (this.dead) { small.close(); return; }
       this.milkyTex = this.keep(this.timed('milkyWay4k', () => createTexture({ context, source: small, repeatX: true })));
       small.close();
       this.tryPart('milky', () => createDrawable({
@@ -441,7 +441,7 @@ export class SpaceSky {
         loadBitmap(this.base + 'earth_night_4k.jpg').catch(() => null),
         loadBitmap(this.base + 'earth_clouds_2k.jpg').catch(() => null),
       ]);
-      if (this.dead) return;
+      if (this.dead) { day.close(); night?.close(); clouds?.close(); return; }
       this.earthTex = this.timed('earth', () => ({
         day: this.keep(createTexture({ context, source: day, repeatX: true })),
         night: this.keep(createTexture({ context, source: night ?? blank(), grey: true, repeatX: true })),

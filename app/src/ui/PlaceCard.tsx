@@ -16,6 +16,7 @@ import { describeEarth, describeSun } from './describe';
 import { DayBars } from './DayBars';
 import { durationParts, fmtKm } from './format';
 import { Help } from './Help';
+import { isPhone } from './device';
 import { IconButton, Segmented } from './kit';
 
 export type Selection =
@@ -80,7 +81,8 @@ export function PlaceCard(p: Props) {
   const polar = lat <= POLAR_LIMIT_LAT;
   const title = selectionTitle(p.selection, p.names);
   const nearest = useMemo(() => (p.selection.type === 'pin' && p.names ? nearestNames(p.names, lat, lon, 1)[0] : null), [p.names, lat, lon, p.selection.type]);
-  const [collapsed, setCollapsed] = useState(false);
+  // (on a phone the card is a sheet across the bottom: it starts folded to its name and buttons, so the Moon stays in view)
+  const [collapsed, setCollapsed] = useState(isPhone);
   const [copied, setCopied] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [moreBelow, setMoreBelow] = useState(false);
@@ -91,7 +93,7 @@ export function PlaceCard(p: Props) {
   const nameMeasure = useRef<HTMLSpanElement>(null);
   const coordsButton = useRef<HTMLButtonElement>(null);
   // A new spot: open the panel again and start at the top.
-  useEffect(() => { setCollapsed(false); setCopied(false); setScrolled(false); if (body.current) body.current.scrollTop = 0; }, [lat, lon]);
+  useEffect(() => { setCollapsed(isPhone()); setCopied(false); setScrolled(false); if (body.current) body.current.scrollTop = 0; }, [lat, lon]);
 
   const ready = p.spot?.status === 'ready' ? p.spot : null;
   const failed = p.spot?.status === 'error' ? p.spot.message : null;
@@ -238,7 +240,7 @@ export function PlaceCard(p: Props) {
         <div className="place-top">
           <span className="place-kind">{kind}</span>
           <span className="place-top-gap" />
-          <IconButton size="sm" label={collapsed ? t('place.show') : t('place.hide')} aria-expanded={!collapsed} onClick={() => setCollapsed(v => !v)}>{collapsed ? <CaretDown size={16} /> : <CaretUp size={16} />}</IconButton>
+          <IconButton size="sm" className="place-toggle" label={collapsed ? t('place.show') : t('place.hide')} aria-expanded={!collapsed} onClick={() => setCollapsed(v => !v)}>{collapsed ? <CaretDown size={16} /> : <CaretUp size={16} />}</IconButton>
           <IconButton size="sm" label={t('common.close')} onClick={p.onClose}><X size={16} /></IconButton>
         </div>
         <div ref={nameRow} className={`place-name-row${coordsBelow ? ' coords-below' : ''}`}>
@@ -254,7 +256,8 @@ export function PlaceCard(p: Props) {
         </a>
       </header>
 
-      {!collapsed && (
+      {/* (the sheet on a phone keeps its three buttons when folded: Land here is what most people came for) */}
+      {(!collapsed || isPhone()) && (
         <div className="place-actions">
           <button type="button" className="btn primary" onClick={p.onStand} disabled={!ready} data-tip={ready ? t('place.standTip') : t('place.standWait')}>
             {ready ? <ArrowLineDown size={18} weight="bold" /> : <span className="spinner dark" />} {t('place.stand')}

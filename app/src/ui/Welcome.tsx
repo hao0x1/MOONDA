@@ -1,5 +1,6 @@
 import { ArrowSquareOut, HandGrabbing, MapPin, Scales, X } from '@phosphor-icons/react';
 import { useT, type Key } from '../i18n';
+import { isTouch } from './device';
 import { IconButton, Wordmark } from './kit';
 
 // What each kind of data is (a text key), who made it and where to read more. Source names stay as published.
@@ -31,8 +32,8 @@ export function Welcome({ onPole, onExplore, onClose, showSources }: { onPole():
         <h1 id="welcome-title">{t('welcome.title')}</h1>
         <p className="welcome-lead">{t('welcome.lead')}</p>
         <ol className="welcome-steps">
-          <li><span className="ws-icon"><HandGrabbing size={18} /></span><div><b>{t('welcome.step.look')}</b><span>{t('welcome.step.look.text')}</span></div></li>
-          <li><span className="ws-icon"><MapPin size={18} weight="fill" color="var(--pin)" /></span><div><b>{t('welcome.step.click')}</b><span>{t('welcome.step.click.text')}</span></div></li>
+          <li><span className="ws-icon"><HandGrabbing size={18} /></span><div><b>{t('welcome.step.look')}</b><span>{t(isTouch() ? 'welcome.step.look.text.touch' : 'welcome.step.look.text')}</span></div></li>
+          <li><span className="ws-icon"><MapPin size={18} weight="fill" color="var(--pin)" /></span><div><b>{t(isTouch() ? 'welcome.step.click.touch' : 'welcome.step.click')}</b><span>{t('welcome.step.click.text')}</span></div></li>
           <li><span className="ws-icon"><Scales size={18} /></span><div><b>{t('welcome.step.compare')}</b><span>{t('welcome.step.compare.text')}</span></div></li>
         </ol>
         <div className="welcome-actions">

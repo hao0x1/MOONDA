@@ -22,6 +22,13 @@ export const tutorial = {
   'tutorial.layers.back': 'Press Back to map, then open Layers.',
   'tutorial.finish.title': 'You are ready',
   'tutorial.finish.body': 'Have fun exploring the Moon.',
+  // the same steps said for a touch screen (Tutorial.tsx uses these where the pointer is a finger)
+  'tutorial.move.body.touch': 'Drag to turn it. Pinch to zoom.',
+  'tutorial.pick.body.touch': 'Tap anywhere on the Moon.',
+  'tutorial.land.body.touch': 'Press Land here on the card at the bottom.',
+  'tutorial.drive.body.touch': 'Push the round pad up to roll forward. Push sideways to turn.',
+  'tutorial.drive.land.touch': 'Press Land here, then push the round pad.',
+  'tutorial.layers.body.touch': 'Open Layers in the row at the top.',
   'tutorial.skipStep': 'Skip',
   'tutorial.skipStep.tip': 'Skip this step',
   'tutorial.skip': 'Close the tutorial',

@@ -37,9 +37,9 @@ import { RobotRig, Dust, type DustLight } from './robotFx';
 import { WheelTracks } from './wheelTracks';
 import { onLangChange, t as tr } from '../i18n';
 import { settings } from '../app/settings';
-import { landerAntialias } from '../app/quality';
+import { isPhoneGraphics, landerAntialias } from '../app/quality';
 import { slopePicture } from './groundMaps';
-import { SunShadows, SUN_MAP_GLSL, sunMapUniforms, placeContact } from './sunShadow';
+import { SunShadows, SUN_MAP_GLSL, SUN_MAP_LIGHT_GLSL, sunMapUniforms, placeContact } from './sunShadow';
 import { FAR_ROCKS, FarRocks, type FarSpot } from './farRocks';
 import { GroundGovernor, landerTerrainFog } from './groundLod';
 import { FAR_GROUND_GLSL } from './groundFar';
@@ -439,6 +439,10 @@ class PhotoMeans {
         })
         .catch(() => null);
       this.tiles.set(key, p);
+      // A drive must not retain every decoded photo it passed on a phone (32 tiles = 8 MiB).
+      if (isPhoneGraphics()) while (this.tiles.size > 32) this.tiles.delete(this.tiles.keys().next().value!);
+    } else if (isPhoneGraphics()) {
+      this.tiles.delete(key); this.tiles.set(key, p);
     }
     return p;
   }
@@ -882,6 +886,12 @@ czm_material czm_getMaterial(czm_materialInput materialInput)
 }
 `;
 
+// A phone spends most of a surface frame shading the ground. Use one filtered scan read instead of
+// four cubic reads, and fewer shadow steps, while keeping the desktop material exactly as before.
+const PHONE_GROUND_SHADER = GROUND_SHADER.replace(SUN_MAP_GLSL, SUN_MAP_LIGHT_GLSL)
+  .replace(/vec4 t = mag > m1[^\n]+/, 'vec4 t = texture(tex, uv);')
+  .replace('k < 8;', 'k < 4;').replaceAll('2048.0', '1024.0');
+
 // Look of the ground (the same numbers are used by the shader and by the exposure below).
 /** Sunlight colour on the ground: moon dust is a slightly warm grey. */
 const SUN_TINT: [number, number, number] = [1.03, 0.99, 0.93];
@@ -950,6 +960,50 @@ const ROCK_MODELS: { url: string; w: number; h: number }[] = [
   [0.2121, 0.0751], [0.2465, 0.2020], [0.1121, 0.0581], [0.1738, 0.0538], [0.0811, 0.0734], [0.0918, 0.0550], [0.0968, 0.0603],
 ].map(([w, h], i) => ({ url: `lander/rocks/moon_rock_0${i + 1}/rock.gltf`, w, h }));
 const ROCK_POOL = 96;
+// A phone keeps four of each scan; the full pool and all of its detail stay on computers.
+const rockPool = () => isPhoneGraphics() ? 28 : ROCK_POOL;
+
+/** The model's shape supplies small detail on phones, without another set of full-size texture maps. */
+interface PhoneGltf {
+  materials?: { normalTexture?: unknown; occlusionTexture?: unknown; pbrMetallicRoughness?: { metallicRoughnessTexture?: unknown; baseColorTexture?: { index: number } } }[];
+  textures?: { source?: number; extensions?: { EXT_texture_webp?: { source: number } } }[];
+  images?: { uri?: string; bufferView?: number; mimeType?: string }[];
+}
+function phoneModelMaterials(gltf: PhoneGltf) {
+  for (const material of gltf.materials ?? []) {
+    delete material.normalTexture;
+    delete material.occlusionTexture;
+    if (material.pbrMetallicRoughness) delete material.pbrMetallicRoughness.metallicRoughnessTexture;
+  }
+}
+/** Make one small colour picture per scan; all four phone models of that scan share its URL. */
+async function phoneRockPicture(kind: number): Promise<string | null> {
+  try {
+    const model = new URL(ROCK_MODELS[kind].url, document.baseURI);
+    const response = await fetch(new URL(`textures/moon_rock_0${kind + 1}_diff_1k.jpg`, model));
+    if (!response.ok) return null;
+    const bitmap = await createImageBitmap(await response.blob(), { resizeWidth: 512, resizeHeight: 512, resizeQuality: 'high', premultiplyAlpha: 'none', colorSpaceConversion: 'none' });
+    try {
+      const canvas = document.createElement('canvas'); canvas.width = canvas.height = 512;
+      canvas.getContext('2d')!.drawImage(bitmap, 0, 0);
+      const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.88));
+      return blob ? URL.createObjectURL(blob) : null;
+    } finally { bitmap.close(); }
+  } catch { return null; } // the original 1k colour picture still fits if resizing is unavailable
+}
+
+function phoneRockMaterials(gltf: PhoneGltf, picture: string | null) {
+  phoneModelMaterials(gltf);
+  if (!picture) return;
+  for (const material of gltf.materials ?? []) {
+    const id = material.pbrMetallicRoughness?.baseColorTexture?.index;
+    const texture = id === undefined ? undefined : gltf.textures?.[id];
+    const imageId = texture?.extensions?.EXT_texture_webp?.source ?? texture?.source;
+    const image = imageId === undefined ? undefined : gltf.images?.[imageId];
+    if (image) { image.uri = picture; delete image.bufferView; image.mimeType = 'image/jpeg'; }
+  }
+}
+
 /** Rock brightness: the scans average ~0.21; scaled so a rock is about as bright as the soil it lies on. */
 const ROCK_ALBEDO = 0.75 / 0.21;
 /** How deep a rock's base sits in the dust (fraction of its height), and how often rocks are re-seated on the drawn ground (ms). */
@@ -1010,6 +1064,55 @@ void fragmentMain(FragmentInput fsInput, inout czm_modelMaterial material) {
 // (and hill shadows), Earth and fill light, at the same exposure, with a faint floor so it is never fully black.
 
 const ROVER_URL = 'lander/rover/rover-moonda.glb'; // rover.glb with its wheels split and a solar panel (data-prep/rover/)
+
+/** Resize embedded rover colours one at a time, so preparation needs only one full decode at once. */
+async function phoneRoverPictures(): Promise<Map<number, string>> {
+  const pictures = new Map<number, string>();
+  try {
+    const response = await fetch(new URL(ROVER_URL, document.baseURI));
+    if (!response.ok) return pictures;
+    const bytes = new Uint8Array(await response.arrayBuffer()), view = new DataView(bytes.buffer);
+    if (view.getUint32(0, true) !== 0x46546c67 || view.getUint32(4, true) !== 2) return pictures;
+    const length = view.getUint32(12, true), binary = 28 + length;
+    const gltf = JSON.parse(new TextDecoder().decode(bytes.subarray(20, 20 + length))) as PhoneGltf & { bufferViews: { byteOffset?: number; byteLength: number }[] };
+    const ids = new Set(gltf.materials?.map(m => m.pbrMetallicRoughness?.baseColorTexture?.index).filter((id): id is number => id !== undefined));
+    for (const id of ids) {
+      try {
+        const texture = gltf.textures?.[id], imageId = texture?.source ?? texture?.extensions?.EXT_texture_webp?.source;
+        const image = imageId === undefined ? undefined : gltf.images?.[imageId];
+        const block = image?.bufferView === undefined ? undefined : gltf.bufferViews[image.bufferView];
+        if (!block) continue;
+        const offset = binary + (block.byteOffset ?? 0);
+        const original = await createImageBitmap(new Blob([bytes.slice(offset, offset + block.byteLength)], { type: image?.mimeType }));
+        let small: ImageBitmap | null = null;
+        try {
+          const scale = Math.min(1, 512 / Math.max(original.width, original.height));
+          if (scale === 1) continue;
+          const width = Math.max(1, Math.floor(original.width * scale)), height = Math.max(1, Math.floor(original.height * scale));
+          small = await createImageBitmap(original, { resizeWidth: width, resizeHeight: height, resizeQuality: 'high', premultiplyAlpha: 'none', colorSpaceConversion: 'none' });
+          const canvas = document.createElement('canvas'); canvas.width = width; canvas.height = height;
+          canvas.getContext('2d')!.drawImage(small, 0, 0);
+          const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/png'));
+          if (blob) pictures.set(id, URL.createObjectURL(blob));
+        } finally { small?.close(); original.close(); }
+      } catch { /* Keep this colour's original 1k map if decoding or resizing failed. */ }
+    }
+  } catch { /* The ordinary model loader can still fetch the rover itself. */ }
+  return pictures;
+}
+
+function phoneRoverMaterials(gltf: PhoneGltf, pictures: Map<number, string>) {
+  phoneModelMaterials(gltf);
+  for (const [id, picture] of pictures) {
+    const texture = gltf.textures?.[id], imageId = texture?.source ?? texture?.extensions?.EXT_texture_webp?.source;
+    const image = imageId === undefined ? undefined : gltf.images?.[imageId];
+    if (!texture || !image) continue;
+    texture.source = imageId;
+    if (texture.extensions) delete texture.extensions.EXT_texture_webp;
+    image.uri = picture; delete image.bufferView; image.mimeType = 'image/png';
+  }
+}
+
 export const ROVER = {
   /**
    * The robot's size against NASA's full-size Perseverance model (set in walk.ts, ROBOT_SCALE, so the wheels and
@@ -1131,7 +1234,7 @@ function rockCell(seed: number, big: boolean, ix: number, iy: number): RockSpot[
     const spot = { id: `${key}:${i}`, e, n: nn, d, kind: Math.floor(rnd() * ROCK_MODELS.length), yaw: rnd() * 2 * Math.PI, tilt: rnd() * 0.25, tiltAz: rnd() * 2 * Math.PI };
     if (Math.hypot(e, nn) > F.clear) out.push(spot); // the lander's own patch of ground stays clear
   }
-  if (cellCache.size > 4000) cellCache.clear();
+  if (cellCache.size > (isPhoneGraphics() ? 512 : 4000)) cellCache.clear();
   cellCache.set(key, out);
   return out;
 }
@@ -1163,9 +1266,9 @@ function rockSpots(lat: number, lon: number, we: number, wn: number, park: reado
   };
   scan(false, F.reach);
   scan(true, F.bigReach);
-  const best = out.sort((a, b) => b.score - a.score).slice(0, ROCK_POOL);
+  const best = out.sort((a, b) => b.score - a.score).slice(0, rockPool());
   // the cut: the weakest rock drawn when the pool is full, else the smallest looks we draw at all
-  const cut = best.length >= ROCK_POOL ? best[best.length - 1].score : F.minAngle;
+  const cut = best.length >= rockPool() ? best[best.length - 1].score : F.minAngle;
   return best.map(o => ({ s: o.s, size: smooth01((o.score - cut) / (0.6 * cut)) }));
 }
 /** Every rock (both cell sizes) between r0 and r1 m from (we, wn): the far stones (farRocks.ts). */
@@ -3319,9 +3422,12 @@ export class LanderView {
           lvGain: new Cartesian4(...DETAIL_LAYERS.map(l => l.gain) as [number, number, number, number]),
           lvFade: new Cartesian4(...DETAIL_LAYERS.map(l => l.fadeM) as [number, number, number, number]),
         },
-        source: GROUND_SHADER.replace('/* LV_CRATER_FIELD */', craterShader(this.webgl2)),
+        source: (isPhoneGraphics() ? PHONE_GROUND_SHADER : GROUND_SHADER).replace('/* LV_CRATER_FIELD */', craterShader(this.webgl2)),
       },
     });
+    // Texture results inherit the sampler's precision. Depth comparisons and signed half-float slopes
+    // need more than ESSL's lowp sampler default on phones; place this before Fabric's uniforms too.
+    if (isPhoneGraphics()) this.material.shaderSource = 'precision highp sampler2D;\n' + this.material.shaderSource;
     globe.material = this.material;
   }
 
@@ -3337,11 +3443,14 @@ export class LanderView {
     const names = ['lvDA', 'lvDB', 'lvDC'];
     const load = (url: string) => fetch(new URL(url, document.baseURI).href)
       .then(r => { if (!r.ok) throw new Error(`${url}: ${r.status}`); return r.blob(); })
-      .then(b => createImageBitmap(b, { imageOrientation: 'flipY', premultiplyAlpha: 'none', colorSpaceConversion: 'none' }));
+      .then(b => createImageBitmap(b, {
+        imageOrientation: 'flipY', premultiplyAlpha: 'none', colorSpaceConversion: 'none',
+        ...(isPhoneGraphics() ? { resizeWidth: 1024, resizeHeight: 1024, resizeQuality: 'high' } : {}),
+      }));
     void Promise.all(REGOLITH.map(r => load(r.url))).then(bitmaps => {
       let i = 0;
       const step = () => {
-        if (this.viewer.isDestroyed() || !this.material) return;
+        if (this.viewer.isDestroyed() || !this.material) { bitmaps.slice(i).forEach(bitmap => bitmap.close()); return; }
         const tex = new Gpu.Texture({
           context: ctx, source: bitmaps[i], flipY: false,
           sampler: new Gpu.Sampler({
@@ -3421,9 +3530,13 @@ export class LanderView {
    * Fetch the rover (NASA's Perseverance model, about 5 MB) and draw it once, invisibly small at the Moon's centre,
    * so its textures are on the GPU and its shader is built before the first "Stand here".
    */
-  private loadRover() {
+  private async loadRover() {
     if (this.roverStarted || !this.material) return;
     this.roverStarted = true;
+    const pictures = isPhoneGraphics() ? await phoneRoverPictures() : new Map<number, string>();
+    const releasePictures = () => { for (const picture of pictures.values()) URL.revokeObjectURL(picture); };
+    if (this.viewer.isDestroyed()) { releasePictures(); return; }
+    this.offs.push(releasePictures);
     const scene = this.viewer.scene;
     const shader = this.roverShader = new CustomShader({
       lightingModel: LightingModel.UNLIT,
@@ -3447,6 +3560,7 @@ export class LanderView {
       show: true, cull: false, backFaceCulling: false, shadows: ShadowMode.DISABLED, allowPicking: false,
       incrementallyLoadTextures: false, asynchronous: true, upAxis: Cesium.Axis.Z, forwardAxis: Cesium.Axis.X,
       environmentMapOptions: { enabled: false },
+      ...(isPhoneGraphics() ? { gltfCallback: (gltf: PhoneGltf) => phoneRoverMaterials(gltf, pictures) } : {}),
     } as Parameters<typeof Model.fromGltfAsync>[0]).then(model => {
       if (this.viewer.isDestroyed()) { model.destroy(); return; }
       scene.primitives.add(model);
@@ -3455,6 +3569,7 @@ export class LanderView {
       const off = scene.postRender.addEventListener(() => {
         if (!model.ready || ++frames < 3) { scene.requestRender(); return; }
         off();
+        releasePictures();
         this.poseRover(model);
         this.roverReady = true;
         this.grabHead(model);
@@ -3704,13 +3819,17 @@ export class LanderView {
     S.setUniform('u_bounce', Cartesian3.fromElements(b, b * 0.98, b * 0.95, scratchG));
   }
 
-  private loadRocks() {
+  private async loadRocks() {
     if (this.rocksStarted || !this.material) return;
     this.rocksStarted = true;
     const t0 = performance.now(), scene = this.viewer.scene;
+    const pictures = isPhoneGraphics() ? await Promise.all(ROCK_MODELS.map((_, kind) => phoneRockPicture(kind))) : [];
+    const releasePictures = () => { for (const picture of pictures) if (picture) URL.revokeObjectURL(picture); };
+    if (this.viewer.isDestroyed()) { releasePictures(); return; }
+    this.offs.push(releasePictures);
     const hidden = Matrix4.fromUniformScale(1e-4);
     const jobs: Promise<void>[] = [];
-    for (let i = 0; i < ROCK_POOL; i++) {
+    for (let i = 0; i < rockPool(); i++) {
       const kind = i % ROCK_MODELS.length;
       const shader = new CustomShader({
         lightingModel: LightingModel.UNLIT,
@@ -3737,6 +3856,7 @@ export class LanderView {
         // unlit (we light them ourselves): no sky reflections, which Cesium would otherwise re-measure with a GPU
         // read-back every time a rock moves (that stalled walking)
         environmentMapOptions: { enabled: false },
+        ...(isPhoneGraphics() ? { gltfCallback: (gltf: PhoneGltf) => phoneRockMaterials(gltf, pictures[kind] ?? null) } : {}),
       } as Parameters<typeof Model.fromGltfAsync>[0]).then(model => {
         if (this.viewer.isDestroyed()) { model.destroy(); return; }
         scene.primitives.add(model);
@@ -3752,6 +3872,7 @@ export class LanderView {
         const ready = this.rocks.every(r => r.model.ready);
         if (!ready || ++frames < 4) { scene.requestRender(); return; }
         off();
+        releasePictures(); // every loader has consumed its picture; GPU textures own it now
         if (!this.placed) for (const r of this.rocks) r.model.show = false;
         else if (this.phase === 'on' || this.phase === 'in') this.placeRocks();
         this.rockMs = Math.round(performance.now() - t0);

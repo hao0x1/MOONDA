@@ -24,6 +24,19 @@ import { POLAR_EXTENT_M } from './layers';
 import { SUN_URL, EARTH_URL } from '../ui/glyphs';
 import type { RouteResult } from '../science/route';
 import { MAP_DETAIL_SOURCES, POLAR_HALF as PHOTO_POLAR_HALF, POLAR_MAX_LEVEL, TILE, TREK_MAX_LEVEL, detailUrl, mapImagery, polarXY, trekUrl, type MapPhotoSource } from '../explore/mapImagery';
+import { drawingPixelRatio, isPhoneGraphics } from '../app/quality';
+
+/** Resize before upload: clamping only the destination texture still leaves an oversized source upload. */
+async function fitTextureBitmap(gl: WebGL2RenderingContext, bitmap: ImageBitmap, phoneLimit = Infinity): Promise<ImageBitmap> {
+  const edge = Math.min(gl.getParameter(gl.MAX_TEXTURE_SIZE) as number, phoneLimit);
+  if (Math.max(bitmap.width, bitmap.height) <= edge) return bitmap;
+  const scale = edge / Math.max(bitmap.width, bitmap.height);
+  try {
+    return await createImageBitmap(bitmap, { resizeWidth: Math.max(1, Math.round(bitmap.width * scale)),
+      resizeHeight: Math.max(1, Math.round(bitmap.height * scale)), resizeQuality: 'high',
+      colorSpaceConversion: 'none', premultiplyAlpha: 'none' });
+  } finally { bitmap.close(); }
+}
 
 const DEG = Math.PI / 180;
 const M_PER_DEG = MOON_R * DEG; // 30.3 km
@@ -472,8 +485,9 @@ export class FlatMap {
     this.light = light;
     this.preparing = (async () => {
       const gl = this.gl;
-      const res = await fetch(new URL(light ? './data/base/v5/moon2k.jpg' : './data/base/v5/moon8k.jpg', document.baseURI).href);
-      const bmp = await createImageBitmap(await res.blob(), { colorSpaceConversion: 'none', premultiplyAlpha: 'none' });
+      const small = light || (gl.getParameter(gl.MAX_TEXTURE_SIZE) as number) < 8192;
+      const res = await fetch(new URL(small ? './data/base/v5/moon2k.jpg' : './data/base/v5/moon8k.jpg', document.baseURI).href);
+      const bmp = await fitTextureBitmap(gl, await createImageBitmap(await res.blob(), { colorSpaceConversion: 'none', premultiplyAlpha: 'none' }));
       this.prog = compile(gl, VS, FS);
       for (const n of ['uC', 'uA', 'uB', 'uS', 'uD', 'uO', 'uFlat', 'uSize', 'uProj', 'uTex', 'uSunOn', 'uDetail', 'uGrid', 'uPhoto', 'uSun', 'uTint0', 'uTint1', 'uTint2', 'uPolS', 'uPolN', 'uPolOn', 'uSharp']) this.u[n] = gl.getUniformLocation(this.prog, n);
       this.ovProg = compile(gl, VS, OFS);
@@ -513,7 +527,8 @@ export class FlatMap {
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-      const W = Math.min(gl.getParameter(gl.MAX_TEXTURE_SIZE) as number, bmp.width), H = W / 2;
+      const viewport = gl.getParameter(gl.MAX_VIEWPORT_DIMS) as Int32Array;
+      const W = Math.min(gl.getParameter(gl.MAX_TEXTURE_SIZE) as number, gl.getParameter(gl.MAX_RENDERBUFFER_SIZE) as number, viewport[0], viewport[1] * 2, bmp.width), H = W / 2;
       bmp.close();
       const tex = gl.createTexture()!;
       gl.bindTexture(gl.TEXTURE_2D, tex);
@@ -542,7 +557,7 @@ export class FlatMap {
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
       const ext = gl.getExtension('EXT_texture_filter_anisotropic');
-      if (ext) gl.texParameterf(gl.TEXTURE_2D, ext.TEXTURE_MAX_ANISOTROPY_EXT, 8);
+      if (ext) gl.texParameterf(gl.TEXTURE_2D, ext.TEXTURE_MAX_ANISOTROPY_EXT, Math.min(8, gl.getParameter(ext.MAX_TEXTURE_MAX_ANISOTROPY_EXT) as number));
       this.tex = tex;
       for (const u of [SUN_URL, EARTH_URL]) img(u, () => this.request());
       this.resize();
@@ -558,7 +573,7 @@ export class FlatMap {
       try {
         const res = await fetch(new URL(`./data/base/v5/${POLAR_PICS[i].file}`, document.baseURI).href);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const bmp = await createImageBitmap(await res.blob(), { colorSpaceConversion: 'none', premultiplyAlpha: 'none' });
+        const bmp = await fitTextureBitmap(this.gl, await createImageBitmap(await res.blob(), { colorSpaceConversion: 'none', premultiplyAlpha: 'none' }));
         const gl = this.gl, tex = gl.createTexture()!;
         gl.bindTexture(gl.TEXTURE_2D, tex);
         gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
@@ -572,7 +587,7 @@ export class FlatMap {
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
         const ext = gl.getExtension('EXT_texture_filter_anisotropic');
-        if (ext) gl.texParameterf(gl.TEXTURE_2D, ext.TEXTURE_MAX_ANISOTROPY_EXT, 8);
+        if (ext) gl.texParameterf(gl.TEXTURE_2D, ext.TEXTURE_MAX_ANISOTROPY_EXT, Math.min(8, gl.getParameter(ext.MAX_TEXTURE_MAX_ANISOTROPY_EXT) as number));
         this.pol[i] = tex;
         this.polState[i] = 'ready';
         this.request();
@@ -682,6 +697,15 @@ export class FlatMap {
           release(src); src = small;
           if (!valid()) return false;
         }
+        const edge = Math.min(this.gl.getParameter(this.gl.MAX_TEXTURE_SIZE) as number, isPhoneGraphics() ? 1024 : Infinity);
+        if (Math.max(src.width, src.height) > edge) {
+          const scale = edge / Math.max(src.width, src.height), original = src;
+          src = await createImageBitmap(original, { resizeWidth: Math.max(1, Math.round(original.width * scale)),
+            resizeHeight: Math.max(1, Math.round(original.height * scale)), resizeQuality: 'high',
+            colorSpaceConversion: 'none', premultiplyAlpha: 'none' });
+          release(original);
+          if (!valid()) return false;
+        }
         const gl = this.gl, at = performance.now();
         texture = gl.createTexture();
         if (!texture) throw new Error('Overlay texture unavailable');
@@ -758,7 +782,7 @@ export class FlatMap {
   resize() {
     this.width = this.ui.clientWidth || 1; this.height = this.ui.clientHeight || 1;
     const { W, H } = this.size();
-    this.dpr = Math.min(2, window.devicePixelRatio || 1);
+    this.dpr = drawingPixelRatio(this.gl, W, H, Math.min(isPhoneGraphics() ? 1 : 2, window.devicePixelRatio || 1));
     for (const c of [this.glCanvas, this.ui]) {
       const w = Math.round(W * this.dpr), h = Math.round(H * this.dpr);
       if (c.width !== w || c.height !== h) { c.width = w; c.height = h; }
@@ -893,10 +917,11 @@ export class FlatMap {
     if (south < -79.5) this.drawPolarTiles([west, east, south, Math.min(-79.5, north)]);
     mapImagery.retain(this, this.tileKeys);
     // Textures are small (256 or 512 px); keep recent copies without growing with every pan.
-    if (this.tileTextures.size > 96) for (const [key, item] of this.tileTextures) {
+    const maxTiles = isPhoneGraphics() ? 40 : 96, keepTiles = isPhoneGraphics() ? 28 : 64;
+    if (this.tileTextures.size > maxTiles) for (const [key, item] of this.tileTextures) {
       if (item.used === this.tileFrame) continue;
       gl.deleteTexture(item.texture); this.tileTextures.delete(key);
-      if (this.tileTextures.size <= 64) break;
+      if (this.tileTextures.size <= keepTiles) break;
     }
     gl.disable(gl.BLEND); gl.depthMask(true); gl.enable(gl.DEPTH_TEST); gl.depthFunc(gl.LESS);
   }

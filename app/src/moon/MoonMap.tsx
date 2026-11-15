@@ -29,7 +29,7 @@ import { POLAR_EXTENT_M, SHARP_POLAR_LAYERS, scienceToLayer, type LayerDef, type
 import { LolaTerrainProvider } from './lolaTerrain';
 import { attachNavigation, cameraHeadingPitch, poseGlobe, poseLookingAt, type Navigation } from './navigation';
 import { runPreload, type LoadProgress } from './preload';
-import { applyQuality, initQuality, knobs } from '../app/quality';
+import { applyQuality, initQuality, isPhoneGraphics, knobs } from '../app/quality';
 import { settings } from '../app/settings';
 import { t } from '../i18n';
 import { SpaceSky } from './sky';
@@ -94,6 +94,8 @@ interface Props {
   timeMs?: number;
   /** Start-up loading progress for the loading screen; `done` arrives exactly once per page load. */
   onLoadProgress?(p: LoadProgress): void;
+  /** The 3D map cannot be drawn (no WebGL 2, or the graphics driver refused a shader): the page says so itself (ui/RenderStopped.tsx). */
+  onRenderError?(message: string): void;
   /** The globe / flat map mode changed (also when the app goes back to the globe by itself, e.g. Stand here). */
   onMapMode?(mode: MapMode): void;
 }
@@ -236,16 +238,29 @@ export const MoonMap = forwardRef<MoonMapHandle, Props>(function MoonMap(props, 
   useEffect(() => {
     const heights = new MoonHeights(new URL('./data/', document.baseURI).href);
     heightsRef.current = heights;
-    const viewer = new Viewer(host.current!, {
-      globe: new Globe(MOON_ELLIPSOID),
-      baseLayer: false, terrainProvider: new EllipsoidTerrainProvider({ ellipsoid: MOON_ELLIPSOID }),
-      animation: false, timeline: false, baseLayerPicker: false, geocoder: false, homeButton: false,
-      sceneModePicker: false, navigationHelpButton: false, fullscreenButton: false, infoBox: false,
-      selectionIndicator: false, skyAtmosphere: false, scene3DOnly: true,
-      requestRenderMode: true, maximumRenderTimeChange: Infinity,
-      useBrowserRecommendedResolution: false, msaaSamples: knobs(initQuality()).msaaSamples,
-      creditContainer: document.getElementById('cesium-credits') ?? undefined,
-    });
+    const quality = initQuality();
+    // Cesium's own answer to a failure is a raw red error box over a black page. The page gives the message itself
+    // (onRenderError), both when the map cannot start at all and when drawing stops later.
+    const failed = (error: unknown) => cb.current.onRenderError?.(String((error as { message?: unknown } | null)?.message ?? error));
+    let viewer: Viewer;
+    try {
+      viewer = new Viewer(host.current!, {
+        globe: new Globe(MOON_ELLIPSOID),
+        baseLayer: false, terrainProvider: new EllipsoidTerrainProvider({ ellipsoid: MOON_ELLIPSOID }),
+        animation: false, timeline: false, baseLayerPicker: false, geocoder: false, homeButton: false,
+        sceneModePicker: false, navigationHelpButton: false, fullscreenButton: false, infoBox: false,
+        selectionIndicator: false, skyAtmosphere: false, scene3DOnly: true,
+        requestRenderMode: true, maximumRenderTimeChange: Infinity, showRenderLoopErrors: false,
+        useBrowserRecommendedResolution: false, msaaSamples: knobs(quality).msaaSamples,
+        // A phone can blend sorted alpha without keeping floating-point translucency buffers.
+        ...(isPhoneGraphics(quality) ? { orderIndependentTranslucency: false } : {}),
+        creditContainer: document.getElementById('cesium-credits') ?? undefined,
+      });
+    } catch (error) {
+      failed(error);
+      return;
+    }
+    viewer.scene.renderError.addEventListener((_scene: unknown, error: unknown) => failed(error));
     viewerRef.current = viewer;
     // Cesium draws as many map layers per ground tile as the graphics card has texture slots (16 on many), but it
     // does not count the 8 pictures our own ground shader reads (lander.ts: hill shadows, heights, soil scans, rock

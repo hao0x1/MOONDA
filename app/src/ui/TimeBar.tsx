@@ -74,7 +74,8 @@ export function TimeBar(p: Props) {
     const root = document.documentElement;
     const apply = () => {
       const h = window.innerHeight;
-      const top = (el: HTMLElement | null) => (el ? Math.round(h - el.getBoundingClientRect().top) : 0);
+      // (a part that is not shown, as the menus and the clock are in Land here on a phone, takes no room)
+      const top = (el: HTMLElement | null) => (el && el.getClientRects().length ? Math.round(h - el.getBoundingClientRect().top) : 0);
       const dock = top(menus.current);
       const left = Math.max(dock, top(mid.current));
       const right = top(clock.current);

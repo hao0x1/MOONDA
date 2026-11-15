@@ -8,7 +8,8 @@
 import { Check, X } from '@phosphor-icons/react';
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { useT, type Key } from '../i18n';
+import { tMaybe, useT, type Key } from '../i18n';
+import { isTouch } from './device';
 import { roverLink } from '../moon/roverLink';
 import { tutorialStore } from './tutorialStore';
 import './tutorial.css';
@@ -154,7 +155,7 @@ function Tour() {
         <span className="moonda-tutorial-num" aria-hidden="true">{isTicked || finish ? <Check size={13} weight="bold" /> : n}</span>
         <div key={`${show.task}${show.body}${isTicked}`} className="moonda-tutorial-text">
           <b>{t(`tutorial.${show.task}.title` as Key)}</b>
-          <span>{isTicked ? t('tutorial.done') : t(show.body)}</span>
+          <span>{isTicked ? t('tutorial.done') : isTouch() ? tMaybe(`${show.body}.touch`, t(show.body)) : t(show.body)}</span>
         </div>
         <div className="moonda-tutorial-dots" aria-label={t('tutorial.count', { n, total: TASKS.length })}>
           {TASKS.map(k => <i key={k} className={done[k] ? 'done' : k === show.task ? 'on' : undefined} />)}

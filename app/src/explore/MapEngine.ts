@@ -9,6 +9,7 @@ import { cratersNear, craterSizeOpacity } from '../moon/craterLayer';
 import { exploreHeights } from './context';
 import { SurfaceProjection } from './surfaceProjection';
 import { BASE_PICTURES, MAP_DETAIL_SOURCES, MAP_R, POLAR_HALF, TREK_MAX_LEVEL, detailUrl, cropMapPhoto, getPhotoPreview, mapImagery, polarLatLon, polarXY, trekUrl, scienceTileRect, scienceHeightParts } from './mapImagery';
+import { drawingPixelRatio, isPhoneGraphics } from '../app/quality';
 
 const DEG = Math.PI / 180;
 const TAU = Math.PI * 2;
@@ -157,7 +158,8 @@ export class MapEngine {
   resize(width: number, height: number) {
     if (width <= 0 || height <= 0) return;
     this.width = width; this.height = height;
-    this.dpr = Math.min(2.5, window.devicePixelRatio || 1);
+    const ratio = Math.min(isPhoneGraphics() ? 1 : 2.5, window.devicePixelRatio || 1);
+    this.dpr = this.basePlane?.pixelRatio(width, height, ratio) ?? ratio;
     // Setting a canvas's size wipes its picture, even to the size it already has. The page sends "resize" for
     // other reasons too (a language switch does), and a wiped map then stood empty until it was next drawn.
     const pixelWidth = Math.round(width * this.dpr), pixelHeight = Math.round(height * this.dpr);
@@ -593,7 +595,8 @@ export class MapEngine {
     if (flat && this.projection?.blend === 1) { this.basePlane?.cancelPendingGlobal(); this.drawFlat(g, flat); return; }
     const quick = BASE_PICTURES[0];
     const low = this.picture('base-quick', [quick.url], -100);
-    const high = this.polar && this.across < 300000 ? null : this.picture('base-global', [BASE_PICTURES[1].url], -80);
+    // Close source tiles still refine the phone map without keeping a decoded 128 MiB overview.
+    const high = isPhoneGraphics() || this.polar && this.across < 300000 ? null : this.picture('base-global', [BASE_PICTURES[1].url], -80);
     if(low)this.drawBasePicture(g,low);
     if(high){this.drawBasePicture(g,high);if(this.basePlane?.tiledFading)this.fading=true;}
 
@@ -1331,6 +1334,7 @@ class BasePlane {
   readonly canvas = document.createElement('canvas');
   rect = { x:0,y:0,width:0,height:0 };
   private readonly gl: WebGL2RenderingContext;
+  private readonly maxTextureSize: number;
   private readonly program: WebGLProgram;
   private readonly vertices: WebGLBuffer;
   private readonly vertexCount: number;
@@ -1353,6 +1357,7 @@ class BasePlane {
     const gl = this.canvas.getContext('webgl2', { alpha: true, antialias: false, depth: false, stencil: false });
     if (!gl) throw new Error('Map photo acceleration unavailable');
     this.gl = gl;
+    this.maxTextureSize = gl.getParameter(gl.MAX_TEXTURE_SIZE) as number;
     const program = gl.createProgram()!;
     for (const [type, source] of [[gl.VERTEX_SHADER, `#version 300 es
       in vec2 p;
@@ -1434,7 +1439,8 @@ class BasePlane {
   }
 
   draw(image: ImageBitmap,projection: FlatMapProjection,width: number,height: number,dpr: number,across: number,cx: number,cy: number,rotation: number, polar?: { x: number; y: number; span: number; crop: [number, number, number, number] }, opacity=1, tileDraw?:TileDraw) {
-    if(image.width>4096&&!polar&&!tileDraw)return this.drawTiledBase(image,projection,width,height,dpr,across,cx,cy,rotation);
+    dpr=this.pixelRatio(width,height,dpr);
+    if(image.width>Math.min(4096,this.maxTextureSize)&&!polar&&!tileDraw)return this.drawTiledBase(image,projection,width,height,dpr,across,cx,cy,rotation);
     const gl=this.gl,pixelWidth=Math.round(width*dpr),pixelHeight=Math.round(height*dpr);
     if(this.canvas.width!==pixelWidth || this.canvas.height!==pixelHeight) { this.canvas.width=pixelWidth; this.canvas.height=pixelHeight; }
     gl.viewport(0,0,pixelWidth,pixelHeight);
@@ -1483,6 +1489,7 @@ class BasePlane {
   }
 
   sunlight(projection:FlatMapProjection,width:number,height:number,dpr:number,across:number,cx:number,cy:number,rotation:number,sun:Vec3) {
+    dpr=this.pixelRatio(width,height,dpr);
     const gl=this.gl,w=Math.round(width*dpr),h=Math.round(height*dpr);
     if(this.canvas.width!==w||this.canvas.height!==h){this.canvas.width=w;this.canvas.height=h;}
     gl.disable(gl.SCISSOR_TEST);gl.disable(gl.BLEND);gl.clearColor(0,0,0,0);gl.clear(gl.COLOR_BUFFER_BIT);
@@ -1542,11 +1549,12 @@ class BasePlane {
     }
     this.baseRegionReady=complete&&drew;
     this.endBatch();
-    while(this.baseTiles.size>160){const key=this.baseTiles.keys().next().value!,tile=this.baseTiles.get(key)!;if(tile.pending)break;tile.bitmap?.close();this.baseTiles.delete(key);}
+    while(this.baseTiles.size>(isPhoneGraphics()?40:160)){const key=this.baseTiles.keys().next().value!,tile=this.baseTiles.get(key)!;if(tile.pending)break;tile.bitmap?.close();this.baseTiles.delete(key);}
     return drew?this.canvas:null;
   }
 
   beginBatch(width:number,height:number,dpr:number) {
+    dpr=this.pixelRatio(width,height,dpr);
     const w=Math.round(width*dpr),h=Math.round(height*dpr),gl=this.gl;
     if(this.canvas.width!==w||this.canvas.height!==h){this.canvas.width=w;this.canvas.height=h;}
     gl.disable(gl.SCISSOR_TEST);gl.clearColor(0,0,0,0);gl.clear(gl.COLOR_BUFFER_BIT);
@@ -1554,6 +1562,8 @@ class BasePlane {
   }
 
   endBatch() { this.batching=false;this.gl.disable(this.gl.BLEND); }
+
+  pixelRatio(width:number,height:number,ratio:number) { return drawingPixelRatio(this.gl,width,height,ratio); }
 
   getStats() { return { backgroundCpuMs:0,maxUploadMs:this.maxSmallUploadMs,uploads:this.textures.size,
     pending:[...this.textures.values()].filter(v=>!v.ready).length,readyLarge:this.baseRegionReady?1:0,tileCrops:this.baseTiles.size,tilePending:this.tilePending,maxSmallUploadMs:this.maxSmallUploadMs }; }
@@ -1572,6 +1582,7 @@ class BasePlane {
     let entry=this.textures.get(image);
     if(entry) { this.textures.delete(image);this.textures.set(image,entry);return entry.ready; }
     const bytes=image.width*image.height*4;
+    if(image.width>this.maxTextureSize||image.height>this.maxTextureSize)return false;
     if(bytes>8388608)return false;
     // A warm CPU tile cache can still be cold on this GPU. Refine at most four megabytes
     // per draw; loaded parents remain underneath until each sharper tile is ready.
@@ -1591,7 +1602,7 @@ class BasePlane {
       this.maxSmallUploadMs=Math.max(this.maxSmallUploadMs,performance.now()-start);
       entry.ready=true;entry.readyAt=performance.now()-(image.width>=2048?120:0);
     }
-    if(this.textures.size>192) { const key=this.textures.keys().next().value!;this.drop(this.textures.get(key)!);this.textures.delete(key); }
+    if(this.textures.size>(isPhoneGraphics()?48:192)) { const key=this.textures.keys().next().value!;this.drop(this.textures.get(key)!);this.textures.delete(key); }
     return entry.ready;
   }
 

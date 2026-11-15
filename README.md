@@ -27,6 +27,18 @@ map, the sky and all calculations are local.
 On first open there is a short loading screen (about 5–10 s): it loads the height map, photos and the
 sky, and quietly prepares the south-pole views so that everything is smooth afterwards.
 
+## Phones (15 Nov 2026)
+
+MOONDA now works on a phone. Nothing here changes what a desktop draws or loads: every rule and check below is
+behind the window's width, a touch-only pointer, or the Smooth graphics mode.
+
+- **The crash on phones.** On an Android phone the map went black behind "Fragment shader failed to compile ... no default precision defined for variable 'vec2[6]'". One line of the Sun-shadow shader put the six wheels in an array constructor (`vec2 w[6] = vec2[6](...)`). Desktop drivers take that; the browser rewrites the shader for a phone's driver and the array it makes has no precision, so the driver refuses the shader and Cesium stops drawing altogether. The wheels are shaded one at a time now, with no array (`lvContact` in `app/src/moon/sunShadow.ts`).
+- **Layout** (`app/src/ui/phone.css`, loaded last; nothing applies above 720 px of width): the top bar is two rows (search, then the tools in a row you can slide sideways); the place card is a sheet across the bottom, folded to its name and three buttons until you open it; Layers, Compare and MOONDA AI are sheets over the whole width; the time bar is two short rows; the line at the bottom that names what the mouse is over is hidden, since nothing is hovered with a finger.
+- **Driving by touch** (`app/src/ui/TouchDrive.tsx`): in Land here a thumb pad at the bottom left drives (up is forward, sideways turns, the first push starts the drive) and a button at the bottom right is "fast". The pad sends the same key events as W A S D, so the drive code does not know the difference. One finger on the picture still looks around; two fingers zoom.
+- **Graphics choice**: a touch-only device gets **Smooth**, and the note under it now says "Recommended for this device", not "this computer".
+- **Words for fingers**: the tutorial and the welcome card say "tap", "pinch" and "push the round pad" on a touch screen.
+- **Testing**: `node scripts/drive.mjs ... --mobile --width 412 --height 915` makes the test page a touch-only phone. It is still this computer's graphics card, so it shows layout faults, not what a phone's graphics driver will refuse.
+
 ## What changed on 14 Nov 2026 (v7): driving, routes, hazard maps and the new look
 
 - **"Stand here" is now "Land here".** Same view, new name everywhere (English and Khmer).

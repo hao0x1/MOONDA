@@ -70,6 +70,7 @@
 
 import { Cartesian2, Cartesian3, Cartographic, Credit, Event, GeographicTilingScheme, Rectangle, RequestState, type Viewer } from 'cesium';
 import { MOON_ELLIPSOID } from './ellipsoid';
+import { isPhoneGraphics } from '../app/quality';
 import {
   FIX_MIN_TRUE_LAT, NORTH_PHOTO_LAT, POLAR_FEATHER_M, POLAR_LIMIT_DEG, PYRAMID_MAX_K, RETRY_MS, TILE, parsePyramidIndex, pixelDeg, pyramidLevelFor, pyramidParentIsEnough,
   pyramidSurelyLocal, tileFixRange, tileTrueLatRange, photoMaxLevel, pixelMetres,
@@ -176,7 +177,8 @@ class ImageryWorkers {
 
   constructor() {
     const cores = navigator.hardwareConcurrency || 4;
-    this.tiledCount = cores >= 4 ? 2 : 1; // Moon Trek and the pyramid, plus the raster worker
+    const phone = isPhoneGraphics();
+    this.tiledCount = !phone && cores >= 4 ? 2 : 1; // Moon Trek and the pyramid, plus the raster worker
     this.scienceWorker = this.tiledCount + 1;
     for (let i = 0; i <= this.scienceWorker; i++) {
       const w = new Worker(new URL('./imageryWorker.ts', import.meta.url), { type: 'module' });
@@ -187,7 +189,9 @@ class ImageryWorkers {
       this.local.push(0);
       this.net.push([0, 0, 0]);
       // Science maps have their own worker so keeping them ready cannot evict the Moon photo.
-      w.postMessage({ cacheBudgetBytes: (i === this.scienceWorker ? 64 : i === 0 ? 128 : i === 1 ? 64 : 32) * 2 ** 20 } satisfies ToWorker);
+      const budget = phone ? (i === this.scienceWorker ? 16 : i === 0 ? 16 : 12)
+        : i === this.scienceWorker ? 64 : i === 0 ? 128 : i === 1 ? 64 : 32;
+      w.postMessage({ cacheBudgetBytes: budget * 2 ** 20, phone } satisfies ToWorker);
     }
     addEventListener('online', () => {
       const msg: ToWorker = { forgetFailures: true };
@@ -680,11 +684,12 @@ export function createBaseMosaicProvider(o: { url?: string; credit: string }): R
   const folder = new URL(o.url ?? './data/base/', document.baseURI).href.replace(/\/?$/, '/');
   const set: BaseSet = (baseSet = { state: 'loading' });
   void fetch(`${folder}base.json`).then(r => (r.ok ? r.json() : Promise.reject(new Error(String(r.status))))).then((m: { pictures?: Record<string, unknown>; fix?: unknown }) => {
-    set.global = basePictureOf(folder, m.pictures?.global, level => level);
+    const phone = isPhoneGraphics();
+    set.global = basePictureOf(folder, phone ? m.pictures?.quick : m.pictures?.global, level => level);
     set.quick = basePictureOf(folder, m.pictures?.quick, level => level);
     // the south picture only draws the levels the whole-Moon picture does not reach
-    set.south = set.global && basePictureOf(folder, m.pictures?.south, level => level - set.global!.level - 1);
-    set.north = set.global && basePictureOf(folder, m.pictures?.north, level => level - set.global!.level - 1);
+    set.south = !phone && set.global && basePictureOf(folder, m.pictures?.south, level => level - set.global!.level - 1) || undefined;
+    set.north = !phone && set.global && basePictureOf(folder, m.pictures?.north, level => level - set.global!.level - 1) || undefined;
     set.fix = fixOf(folder, (m as { fix?: unknown }).fix);
     set.state = set.global ? 'ready' : 'failed';
   }).catch((e: unknown) => { console.warn('Local Moon picture not available:', e); set.state = 'failed'; });
@@ -813,7 +818,7 @@ export function scienceRasterValueAt(source: ScienceRasterSource, lat: number, l
 }
 
 const SCIENCE_TILE_BYTES = TILE * TILE * 4;
-const SCIENCE_TILE_BUDGET = 96 * 2 ** 20;
+const scienceTileBudget = () => (isPhoneGraphics() ? 12 : 96) * 2 ** 20;
 const SCIENCE_IDLE_MS = 5 * 60_000;
 interface PreparedScienceTile {
   owner: PreparedLayerProvider; key: string; promise: Promise<ImageBitmap>;
@@ -832,7 +837,7 @@ function removeScienceTile(tile: PreparedScienceTile, reason?: 'budget' | 'idle'
 function trimScienceTiles() {
   const now = performance.now();
   for (const tile of scienceTiles.keys()) if (!tile.owner.active && now - tile.lastUsed > SCIENCE_IDLE_MS) removeScienceTile(tile, 'idle');
-  while (scienceTiles.size * SCIENCE_TILE_BYTES > SCIENCE_TILE_BUDGET) removeScienceTile(scienceTiles.keys().next().value!, 'budget');
+  while (scienceTiles.size * SCIENCE_TILE_BYTES > scienceTileBudget()) removeScienceTile(scienceTiles.keys().next().value!, 'budget');
 }
 const scienceReadyTimers = new Map<string, ReturnType<typeof setTimeout>>();
 function invalidateScienceSource(url: string) {
@@ -918,7 +923,7 @@ export async function warmVisibleLayerTiles(viewer: Viewer, providers: readonly 
   const cached = providers.filter(p => p instanceof PreparedLayerProvider);
   if (!cached.length) return true;
   if (!visible.length) return false;
-  const perProvider = Math.max(2, Math.floor(SCIENCE_TILE_BUDGET / SCIENCE_TILE_BYTES / cached.length));
+  const perProvider = Math.max(2, Math.floor(scienceTileBudget() / SCIENCE_TILE_BYTES / cached.length));
   let capped = false;
   const lists = cached.map(provider => {
     const tiles = new Map<string, { x: number; y: number; level: number }>(), targets = new Set<string>();
@@ -933,7 +938,7 @@ export async function warmVisibleLayerTiles(viewer: Viewer, providers: readonly 
       const nw = provider.tilingScheme.positionToTileXY(new Cartographic(rect.west + dx, rect.north - dy), level);
       const se = provider.tilingScheme.positionToTileXY(new Cartographic(rect.east - dx, rect.south + dy), level);
       if (!nw || !se) continue;
-      for (let y = nw.y; y <= se.y && tiles.size < SCIENCE_TILE_BUDGET / SCIENCE_TILE_BYTES; y++) for (let x = nw.x; x <= se.x && tiles.size < SCIENCE_TILE_BUDGET / SCIENCE_TILE_BYTES; x++) {
+      for (let y = nw.y; y <= se.y && tiles.size < scienceTileBudget() / SCIENCE_TILE_BYTES; y++) for (let x = nw.x; x <= se.x && tiles.size < scienceTileBudget() / SCIENCE_TILE_BYTES; x++) {
         targets.add(`${level}/${x}/${y}`);
         for (let parent = 0; parent <= level; parent++) {
           const scale = 2 ** (level - parent), px = Math.floor(x / scale), py = Math.floor(y / scale);
@@ -943,7 +948,7 @@ export async function warmVisibleLayerTiles(viewer: Viewer, providers: readonly 
     }
     const rank = (tile: { x: number; y: number; level: number }) => tile.level < 2 ? 0 : targets.has(`${tile.level}/${tile.x}/${tile.y}`) ? 1 : 2;
     const ordered = [...tiles.values()].sort((a, b) => rank(a) - rank(b) || a.level - b.level);
-    if (ordered.length > perProvider || tiles.size >= SCIENCE_TILE_BUDGET / SCIENCE_TILE_BYTES) capped = true;
+    if (ordered.length > perProvider || tiles.size >= scienceTileBudget() / SCIENCE_TILE_BYTES) capped = true;
     // Share the budget fairly; a close view must not evict every other switch's roots.
     return ordered.slice(0, perProvider);
   });
@@ -969,7 +974,7 @@ import.meta.hot?.dispose(() => {
   for (const timer of scienceReadyTimers.values()) clearTimeout(timer);
   scienceReadyTimers.clear(); releaseScienceLayers(); pool?.disposeScience();
 });
-const scienceMemory = () => ({ worker: pool?.stats.science ?? null, preparedBitmapBytes: scienceTiles.size * SCIENCE_TILE_BYTES, preparedBitmapBudget: SCIENCE_TILE_BUDGET, preparedCache: { ...scienceTileStats }, preparedIdleMs: SCIENCE_IDLE_MS });
+const scienceMemory = () => ({ worker: pool?.stats.science ?? null, preparedBitmapBytes: scienceTiles.size * SCIENCE_TILE_BYTES, preparedBitmapBudget: scienceTileBudget(), preparedCache: { ...scienceTileStats }, preparedIdleMs: SCIENCE_IDLE_MS });
 (globalThis as unknown as { __moondaScienceMemory: unknown }).__moondaScienceMemory = scienceMemory;
 (globalThis as unknown as { __moondaScienceSnapshot: unknown }).__moondaScienceSnapshot = async () => { await workers().scienceControl(); return scienceMemory(); };
 (globalThis as unknown as { __moondaScienceDropDecoded: unknown }).__moondaScienceDropDecoded = async (dropCompressed = false) => {

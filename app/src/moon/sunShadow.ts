@@ -17,6 +17,7 @@
 
 import { Camera, Cartesian3, Cartesian4, Material, Matrix4, OrthographicOffCenterFrustum, ShadowMap, ShadowMode, type Model, type Viewer } from 'cesium';
 import { ROBOT_SCALE, WHEELS, type Driver } from './walk';
+import { isPhoneGraphics } from '../app/quality';
 
 export const SUN_SHADOW = {
   /** depth-picture size (texels per side) and half its width on the ground (m): Full detail / Smooth */
@@ -75,14 +76,17 @@ float lvSunMap(vec3 posEC, vec3 N, vec3 L, out float fw) {
     return mix(1.0, lit / 16.0, lvShInfo.z);
 }
 // Soft darkening right under the robot: each wheel's footprint and the belly (en: m east / north, map frame).
+// (One wheel at a time, with no array. The six wheels used to be put in "vec2 w[6] = vec2[6](...)": desktop
+//  graphics drivers take that, but the browser hands a phone's driver a rewritten shader in which that array has
+//  no precision, and the driver refuses it: "no default precision defined for variable 'vec2[6]'". Cesium then
+//  stops drawing altogether, so on a phone the whole map went black behind an error box.)
+float lvWheelShade(vec2 en, vec2 wheel) {
+    return mix(0.5, 1.0, smoothstep(0.25, 1.0, length(en - wheel) / lvCInfo.y));
+}
 float lvContact(vec2 en) {
     if (lvCInfo.x < 0.5) return 1.0;
-    float ao = 1.0;
-    vec2 w[6] = vec2[6](lvCw1.xy, lvCw1.zw, lvCw2.xy, lvCw2.zw, lvCw3.xy, lvCw3.zw);
-    for (int i = 0; i < 6; i++) {
-        float d = length(en - w[i]) / lvCInfo.y;
-        ao *= mix(0.5, 1.0, smoothstep(0.25, 1.0, d));
-    }
+    float ao = lvWheelShade(en, lvCw1.xy) * lvWheelShade(en, lvCw1.zw) * lvWheelShade(en, lvCw2.xy)
+        * lvWheelShade(en, lvCw2.zw) * lvWheelShade(en, lvCw3.xy) * lvWheelShade(en, lvCw3.zw);
     vec2 q = en - lvCBody.xy;
     vec2 f = lvCBody.zw;
     vec2 loc = abs(vec2(dot(q, f), dot(q, vec2(f.y, -f.x)))) / lvCInfo.zw;
@@ -91,6 +95,12 @@ float lvContact(vec2 en) {
     return mix(1.0, ao, lvCInfo.x);
 }
 `;
+
+// Phone drivers have smaller instruction budgets, and the ground already samples several detail maps.
+// Keep the same soft shadow on Smooth phones with fewer taps; the Full detail source stays unchanged.
+export const SUN_MAP_LIGHT_GLSL = SUN_MAP_GLSL
+  .replace('i < 12', 'i < 4').replace('lvVogel(i, 12.0', 'lvVogel(i, 4.0')
+  .replace('i < 16', 'i < 6').replace('lvVogel(i, 16.0', 'lvVogel(i, 6.0').replace('lit / 16.0', 'lit / 6.0');
 
 /** The uniforms SUN_MAP_GLSL needs, with their starting values (merged into the ground material's fabric). */
 export function sunMapUniforms(): Record<string, unknown> {
@@ -132,11 +142,14 @@ export class SunShadows {
 
   private readonly viewer: Viewer;
   private readonly material: Material;
+  private readonly maxSize: number;
   private globeShadows: ShadowMode | undefined;
 
   constructor(viewer: Viewer, material: Material) {
     this.viewer = viewer; this.material = material;
     const scene = viewer.scene;
+    const gl = (scene as unknown as { context: { _gl: WebGLRenderingContext } }).context._gl;
+    this.maxSize = Math.min(gl.getParameter(gl.MAX_TEXTURE_SIZE) as number, gl.getParameter(gl.MAX_RENDERBUFFER_SIZE) as number);
     this.cam = new Camera(scene);
     (this.cam as unknown as { frustum: unknown }).frustum = this.frustum;
     this.frustum.left = -10; this.frustum.right = 10; this.frustum.bottom = -10; this.frustum.top = 10;
@@ -144,7 +157,7 @@ export class SunShadows {
     const opts = {
       context: (scene as unknown as { context: unknown }).context, lightCamera: this.cam, enabled: false,
       isPointLight: false, cascadesEnabled: false, numberOfCascades: 1, maximumDistance: 400,
-      size: SUN_SHADOW.full.size, softShadows: true, darkness: SUN_SHADOW.darkness, normalOffset: true, fadingEnabled: false, fromLightSource: false,
+      size: Math.min(isPhoneGraphics() ? 1024 : SUN_SHADOW.full.size, this.maxSize), softShadows: true, darkness: SUN_SHADOW.darkness, normalOffset: true, fadingEnabled: false, fromLightSource: false,
     };
     this.map = new (ShadowMap as unknown as new (o: object) => ShadowMap)(opts);
     // robot / rock receive pass: no "turned from the light = dark" (our own shaders light the sides), small biases
@@ -180,12 +193,18 @@ export class SunShadows {
     const u = this.material.uniforms as Record<string, unknown>;
     const info = u.lvShInfo as Cartesian4;
     const strength = Math.min(1, Math.max(0, (f.sunEl + 0.3) / 0.8));
-    const on = f.on && strength > 0;
+    // Some drivers reject a depth-only framebuffer, so Cesium packs the depth into RGBA instead.
+    // The ground reads native depth. In Smooth keep its CPU rock shadows and wheel contact shade
+    // rather than interpreting packed bytes as depth and darkening the whole surface incorrectly.
+    const packedDepth = (this.map as unknown as { _usesDepthTexture: boolean })._usesDepthTexture === false;
+    const on = f.on && strength > 0 && !(f.light && packedDepth);
     this.install(on);
     this.active = on;
     if (!on) { info.x = 0; return; }
     const Q = f.light ? SUN_SHADOW.light : SUN_SHADOW.full;
-    if (Q.size !== this.size) { this.size = Q.size; this.map.size = Q.size; }
+    // A 1024² depth picture uses one quarter of Smooth's desktop memory. Respect smaller hardware limits too.
+    const size = Math.min(isPhoneGraphics(f.light ? 'light' : 'full') ? 1024 : Q.size, this.maxSize);
+    if (size !== this.size) { this.size = size; this.map.size = size; }
     // the light camera: looks along the sunbeam; a basis fixed for a given Sun (its up = the local up, flattened)
     const d = Cartesian3.negate(f.sun, sA);
     let up = Cartesian3.subtract(f.up, Cartesian3.multiplyByScalar(d, Cartesian3.dot(f.up, d), sB), sB);
@@ -198,7 +217,7 @@ export class SunShadows {
     const reliefM = SUN_SHADOW.relief + SUN_SHADOW.reliefK * Q.half;
     let hy = Math.min(Q.half, Q.half * Math.sin(el) + reliefM * Math.cos(el));
     hy = Math.ceil(hy / (Q.half / 32)) * (Q.half / 32); // in steps, so the texel size only changes now and then
-    const tx = (2 * hx) / Q.size, ty = (2 * hy) / Q.size;
+    const tx = (2 * hx) / size, ty = (2 * hy) / size;
     // centre: ahead of where you look, snapped to whole texels of a grid laid from the fixed origin
     const c = Cartesian3.add(f.centre, Cartesian3.multiplyByScalar(f.look, SUN_SHADOW.ahead * Q.half, sD), sD);
     const rel = Cartesian3.subtract(c, f.origin, sD);
@@ -226,7 +245,7 @@ export class SunShadows {
     if (u.lvShMat !== m._shadowMapMatrix) u.lvShMat = m._shadowMapMatrix;
     info.x = this.texSet && SUN_SHADOW.ground ? 1 : 0; info.y = SUN_SHADOW.depth; info.z = strength; info.w = Math.max(tx, ty);
     const sc = u.lvShScale as Cartesian4;
-    sc.x = 1 / (2 * hx); sc.y = 1 / (2 * hy); sc.z = Q.size; sc.w = Q.size;
+    sc.x = 1 / (2 * hx); sc.y = 1 / (2 * hy); sc.z = size; sc.w = size;
   }
 
   /** Back to the map: shadows off. */

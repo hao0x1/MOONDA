@@ -2,6 +2,7 @@
 // measure real frame rates. Used to test changes the way a person would use the site.
 //
 //   node scripts/drive.mjs scenario.json [--out <dir>] [--url http://127.0.0.1:5190/] [--profile <dir>] [--width 1440 --height 900] [--headful]
+//   --mobile makes the page a touch-only phone (use with --width 412 --height 915) for layout checks.
 //   --profile keeps Chrome's cache and site storage between runs (remote map tiles load much faster the second time;
 //   the welcome dialog then only shows on the first run). Without it every run starts from a clean browser.
 //   node scripts/drive.mjs '[{"do":"ready"},{"do":"shot","name":"start"}]' --out /tmp/x
@@ -101,6 +102,13 @@ launchPromise = puppeteer.launch({
 browser = await launchPromise;
 await lease.afterLaunch(browser);
 const page = (await browser.pages())[0] ?? await browser.newPage();
+// --mobile: a phone stand-in for layout checks (touch only, a phone's pixel density and user agent, so the page's
+// own "is this a phone" tests answer yes). It is still this computer's graphics card: it proves nothing about
+// a phone's graphics driver.
+if (args.includes('--mobile')) {
+  await page.emulate({ viewport: { width: W, height: H, deviceScaleFactor: 2.625, isMobile: true, hasTouch: true },
+    userAgent: 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36' });
+}
 const result = { steps: [], measures: {}, evals: {}, errors: [], shots: [] };
 page.on('console', m => { if (m.type() === 'error') result.errors.push(m.text().slice(0, 300)); });
 page.on('pageerror', e => {

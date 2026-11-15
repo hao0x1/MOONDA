@@ -7,6 +7,7 @@
 
 import * as CesiumAll from 'cesium';
 import { ComponentDatatype, PixelFormat, PrimitiveType, WebGLConstants } from 'cesium';
+import { isPhoneGraphics } from '../../app/quality';
 
 export interface GlContext { readonly webgl2: boolean; readonly drawingBufferWidth: number; readonly drawingBufferHeight: number }
 export interface GlTexture { destroy(): void; generateMipmap(): void; readonly width: number; readonly height: number }
@@ -101,13 +102,24 @@ export interface TextureSpec { context: GlContext; source: ImageBitmap | HTMLCan
 /** Picture -> GPU texture. Row 0 of the picture is texture coordinate t = 0 (no flip), for every kind of source. */
 export function createTexture(spec: TextureSpec): GlTexture {
   const mip = spec.mipmaps !== false;
+  // Some phones only accept 4096px textures; Smooth also keeps the sky's decoded pictures small.
+  const maxSize = Math.min(P.ContextLimits.maximumTextureSize, isPhoneGraphics() ? 1024 : Infinity);
+  let source = spec.source;
+  if (source.width > maxSize || source.height > maxSize) {
+    const scale = maxSize / Math.max(source.width, source.height);
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.floor(source.width * scale));
+    canvas.height = Math.max(1, Math.floor(source.height * scale));
+    canvas.getContext('2d')!.drawImage(source, 0, 0, canvas.width, canvas.height);
+    source = canvas;
+  }
   const sampler = new P.Sampler({
     wrapS: spec.repeatX ? WebGLConstants.REPEAT : WebGLConstants.CLAMP_TO_EDGE, wrapT: WebGLConstants.CLAMP_TO_EDGE,
     minificationFilter: mip ? WebGLConstants.LINEAR_MIPMAP_LINEAR : WebGLConstants.LINEAR, magnificationFilter: WebGLConstants.LINEAR,
     maximumAnisotropy: mip ? Math.min(8, P.ContextLimits.maximumTextureFilterAnisotropy || 1) : 1,
   });
   const texture = new P.Texture({
-    context: spec.context, source: spec.source, flipY: false, preMultiplyAlpha: !!spec.premultiply, skipColorSpaceConversion: true, sampler,
+    context: spec.context, source, flipY: false, preMultiplyAlpha: !!spec.premultiply, skipColorSpaceConversion: true, sampler,
     pixelFormat: spec.alpha ? PixelFormat.RGBA : spec.grey ? PixelFormat.LUMINANCE : PixelFormat.RGB,
   });
   if (mip) texture.generateMipmap();
@@ -123,5 +135,12 @@ export async function loadBitmap(url: string): Promise<ImageBitmap> {
   img.decoding = 'async';
   img.src = url;
   await img.decode();
-  return createImageBitmap(img, { imageOrientation: 'none', premultiplyAlpha: 'none', colorSpaceConversion: 'none' });
+  const maxSize = Math.min(P.ContextLimits.maximumTextureSize, isPhoneGraphics() ? 1024 : Infinity);
+  const scale = Math.min(1, maxSize / Math.max(img.naturalWidth, img.naturalHeight));
+  const bitmap = await createImageBitmap(img, {
+    imageOrientation: 'none', premultiplyAlpha: 'none', colorSpaceConversion: 'none',
+    ...(scale < 1 ? { resizeWidth: Math.max(1, Math.floor(img.naturalWidth * scale)), resizeHeight: Math.max(1, Math.floor(img.naturalHeight * scale)), resizeQuality: 'high' } : {}),
+  });
+  if (scale < 1) img.src = ''; // release the full-size decode after making the phone's smaller picture
+  return bitmap;
 }

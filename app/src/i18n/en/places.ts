@@ -65,6 +65,8 @@ export const places = {
   'welcome.step.look.text': 'Drag to move, scroll to zoom, right-drag to tilt.',
   'welcome.step.click': 'Click a spot',
   'welcome.step.click.text': 'See when it gets sunlight and can see Earth, then land there.',
+  'welcome.step.look.text.touch': 'Drag to move, pinch to zoom.',
+  'welcome.step.click.touch': 'Tap a spot',
   'welcome.step.compare': 'Compare plans',
   'welcome.step.compare.text': 'Line up to four landing plans and see which one works.',
   'welcome.toPole': 'Take me to the south pole',

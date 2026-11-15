@@ -102,6 +102,12 @@ export const shell: Partial<Record<keyof typeof en, string>> = {
   'map.zoomOut': 'បង្រួម',
   'map.colours': 'ពណ៌លើផែនទី',
   'map.legend.hide': 'លាក់ {name}',
+  'render.stopped.title': 'ផែនទីឈប់គូរ',
+  'render.stopped.body': 'ក្រាហ្វិករបស់ឧបករណ៍នេះមិនអាចគូរផ្នែកខ្លះនៃព្រះច័ន្ទបានទេ។ ក្រាហ្វិកស្រាលជាងជាធម្មតាដោះស្រាយបាន។',
+  'render.stopped.body.light': 'ក្រាហ្វិករបស់ឧបករណ៍នេះមិនអាចគូរផ្នែកខ្លះនៃព្រះច័ន្ទបានទេ ទោះប្រើក្រាហ្វិកស្រាលក៏ដោយ។ ការផ្ទុកឡើងវិញពេលខ្លះអាចជួយបាន។',
+  'render.stopped.light': 'ប្រើក្រាហ្វិកស្រាលជាង រួចផ្ទុកឡើងវិញ',
+  'render.stopped.reload': 'ផ្ទុកឡើងវិញ',
+  'render.stopped.detail': 'អ្វីដែលខុស',
 
   'status.standing': 'បានចុះចតនៅ {name}',
   'status.move': 'រំកិលព្រួញកណ្ដុរលើព្រះច័ន្ទ ដើម្បីដឹងថាវានៅត្រង់ណា',

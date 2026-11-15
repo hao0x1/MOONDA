@@ -37,8 +37,37 @@ export const QUALITY: Record<Quality, QualityKnobs> = {
   light: { maxSSE: 2, maxPixelRatio: 1.25, msaaSamples: 1, fxaa: true, tileCacheSize: 1200, preloadSiblings: false, loadingDescendantLimit: 12, milkyWay8k: false },
 };
 
+/** Small touch-only screens share memory with the browser and cannot keep a desktop tile cache. */
+let phonePointers: { coarse: MediaQueryList; fine: MediaQueryList } | undefined;
+export function isPhoneGraphics(q: Quality = settings.get().quality): boolean {
+  if (q !== 'light' || typeof window === 'undefined') return false;
+  phonePointers ??= { coarse: matchMedia('(pointer: coarse)'), fine: matchMedia('(pointer: fine)') };
+  const touchOnly = phonePointers.coarse.matches && !phonePointers.fine.matches;
+  const shortSide = Math.min(screen.width || innerWidth, screen.height || innerHeight);
+  return touchOnly && shortSide <= 600;
+}
+
+const PHONE_QUALITY: QualityKnobs = {
+  ...QUALITY.light, maxSSE: 3, maxPixelRatio: 1, tileCacheSize: 192, loadingDescendantLimit: 4,
+};
+
 /** The knobs for the mode chosen right now. */
-export const knobs = (q: Quality = settings.get().quality): QualityKnobs => QUALITY[q];
+export const knobs = (q: Quality = settings.get().quality): QualityKnobs => isPhoneGraphics(q) ? PHONE_QUALITY : QUALITY[q];
+
+/** A canvas and its offscreen targets must both fit the actual driver's drawing limits. */
+const drawingLimits = new WeakMap<WebGLRenderingContext | WebGL2RenderingContext, { edge: number; width: number; height: number }>();
+export function drawingPixelRatio(gl: WebGLRenderingContext | WebGL2RenderingContext, width: number, height: number, ratio: number): number {
+  let limits = drawingLimits.get(gl);
+  if (!limits) {
+    const viewport = gl.getParameter(gl.MAX_VIEWPORT_DIMS) as Int32Array | null;
+    const edge = Math.min(gl.getParameter(gl.MAX_TEXTURE_SIZE) as number, gl.getParameter(gl.MAX_RENDERBUFFER_SIZE) as number);
+    // A lost context returns null; use its last good limits once the context comes back.
+    if (!viewport || edge <= 0) return ratio;
+    drawingLimits.set(gl, (limits = { edge, width: viewport[0], height: viewport[1] }));
+  }
+  return Math.min(ratio, limits.edge / Math.max(1, width), limits.edge / Math.max(1, height),
+    limits.width / Math.max(1, width), limits.height / Math.max(1, height));
+}
 
 /** The text keys for each mode (English in src/i18n/en/start.ts). */
 export const QUALITY_TEXT: Record<Quality, { title: 'start.mode.full' | 'start.mode.light'; body: 'start.mode.full.body' | 'start.mode.light.body' }> = {
@@ -96,11 +125,13 @@ export function chooseQuality(q: Quality): void { settings.set({ quality: q, qua
 /** Apply everything that can change while the map is running. Safe to call again at any time. */
 export function applyQuality(viewer: Viewer, q: Quality = settings.get().quality): void {
   if (viewer.isDestroyed()) return;
-  const k = QUALITY[q];
+  const k = knobs(q);
   const scene = viewer.scene, globe = scene.globe;
   const dpr = window.devicePixelRatio || 1;
   // useBrowserRecommendedResolution is off, so the drawing size is devicePixelRatio x resolutionScale
-  viewer.resolutionScale = Math.min(1, k.maxPixelRatio / dpr);
+  const gl = viewer.canvas.getContext('webgl2');
+  const ratio = gl ? drawingPixelRatio(gl, viewer.canvas.clientWidth, viewer.canvas.clientHeight, Math.min(dpr, k.maxPixelRatio)) : Math.min(dpr, k.maxPixelRatio);
+  viewer.resolutionScale = ratio / dpr;
   globe.maximumScreenSpaceError = k.maxSSE;
   globe.tileCacheSize = k.tileCacheSize;
   globe.preloadAncestors = true;
@@ -125,7 +156,7 @@ export const LANDER_MSAA4_PX = 3.7e6;
 export const LANDER_MAX_PX = 3.9e6;
 export function landerAntialias(viewer: Viewer, on: boolean, q: Quality = settings.get().quality): void {
   if (viewer.isDestroyed()) return;
-  const scene = viewer.scene, k = QUALITY[q];
+  const scene = viewer.scene, k = knobs(q);
   const dpr = window.devicePixelRatio || 1;
   let res = Math.min(1, k.maxPixelRatio / dpr);
   const css = viewer.canvas.clientWidth * viewer.canvas.clientHeight;
@@ -133,6 +164,8 @@ export function landerAntialias(viewer: Viewer, on: boolean, q: Quality = settin
     const px = css * (dpr * res) ** 2;
     if (px > LANDER_MAX_PX) res *= Math.sqrt(LANDER_MAX_PX / px);
   }
+  const gl = viewer.canvas.getContext('webgl2');
+  if (gl) res = drawingPixelRatio(gl, viewer.canvas.clientWidth, viewer.canvas.clientHeight, dpr * res) / dpr;
   if (Math.abs(viewer.resolutionScale - res) > 1e-3) viewer.resolutionScale = res;
   if (!scene.msaaSupported) return;
   let samples = k.msaaSamples;

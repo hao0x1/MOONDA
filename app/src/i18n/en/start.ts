@@ -24,9 +24,9 @@ export const start = {
   'start.mode.full.body': 'The sharpest Moon, the full night sky and every effect. For a recent laptop or desktop.',
   'start.mode.full.tip': 'Use the sharpest Moon and all visual effects.',
   'start.mode.light': 'Smooth',
-  'start.mode.light.body': 'Lighter graphics that stay fluid on older computers and tablets.',
+  'start.mode.light.body': 'Lighter graphics that stay fluid on phones, tablets and older computers.',
   'start.mode.light.tip': 'Use lighter graphics to keep the Moon moving smoothly.',
-  'start.recommended': 'Recommended for this computer',
+  'start.recommended': 'Recommended for this device',
 
   'start.language': 'Language',
   'start.language.en.tip': 'Show MOONDA in English.',

@@ -6,6 +6,7 @@
 import { PHOTO_REGIONS, PHOTO_TC, PHOTO_TC_MAX_Z, trekUrl as sourceTrekUrl } from '../moon/imageryWorker';
 import { createMoonTrekProvider, createScienceRasterProvider, type ReprojectedImageryProvider } from '../moon/imagery';
 import { SHARP_POLAR_LAYERS, type LayerDef, type ScienceRasterSource } from '../moon/layers';
+import { isPhoneGraphics } from '../app/quality';
 
 export const MAP_R = 1737400;
 export const POLAR_HALF = 304000;
@@ -23,6 +24,9 @@ const MAX_FETCHES = 4;
 const TIMEOUT_MS = 20000;
 const RETRY_MS = 30000;
 const SCIENCE_BYTES = 24 * 1024 * 1024;
+const photoCacheLimits = () => isPhoneGraphics()
+  ? { items: 96, bytes: 32 * 1024 * 1024, scienceBytes: 8 * 1024 * 1024 }
+  : { items: MAX_ITEMS, bytes: MAX_BYTES, scienceBytes: SCIENCE_BYTES };
 export const SCIENCE_TILE_SIZE = 256;
 const heightParts = new WeakMap<LayerDef, { global: LayerDef; polar: LayerDef }>();
 interface HeightSpotWarm {
@@ -270,10 +274,13 @@ async function normaliseSciencePixels(bitmaps: ImageBitmap[], flip: boolean): Pr
  * The true-to-display transform matches moon/flatMap.ts. Canvas bitmaps have north at the top,
  * whereas flatMap's intermediate GL texture has its first row at the bottom. */
 function flatBitmap(bitmap: ImageBitmap): ImageBitmap {
-  const width = Math.min(2048, bitmap.width), height = width / 2;
-  const canvas = new OffscreenCanvas(width, height);
+  const canvas = new OffscreenCanvas(1, 1);
   const gl = canvas.getContext('webgl2', { alpha: false, antialias: false, depth: false, stencil: false });
   if (!gl) throw new Error('Photo projection unavailable');
+  const maxTexture = gl.getParameter(gl.MAX_TEXTURE_SIZE) as number;
+  const viewport = gl.getParameter(gl.MAX_VIEWPORT_DIMS) as Int32Array;
+  const width = Math.min(2048, bitmap.width, maxTexture, gl.getParameter(gl.MAX_RENDERBUFFER_SIZE) as number, viewport[0], viewport[1] * 2), height = width / 2;
+  canvas.width = width; canvas.height = height;
   const program = gl.createProgram();
   if (!program) throw new Error('Photo projection unavailable');
   const sources = [
@@ -310,7 +317,17 @@ function flatBitmap(bitmap: ImageBitmap): ImageBitmap {
   gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, texture);
   gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
   gl.pixelStorei(gl.UNPACK_COLORSPACE_CONVERSION_WEBGL, gl.NONE);
-  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, bitmap);
+  // The smaller output does not make an oversized input texture legal on a phone.
+  let source: ImageBitmap | OffscreenCanvas = bitmap;
+  if (Math.max(bitmap.width, bitmap.height) > maxTexture) {
+    const scale = maxTexture / Math.max(bitmap.width, bitmap.height);
+    const small = new OffscreenCanvas(Math.max(1, Math.floor(bitmap.width * scale)), Math.max(1, Math.floor(bitmap.height * scale)));
+    const context = small.getContext('2d');
+    if (!context) throw new Error('Photo resizing unavailable');
+    context.drawImage(bitmap, 0, 0, small.width, small.height); source = small;
+  }
+  try { gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, source); }
+  finally { if (source instanceof OffscreenCanvas) { source.width = 1; source.height = 1; } }
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
@@ -376,7 +393,7 @@ function decoder(): Worker | null {
             // cache keep its usual bitmap while every later crop message contains only a number.
             sourceId = ++nextSourceId;
             photoSources.set(sourceId, bitmap);
-            while (photoSources.size > 8) releaseSource(photoSources.keys().next().value);
+            while (photoSources.size > ${isPhoneGraphics() ? 2 : 8}) releaseSource(photoSources.keys().next().value);
             preview = await previewPixels(bitmap);
             bitmap = await createImageBitmap(bitmap, { premultiplyAlpha: 'none', colorSpaceConversion: 'none' });
           }
@@ -693,7 +710,7 @@ export class MapImagery {
       ...decodeStats, networkStarts: this.fetchStarts, maxStartsPerFrame: this.maxStartsPerFrame,
       heightSpotWarm: { ...heightSpotWarmStats, retained: heightSpotWarms.size, queued: [...heightSpotWarms.values()].filter(job => job.state === 'queued').length },
       landingScienceWarm: { ...this.landingScienceWarm },
-      scienceBytes, scienceTiles, scienceByLayer, scienceBudgetBytes: SCIENCE_BYTES, scienceActive: this.scienceActive, scienceStarts: this.scienceStarts, maxScienceStartsPerFrame: this.maxScienceStartsPerFrame,
+      scienceBytes, scienceTiles, scienceByLayer, scienceBudgetBytes: photoCacheLimits().scienceBytes, scienceActive: this.scienceActive, scienceStarts: this.scienceStarts, maxScienceStartsPerFrame: this.maxScienceStartsPerFrame,
       sciencePipeline: { ...this.sciencePipeline, queue: { ...this.sciencePipeline.queue }, source: { ...this.sciencePipeline.source }, normalise: { ...this.sciencePipeline.normalise }, total: { ...this.sciencePipeline.total } } };
   }
 
@@ -1009,20 +1026,21 @@ export class MapImagery {
   }
 
   private evict(): void {
+    const limits = photoCacheLimits();
     let scienceBytes = 0;
     for (const [key, item] of this.cached) if (key.startsWith('science:')) scienceBytes += item.bytes;
-    if (scienceBytes > SCIENCE_BYTES) for (const [key, item] of this.cached) {
+    if (scienceBytes > limits.scienceBytes) for (const [key, item] of this.cached) {
       if (!key.startsWith('science:') || this.needed(key)) continue;
       this.cached.delete(key); this.bytes -= item.bytes; scienceBytes -= item.bytes; closeCachedPhoto(item.bitmap);
       this.sciencePipeline.budgetEvictions++; this.sciencePipeline.evictedBytes += item.bytes;
-      if (scienceBytes <= SCIENCE_BYTES) break;
+      if (scienceBytes <= limits.scienceBytes) break;
     }
-    if (this.cached.size <= MAX_ITEMS && this.bytes <= MAX_BYTES) return;
+    if (this.cached.size <= limits.items && this.bytes <= limits.bytes) return;
     for (const [key, item] of this.cached) {
       if (this.needed(key)) continue;
       this.cached.delete(key); this.bytes -= item.bytes; closeCachedPhoto(item.bitmap);
       if (key.startsWith('science:')) { this.sciencePipeline.totalBudgetEvictions++; this.sciencePipeline.evictedBytes += item.bytes; }
-      if (this.cached.size <= MAX_ITEMS && this.bytes <= MAX_BYTES) break;
+      if (this.cached.size <= limits.items && this.bytes <= limits.bytes) break;
     }
   }
 }

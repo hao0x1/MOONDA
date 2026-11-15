@@ -542,8 +542,12 @@ export class ScienceBlockCache {
   private readonly items = new Map<string, { src: Src; map: string; lastUsed: number }>();
   bytes = 0;
   readonly stats: ScienceCacheStats = { hits: 0, misses: 0, evictions: 0, expired: 0 };
-  readonly budgetBytes: number;
+  budgetBytes: number;
   constructor(budgetBytes: number) { this.budgetBytes = budgetBytes; }
+  setBudget(bytes: number): void {
+    this.budgetBytes = bytes;
+    while (this.bytes > bytes && this.items.size) { this.stats.evictions++; this.drop(this.items.keys().next().value!); }
+  }
   get(key: string, now: number): Src | undefined {
     const hit = this.items.get(key);
     if (!hit) { this.stats.misses++; return undefined; }
@@ -1331,7 +1335,7 @@ export type Job =
  * A tile to draw; or (when the browser is back online) "try every failed download again"; or
  * the list of pyramid squares stored with the app (sent once, before the first pyramid job).
  */
-export type ToWorker = { id: number; job: Job; flipRows: boolean } | { cancel: number } | { cacheBudgetBytes: number } | { photoView: { lon: number; lat: number; level: number } } | { forgetFailures: true } | { pyramidIndex: unknown; base: string } | { warmRasters: string[] } | { warmScience: ScienceRasterSource[]; warmId: number } | { scienceValue: { source: ScienceRasterSource; lat: number; lon: number }; valueId: number } | { scienceState: { activeUrls: string[] }; scienceRequestId?: number } | { scienceTrim: { dropAll?: boolean; dropCompressed?: boolean }; scienceRequestId?: number } | { scienceStats: { requestId: number } };
+export type ToWorker = { id: number; job: Job; flipRows: boolean } | { cancel: number } | { cacheBudgetBytes: number; phone?: boolean } | { photoView: { lon: number; lat: number; level: number } } | { forgetFailures: true } | { pyramidIndex: unknown; base: string } | { warmRasters: string[] } | { warmScience: ScienceRasterSource[]; warmId: number } | { scienceValue: { source: ScienceRasterSource; lat: number; lon: number }; valueId: number } | { scienceState: { activeUrls: string[] }; scienceRequestId?: number } | { scienceTrim: { dropAll?: boolean; dropCompressed?: boolean }; scienceRequestId?: number } | { scienceStats: { requestId: number } };
 /**
  * A finished tile. gaps = it could not be drawn in full because a download failed for now (worth
  * asking for again later); recovered = a server that was failing answers again; parent = draw
@@ -1370,6 +1374,7 @@ const TILE_CACHE_BYTES = 48 * 2 ** 20; // decoded source tiles kept per worker (
 // polar rasters, downloaded squares and masks. The main thread assigns a larger share to the
 // raster worker. Pictures still being sampled are temporary job memory, not retained cache.
 let decodedBudgetBytes = 64 * 2 ** 20, decodedBytes = 0, decodedEvictions = 0;
+let rasterMaxEdge = Infinity;
 let decodesActive = 0, decodesQueued = 0;
 const decoded = new Map<string, { bytes: number; kind: DecodedKind; evict: () => void }>();
 
@@ -1578,11 +1583,18 @@ function canvas2d(w: number, h: number): OffscreenCanvasRenderingContext2D {
 }
 
 /** Decode a picture into the most compact form (grey/RGB/RGBA), reading big pictures in strips to keep memory low. */
-async function decode(blob: Blob): Promise<Src> {
+async function decode(blob: Blob, maxEdge = Infinity): Promise<Src> {
   decodesActive++;
   let bmp: ImageBitmap | undefined;
   try {
     bmp = await createImageBitmap(blob, { premultiplyAlpha: 'none', colorSpaceConversion: 'none' });
+    if (Math.max(bmp.width, bmp.height) > maxEdge) {
+      const scale = maxEdge / Math.max(bmp.width, bmp.height), original = bmp;
+      bmp = await createImageBitmap(original, { resizeWidth: Math.max(1, Math.round(original.width * scale)),
+        resizeHeight: Math.max(1, Math.round(original.height * scale)), resizeQuality: 'high',
+        premultiplyAlpha: 'none', colorSpaceConversion: 'none' });
+      original.close();
+    }
     const w = bmp.width, h = bmp.height, stripH = clamp(Math.floor(2 ** 20 / w), 1, h), ctx = canvas2d(w, stripH);
     const pack = new Packer(w, h);
     for (let y = 0; y < h; y += stripH) {
@@ -1610,7 +1622,7 @@ async function decodeRaster(blob: Blob, mips = Infinity, poleAware = false): Pro
   decodesQueued++;
   await before;
   decodesQueued--;
-  try { return buildMips(await decode(blob), mips, poleAware); }
+  try { return buildMips(await decode(blob, rasterMaxEdge), mips, poleAware); }
   finally { release(); }
 }
 
@@ -2343,6 +2355,10 @@ function startWorker() {
     if ('photoView' in m) { photoView = m.photoView; return; }
     if ('cacheBudgetBytes' in m) {
       if (Number.isFinite(m.cacheBudgetBytes) && m.cacheBudgetBytes >= 2 ** 20) { decodedBudgetBytes = m.cacheBudgetBytes; trimDecoded(); }
+      if (m.phone) {
+        rasterMaxEdge = 2048;
+        scienceBlocks.setBudget(16 * 2 ** 20); sciencePreviews.setBudget(4 * 2 ** 20);
+      }
     }
     else if ('cancel' in m) jobs.get(m.cancel)?.abort();
     else if ('forgetFailures' in m) { forgetBefore = performance.now(); for (const b of breakers.values()) b.fails = 0; }

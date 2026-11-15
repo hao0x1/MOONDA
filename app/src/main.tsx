@@ -5,6 +5,8 @@ import { createRoot } from 'react-dom/client';
 import App from './App';
 import { Tutorial } from './ui/Tutorial';
 import { installMusic } from './audio/music';
+// Last on purpose, after App and every stylesheet its parts bring in: the phone layout restates their rules.
+import './ui/phone.css';
 
 // The start screen's space video (index.html) goes first: wait until it can play (at most 2.5 s) before
 // the app starts and begins downloading the Moon data, so the two do not fight over the connection.

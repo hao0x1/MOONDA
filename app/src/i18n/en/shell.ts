@@ -101,6 +101,12 @@ export const shell = {
   'map.zoomOut': 'Zoom out',
   'map.colours': 'Map colours',
   'map.legend.hide': 'Hide {name}',
+  'render.stopped.title': 'The map stopped drawing',
+  'render.stopped.body': 'The graphics on this device could not draw part of the Moon. The lighter graphics usually fix it.',
+  'render.stopped.body.light': 'The graphics on this device could not draw part of the Moon, even with the lighter graphics. Reloading sometimes helps.',
+  'render.stopped.light': 'Use lighter graphics and reload',
+  'render.stopped.reload': 'Reload',
+  'render.stopped.detail': 'What went wrong',
 
   'status.standing': 'Landed at {name}',
   'status.move': 'Move the pointer over the Moon to see where it is',

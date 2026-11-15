@@ -25,9 +25,9 @@ export const start: Partial<Record<keyof typeof en, string>> = {
   'start.mode.full.body': 'ព្រះច័ន្ទច្បាស់បំផុត មេឃពេលយប់ពេញលេញ និងគ្រប់បែបផែន។ សម្រាប់កុំព្យូទ័រថ្មីៗ។',
   'start.mode.full.tip': 'ប្រើរូបព្រះច័ន្ទច្បាស់បំផុត និងបែបផែនទាំងអស់។',
   'start.mode.light': 'រលូន',
-  'start.mode.light.body': 'ក្រាហ្វិកស្រាលជាង ដើររលូនលើកុំព្យូទ័រចាស់ៗ និងថេប្លេត។',
+  'start.mode.light.body': 'ក្រាហ្វិកស្រាលជាង ដើររលូនលើទូរសព្ទ ថេប្លេត និងកុំព្យូទ័រចាស់ៗ។',
   'start.mode.light.tip': 'ប្រើក្រាហ្វិកស្រាលជាង ដើម្បីឱ្យព្រះច័ន្ទរំកិលបានរលូន។',
-  'start.recommended': 'ស័ក្តិសមនឹងកុំព្យូទ័រនេះ',
+  'start.recommended': 'ស័ក្តិសមនឹងឧបករណ៍នេះ',
 
   'start.language': 'ភាសា',
   'start.language.en.tip': 'បង្ហាញ MOONDA ជាភាសាអង់គ្លេស។',

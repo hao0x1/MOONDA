@@ -18,6 +18,8 @@ import type { RouteResult } from '../science/route';
 import type { SpotTimeline } from '../science/analysis';
 import { compassName, type BodyNow } from './describe';
 import { EarthGlyph, SunGlyph } from './glyphs';
+import { isTouch } from './device';
+import { TouchDrive } from './TouchDrive';
 import './lander.css';
 
 interface Props {
@@ -106,6 +108,8 @@ function earthLine(e: Props['earth'], never: boolean, until: number | null | und
 
 export function LanderHud({ name, sun, earth, earthNeverRises, mastM, timeline, cursor, onLook, onExit, bodies, layers, opacity, layerDefs, timeKey, route, names, onOpenMap }: Props) {
   const t = useT();
+  // a finger and no keyboard: the drive pad is shown, and the hint speaks of touch
+  const [touch] = useState(isTouch);
   const tape = useRef<HTMLDivElement>(null);
   const degText = useRef<HTMLElement>(null);
   const zoomTip = useRef<HTMLDivElement>(null);
@@ -185,7 +189,7 @@ export function LanderHud({ name, sun, earth, earthNeverRises, mastM, timeline, 
   const blur = (ev: { currentTarget: HTMLElement }) => ev.currentTarget.blur();
 
   return (
-    <div className="lv-hud">
+    <div className={`lv-hud${touch ? ' lv-touch' : ''}`}>
       <div className="lv-scrim" aria-hidden="true" />
       <div className="lv-top lv-glass">
         <button className="lv-back" onClick={onExit} data-tip={t('ex.back.tip')}><ArrowLeft size={16} weight="bold" /> {t('hud.back')}</button>
@@ -256,7 +260,8 @@ export function LanderHud({ name, sun, earth, earthNeverRises, mastM, timeline, 
         </div>
       </div>
 
-      {!drive.on && !onRover && <div className="lv-hint lv-glass"><HandGrabbing size={16} /> {t('hud.hint')}</div>}
+      {!drive.on && !onRover && <div className="lv-hint lv-glass"><HandGrabbing size={16} /> {t(touch ? 'hud.hint.touch' : 'hud.hint')}</div>}
+      {touch && <TouchDrive />}
 
       <Minimap bodies={bodies} layers={layers} opacity={opacity} layerDefs={layerDefs} timeKey={timeKey} mastM={mastM} route={route} names={names} onOpen={onOpenMap} />
     </div>
