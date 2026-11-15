@@ -17,6 +17,7 @@ const SOURCES: [Key, string, string][] = [
   ['welcome.src.quickmap', 'NASA / ASU LROC QuickMap (NASA, Intuitive Machines & Applied Coherent Technology)', 'https://quickmap.im-ldi.com/'],
   ['welcome.src.engine', 'CesiumJS (open source, Apache 2.0)', 'https://cesium.com/platform/cesiumjs/'],
   ['welcome.src.music', '"Cylinder Five" by Chris Zabriskie (CC BY 4.0)', 'https://chriszabriskie.com/cylinders/'],
+  ['welcome.src.film', 'NASA’s Scientific Visualization Studio and NASA’s Goddard Space Flight Center (public domain)', 'https://svs.gsfc.nasa.gov/'],
 ];
 
 export function Welcome({ onPole, onExplore, onClose, showSources }: { onPole(): void; onExplore(): void; onClose(): void; showSources?: boolean }) {

@@ -18,7 +18,9 @@
       html, body { margin: 0; height: 100%; background: #05060a; }
       /* The space video behind the start screen. It is in the page itself so it is the first thing the
          browser downloads; the app waits for it (src/main.tsx) before loading the Moon data. Blur and
-         dimming are baked into the file; the shade on top keeps the text readable. */
+         dimming are baked into the file; the shade on top keeps the text readable. The film is cut from
+         NASA visualisations, public domain: sources in public/intro/CREDITS.md, built by
+         data-prep/intro/make-intro.sh. */
       .intro-bg { position: fixed; inset: 0; z-index: 99; pointer-events: none; background: #05060a; transition: opacity 480ms ease-out; }
       .intro-bg video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
       .intro-bg::after { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse 60% 75% at 50% 48%, rgba(5, 6, 10, .46) 0%, rgba(5, 6, 10, .2) 60%, rgba(5, 6, 10, .06) 100%); }

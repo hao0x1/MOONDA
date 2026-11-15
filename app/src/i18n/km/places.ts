@@ -86,6 +86,7 @@ export const places: Partial<Record<keyof typeof en | `pl.${string}`, string>> =
   'welcome.src.artemis': 'តំបន់ Artemis',
   'welcome.src.engine': 'កម្មវិធីផែនទី 3D',
   'welcome.src.music': 'តន្ត្រី',
+  'welcome.src.film': 'វីដេអូអេក្រង់ចាប់ផ្ដើម',
   'welcome.fine': 'លទ្ធផលពន្លឺព្រះអាទិត្យ និងការមើលឃើញផែនដី គណនាពីរូបរាងដីតែប៉ុណ្ណោះ។ ត្រូវមើលឃើញផែនដីទើបមានវិទ្យុផ្ទាល់បាន ប៉ុន្តែវាមិនបញ្ជាក់ថាវិទ្យុដំណើរការពិតទេ។ មិនមែនជាផលិតផលផ្លូវការរបស់ NASA ទេ។',
 
   // well-known sunny spots

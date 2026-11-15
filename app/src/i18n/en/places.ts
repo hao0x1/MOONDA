@@ -81,5 +81,6 @@ export const places = {
   'welcome.src.artemis': 'Artemis regions',
   'welcome.src.engine': '3D map engine',
   'welcome.src.music': 'Music',
+  'welcome.src.film': 'Start-screen film',
   'welcome.fine': 'Sunlight and Earth-view results come from the shape of the ground only. Seeing Earth is needed for direct radio, but it does not prove a working radio link. Not an official NASA product.',
 } as const;
