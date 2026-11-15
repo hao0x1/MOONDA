@@ -24,7 +24,7 @@ export interface ChatMessage {
 export interface ToolSpec { type: 'function'; function: { name: string; description: string; parameters: Record<string, unknown> } }
 
 /** Why a run ended badly, as a fixed code (the panel shows a short sentence for each). */
-export type ErrCode = 'no-key' | 'busy' | 'network' | 'stall' | 'cut' | 'too-long' | 'service' | 'chat-too-long' | 'steps';
+export type ErrCode = 'no-key' | 'busy' | 'rate-limit' | 'budget-limit' | 'network' | 'stall' | 'cut' | 'too-long' | 'service' | 'chat-too-long' | 'steps';
 
 export type AgentEvent =
   | { type: 'round'; round: number }
@@ -57,6 +57,8 @@ export function toolLimitMs(name: string, args: Record<string, unknown>) {
 const MESSAGES: Record<ErrCode, () => string> = {
   'no-key': () => t('ai.err.noKey'),
   busy: () => t('ai.err.busy'),
+  'rate-limit': () => t('ai.err.rateLimit'),
+  'budget-limit': () => t('ai.err.budgetLimit'),
   network: () => t('ai.err.network'),
   stall: () => t('ai.err.stall'),
   cut: () => t('ai.err.cut'),
@@ -70,6 +72,8 @@ function codeFromServer(code: unknown): ErrCode {
   switch (code) {
     case 'no-key': return 'no-key';
     case 'busy': return 'busy';
+    case 'rate-limit': return 'rate-limit';
+    case 'budget-limit': return 'budget-limit';
     case 'network': return 'network';
     case 'timeout': return 'stall';
     case 'too-long': return 'chat-too-long';
@@ -182,7 +186,7 @@ export class Agent {
     this.messages.push({ role: 'user', content: context ? `${question}\n\n[What the user is looking at right now: ${context}]` : question });
     let silence: ReturnType<typeof setTimeout> | undefined;
     const alive = () => { clearTimeout(silence); silence = setTimeout(() => this.end('stall'), SILENCE_MS); };
-    const fail = (code: ErrCode) => onEvent({ type: 'error', code, message: MESSAGES[code](), retry: code !== 'no-key' && code !== 'chat-too-long' });
+    const fail = (code: ErrCode) => onEvent({ type: 'error', code, message: MESSAGES[code](), retry: !['no-key', 'chat-too-long', 'rate-limit', 'budget-limit'].includes(code) });
     try {
       for (let round = 1; round <= MAX_ROUNDS; round++) {
         onEvent({ type: 'round', round });
@@ -202,11 +206,13 @@ export class Agent {
           if (!res.ok && round === 1 && messages === this.messages && err.status === 400 && messages.length > 2) {
             const plain = plainTalk(messages);
             const again = await post(plain);
-            if (again.ok) { res = again; this.messages = plain; start = plain.length - 1; }
+            res = again;
+            if (again.ok) { this.messages = plain; start = plain.length - 1; }
+            else err = await again.json().catch(() => ({})) as typeof err;
           }
           if (!res.ok || !res.body) {
             if (round === 1) this.messages.splice(start); // nothing happened: forget the question
-            throw new RunError(res.status === 404 ? 'no-key' : codeFromServer(err.error));
+            throw new RunError(res.status === 404 ? 'no-key' : res.status === 429 && err.error !== 'budget-limit' ? 'rate-limit' : codeFromServer(err.error));
           }
           let thinking = '', answer = '', whole = false;
           const calls = new Map<number, ToolCall>();

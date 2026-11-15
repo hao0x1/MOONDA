@@ -3,6 +3,8 @@ export const ai = {
   // errors the helper can show (short, human, no technical details)
   'ai.err.noKey': 'The AI helper is not switched on for this site yet. Everything else in MOONDA works as usual.',
   'ai.err.busy': 'The AI service is busy right now. Wait a few seconds and try again.',
+  'ai.err.rateLimit': 'Moon AI has reached its usage limit. Please try again later.',
+  'ai.err.budgetLimit': 'Moon AI has reached today’s shared usage limit. Please try again tomorrow.',
   'ai.err.network': 'Could not reach the AI service. Check the internet connection and try again.',
   'ai.err.stall': 'The AI stopped answering, so this was ended. Try again.',
   'ai.err.cut': 'The answer was cut off before it finished. Try again.',

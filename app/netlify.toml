@@ -1,5 +1,6 @@
 # Deployed with: npx netlify-cli deploy --dir dist --functions netlify/functions --prod --site <id>
 [build]
+  command = "npm run build"
   publish = "dist"
   functions = "netlify/functions"
   # /api/ai is answered at the edge (no 30 s cut on a streaming answer); the function is the fallback
