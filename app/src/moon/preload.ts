@@ -59,6 +59,8 @@ export interface PreloadDeps {
   onProgress(p: LoadProgress): void;
   /** Set to true (e.g. by a "Skip" button) to finish as soon as possible. */
   cancelled?: () => boolean;
+  /** Aborting releases the start screen and camera synchronously; remaining downloads may finish in the background. */
+  signal?: AbortSignal;
 }
 
 /** The south-pole views see far over the horizon, where the photos come from NASA's server (slow from far away):
@@ -74,14 +76,14 @@ function waitingKinds(): string {
 }
 
 const sleep = (ms: number) => new Promise<void>(r => setTimeout(r, ms));
-/** true when `p` settled in time (resolved or failed), false when the time ran out */
+/** true when `p` succeeded in time; false for failure, an explicit false result, timeout or cancellation. */
 function withTimeout<T>(p: Promise<T>, ms: number, cancelled?: () => boolean): Promise<boolean> {
   return new Promise(resolve => {
     let over = false;
     const end = (ok: boolean) => { if (!over) { over = true; clearTimeout(timer); clearInterval(poll); resolve(ok); } };
     const timer = setTimeout(() => end(false), ms);
     const poll = setInterval(() => { if (cancelled?.()) end(false); }, 100); // a skip ends the wait at once
-    p.then(() => end(true), () => end(true));
+    p.then(value => end(value !== false), () => end(false));
   });
 }
 
@@ -149,8 +151,8 @@ async function fetchFiles(files: string[], onFrac: (f: number) => void, cancelle
 }
 
 export async function runPreload(viewer: Viewer, d: PreloadDeps): Promise<void> {
-  const stop = () => viewer.isDestroyed() || !!d.cancelled?.();
-  const cancelled = () => !!d.cancelled?.();
+  const cancelled = () => finished || !!d.signal?.aborted || !!d.cancelled?.();
+  const stop = () => viewer.isDestroyed() || cancelled();
   // what happened, for tests and for "why did it take so long" (window.__moonda.preloadTrace)
   const trace: string[] = [];
   const hook = (window as unknown as { __moonda?: Record<string, unknown> }).__moonda;
@@ -167,14 +169,15 @@ export async function runPreload(viewer: Viewer, d: PreloadDeps): Promise<void> 
       all += WEIGHT[s.id];
       got += WEIGHT[s.id] * (s.state === 'done' || s.state === 'later' || s.state === 'off' ? 1 : s.state === 'loading' ? (s.frac ?? 0) : 0);
     }
-    const pct = Math.min(99, Math.floor((100 * got) / all));
+    const pct = Math.min(99, Math.max(lastPct, Math.floor((100 * got) / all)));
     const current = list.find(s => s.state === 'loading');
-    const key = list.map(s => s.state).join() + pct;
+    const key = list.map(s => `${s.state}:${s.frac === null ? '?' : Math.round(s.frac * 100)}:${s.ms ?? ''}`).join() + pct;
     if (key === lastSent && pct === lastPct) return;
     lastSent = key; lastPct = pct;
     d.onProgress({ pct, step: current ? t(`start.stage.${current.id}`) : t('start.step.start'), done: false, stages: list });
   };
   const mark = (id: StageId, state: StageState, frac: number | null = null) => {
+    if (finished) return;
     const s = stages.get(id)!;
     if (state === 'loading' && !began.has(id)) began.set(id, performance.now());
     if (state !== 'loading' && state !== 'waiting' && began.has(id)) s.ms = Math.round(performance.now() - began.get(id)!);
@@ -183,16 +186,31 @@ export async function runPreload(viewer: Viewer, d: PreloadDeps): Promise<void> 
   };
   const frac = (id: StageId) => (f: number) => {
     const s = stages.get(id)!;
-    if (s.state !== 'loading' || (s.frac !== null && Math.abs(f - s.frac) < 0.02 && f < 1)) return;
-    s.frac = f; send();
+    if (finished || s.state !== 'loading' || !Number.isFinite(f)) return;
+    const next = Math.max(s.frac ?? 0, Math.min(1, Math.max(0, f)));
+    if (s.frac !== null && Math.round(next * 100) === Math.round(s.frac * 100)) return;
+    s.frac = next; send();
   };
   /** run one stage: loading → done when `job` says it finished in time, otherwise "later" */
   const stage = async (id: StageId, job: () => Promise<boolean | void>) => {
+    if (stop()) return;
     mark(id, 'loading');
     let ok = false;
     try { ok = (await job()) !== false; } catch { ok = false; }
-    if (!viewer.isDestroyed()) mark(id, ok && !cancelled() ? 'done' : 'later');
+    if (!finished && !viewer.isDestroyed()) mark(id, ok && !cancelled() ? 'done' : 'later');
   };
+
+  const finish = () => {
+    if (finished || viewer.isDestroyed()) return;
+    // Restore the opening view before enabling Enter/navigation, including an explicit skip.
+    // An aborted asynchronous continuation must never move the camera after this point.
+    try { setPose(viewer, d.startView); } finally {
+      for (const s of stages.values()) if (s.state === 'waiting' || s.state === 'loading') s.state = 'later';
+      finished = true;
+      d.onProgress({ pct: 100, step: t('start.step.ready'), done: true, stages: STAGES.map(id => ({ ...stages.get(id)! })) });
+    }
+  };
+  const onAbort = () => finish();
 
   // music: only when it is switched on; switching it on during start-up fetches it then
   let musicJob: Promise<void> | null = null;
@@ -204,6 +222,8 @@ export async function runPreload(viewer: Viewer, d: PreloadDeps): Promise<void> 
   const offSound = settings.subscribe((s, prev) => { if (s.sound && !prev.sound) music(); });
 
   try {
+    d.signal?.addEventListener('abort', onAbort, { once: true });
+    if (stop()) return;
     send();
     music();
     const manifest = withTimeout(loadManifest(), 8000, cancelled); // the layer legends (small)
@@ -218,15 +238,16 @@ export async function runPreload(viewer: Viewer, d: PreloadDeps): Promise<void> 
       await photoFinished;
       if (stop()) return false;
       await sleep(60); // the map swaps in the 3D ground when the heights arrive
+      if (stop()) return false;
       setPose(viewer, d.startView);
       // then the 3D ground at the opening view
-      return heightsOk && await waitUntilLoaded(viewer, 15000, d.imageryPending, d.cancelled);
+      return heightsOk && await waitUntilLoaded(viewer, 15000, d.imageryPending, cancelled);
     });
 
     // the opening view's photo, on the smooth ball (the 3D ground replaces it once the heights are in)
     setPose(viewer, d.startView);
     await stage('photo', async () => {
-      const ok = await waitUntilLoaded(viewer, 20000, d.imageryPending, d.cancelled, frac('photo'));
+      const ok = await waitUntilLoaded(viewer, 20000, d.imageryPending, cancelled, frac('photo'));
       await manifest;
       await withTimeout(d.namesReady, 6000, cancelled);
       return ok;
@@ -248,13 +269,12 @@ export async function runPreload(viewer: Viewer, d: PreloadDeps): Promise<void> 
     const layers = d.layerFiles || d.warmLayers
       ? stage('layers', async () => {
         const preparation = (async () => {
-        let ok = true;
-        let fetched = d.layerFiles ? 0 : 1, warmed = d.warmLayers ? 0 : 1;
-        const report = () => frac('layers')(d.layerFiles && d.warmLayers ? fetched * 0.45 + warmed * 0.55 : d.layerFiles ? fetched : warmed);
-        const fetchJob = d.layerFiles ? d.layerFiles().then(files => fetchFiles(files, f => { fetched = f; report(); }, cancelled)) : Promise.resolve();
-        const warmJob = d.warmLayers && !stop() ? d.warmLayers(f => { warmed = f; report(); }).then(result => { ok = result !== false; }) : Promise.resolve();
-        await Promise.all([fetchJob, warmJob]);
-        return ok;
+          let fetched = d.layerFiles ? 0 : 1, warmed = d.warmLayers ? 0 : 1;
+          const report = () => frac('layers')(d.layerFiles && d.warmLayers ? fetched * 0.45 + warmed * 0.55 : d.layerFiles ? fetched : warmed);
+          const fetchJob = d.layerFiles ? d.layerFiles().then(files => fetchFiles(files, f => { fetched = f; report(); }, cancelled)) : Promise.resolve(true);
+          const warmJob = d.warmLayers && !stop() ? d.warmLayers(f => { warmed = f; report(); }).then(result => result !== false) : Promise.resolve(!d.warmLayers);
+          const [filesReady, viewsReady] = await Promise.all([fetchJob, warmJob]);
+          return filesReady && viewsReady;
         })();
         return await withTimeout(preparation, 90000, cancelled) && await preparation;
       })
@@ -272,7 +292,7 @@ export async function runPreload(viewer: Viewer, d: PreloadDeps): Promise<void> 
         if (stop()) return false;
         setPose(viewer, views[i].pose);
         const t1 = performance.now();
-        const got = await waitUntilLoaded(viewer, views[i].maxMs * POLE_TIME, d.imageryPending, d.cancelled, f => frac('pole')((i + f) / views.length));
+        const got = await waitUntilLoaded(viewer, views[i].maxMs * POLE_TIME, d.imageryPending, cancelled, f => frac('pole')((i + f) / views.length));
         trace.push(`${views[i].label}: ${got ? 'sharp' : 'timed out'} after ${Math.round(performance.now() - t1)} ms, ${d.imageryPending?.() ?? 0} photo jobs left ${waitingKinds()}`);
         // Some hidden layers need this view's settled tile levels. Schedule them before moving on.
         if (got && !stop()) views[i].warm?.();
@@ -285,16 +305,12 @@ export async function runPreload(viewer: Viewer, d: PreloadDeps): Promise<void> 
 
     // back to the opening view, at the graphics mode chosen now (it may have changed while loading)
     setPose(viewer, d.startView);
-    await waitUntilLoaded(viewer, 6000, d.imageryPending, d.cancelled);
+    await waitUntilLoaded(viewer, 6000, d.imageryPending, cancelled);
     if (musicJob) await musicJob;
   } finally {
     offSound();
+    d.signal?.removeEventListener('abort', onAbort);
     // A destroyed viewer (React remount in development) must stay silent: the new viewer reports for itself.
-    if (!viewer.isDestroyed()) {
-      setPose(viewer, d.startView);
-      for (const s of stages.values()) if (s.state === 'waiting' || s.state === 'loading') s.state = 'later';
-      finished = true;
-      d.onProgress({ pct: 100, step: t('start.step.ready'), done: true, stages: STAGES.map(id => ({ ...stages.get(id)! })) });
-    }
+    finish();
   }
 }

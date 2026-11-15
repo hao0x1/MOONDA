@@ -71,6 +71,7 @@
 import { Cartesian2, Cartesian3, Cartographic, Credit, Event, GeographicTilingScheme, Rectangle, RequestState, type Viewer } from 'cesium';
 import { MOON_ELLIPSOID } from './ellipsoid';
 import { isPhoneGraphics } from '../app/quality';
+import { fetchJsonWithRetry } from '../app/fetch';
 import {
   FIX_MIN_TRUE_LAT, NORTH_PHOTO_LAT, POLAR_FEATHER_M, POLAR_LIMIT_DEG, PYRAMID_MAX_K, RETRY_MS, TILE, parsePyramidIndex, pixelDeg, pyramidLevelFor, pyramidParentIsEnough,
   pyramidSurelyLocal, tileFixRange, tileTrueLatRange, photoMaxLevel, pixelMetres,
@@ -172,6 +173,10 @@ class ImageryWorkers {
   private readonly scienceWarm = new Map<number, { resolve: (ok: boolean) => void; progress?: (frac: number) => void }>();
   private readonly scienceValues = new Map<number, (value: number | null) => void>();
   private readonly scienceControls = new Map<number, (value: unknown) => void>();
+  private readonly configuration: Map<string, ToWorker>[] = [];
+  private readonly restartAttempts: number[] = [];
+  private readonly restartTimers: (ReturnType<typeof setTimeout> | undefined)[] = [];
+  private scienceDisposed = false;
   readonly tiledCount: number;
   readonly scienceWorker: number;
 
@@ -181,23 +186,41 @@ class ImageryWorkers {
     this.tiledCount = !phone && cores >= 4 ? 2 : 1; // Moon Trek and the pyramid, plus the raster worker
     this.scienceWorker = this.tiledCount + 1;
     for (let i = 0; i <= this.scienceWorker; i++) {
-      const w = new Worker(new URL('./imageryWorker.ts', import.meta.url), { type: 'module' });
-      w.onmessage = (e: MessageEvent<FromWorker>) => this.finish(e.data, i);
-      w.onerror = e => this.fail(i, e);
-      this.workers.push(w);
+      this.workers.push(null);
       this.busy.push(0);
       this.local.push(0);
       this.net.push([0, 0, 0]);
-      // Science maps have their own worker so keeping them ready cannot evict the Moon photo.
-      const budget = phone ? (i === this.scienceWorker ? 8 : i === 0 ? 16 : 6)
-        : i === this.scienceWorker ? 64 : i === 0 ? 128 : i === 1 ? 64 : 32;
-      w.postMessage({ cacheBudgetBytes: budget * 2 ** 20, phone } satisfies ToWorker);
+      this.configuration.push(new Map());
+      this.restartAttempts.push(0);
+      this.start(i);
     }
     addEventListener('online', () => {
       const msg: ToWorker = { forgetFailures: true };
       for (const w of this.workers) w?.postMessage(msg);
       for (const p of this.gapped) p.networkBack();
     });
+  }
+
+  /** Keep routing and source indexes when a worker's script or process fails. Retry only twice. */
+  private start(index: number) {
+    if (index === this.scienceWorker && this.scienceDisposed) return;
+    try {
+      const w = new Worker(new URL('./imageryWorker.ts', import.meta.url), { type: 'module' });
+      this.workers[index] = w;
+      w.onmessage = (e: MessageEvent<FromWorker>) => {
+        if (this.workers[index] === w) this.finish(e.data, index); else e.data.bitmap?.close();
+      };
+      w.onerror = e => { if (this.workers[index] === w) this.fail(index, e); };
+      w.onmessageerror = e => { if (this.workers[index] === w) this.fail(index, e); };
+      const phone = isPhoneGraphics();
+      // Keep the original graphics/cache budgets on recovery.
+      const budget = phone ? (index === this.scienceWorker ? 8 : index === 0 ? 16 : 6)
+        : index === this.scienceWorker ? 64 : index === 0 ? 128 : index === 1 ? 64 : 32;
+      w.postMessage({ cacheBudgetBytes: budget * 2 ** 20, phone } satisfies ToWorker);
+      for (const msg of this.configuration[index].values()) w.postMessage(msg);
+      for (const provider of this.gapped) if (provider.worker === index) provider.networkBack();
+      imageryReloaded.raiseEvent();
+    } catch (error) { this.fail(index, error); }
   }
 
   /** Worker for a tiled source: the same source always goes to the same worker (so its cache is shared). */
@@ -214,7 +237,10 @@ class ImageryWorkers {
    */
   run(worker: number, job: Job, owner: ReprojectedImageryProvider, local = false, request?: ImageryRequest): Promise<ImageBitmap> | undefined {
     const w = this.workers[worker];
-    if (!w) return Promise.resolve(blankTile());
+    if (!w) {
+      this.gapped.add(owner); owner.noteGaps();
+      return Promise.resolve(parentMarkBitmap());
+    }
     const count = local ? this.local : this.busy;
     const limit = isPhoneGraphics() ? (local ? 12 : 8) : local ? LOCAL_QUEUE : worker === 0 ? RASTER_QUEUE : TILED_QUEUE;
     if (count[worker] >= limit) { this.stats.refused++; return undefined; }
@@ -233,7 +259,11 @@ class ImageryWorkers {
         if (cancel) request.cancel = () => { cancel.call(request); this.cancel(id); };
         if (request.cancelled) this.cancel(id);
       }
-      void this.flip.then(flipRows => { if (this.jobs.has(id)) { const msg: ToWorker = { id, job, flipRows }; w.postMessage(msg); } });
+      void this.flip.then(flipRows => {
+        if (!this.jobs.has(id)) return;
+        try { const msg: ToWorker = { id, job, flipRows }; w.postMessage(msg); }
+        catch (error) { this.fail(worker, error); }
+      });
     });
   }
 
@@ -260,13 +290,18 @@ class ImageryWorkers {
   }
 
   /** Tell one worker something that is not a tile job (e.g. which pyramid squares are stored with the app). */
-  tell(worker: number, msg: ToWorker) { this.workers[worker]?.postMessage(msg); }
+  tell(worker: number, msg: ToWorker) {
+    const key = 'pyramidIndex' in msg ? 'pyramidIndex' : 'photoView' in msg ? 'photoView' : 'scienceState' in msg ? 'scienceState' : null;
+    if (key) this.configuration[worker].set(key, msg);
+    try { this.workers[worker]?.postMessage(msg); } catch (error) { this.fail(worker, error); }
+  }
 
   warmScience(sources: ScienceRasterSource[], progress?: (frac: number) => void): Promise<boolean> {
     if (!this.workers[this.scienceWorker]) return Promise.resolve(false);
     const warmId = this.nextId++;
     return new Promise(resolve => {
-      this.scienceWarm.set(warmId, { resolve, progress });
+      const timer = setTimeout(() => { this.scienceWarm.delete(warmId); resolve(false); }, 60000);
+      this.scienceWarm.set(warmId, { resolve: ok => { clearTimeout(timer); resolve(ok); }, progress });
       this.tell(this.scienceWorker, { warmScience: sources, warmId });
     });
   }
@@ -275,7 +310,8 @@ class ImageryWorkers {
     if (!this.workers[this.scienceWorker]) return Promise.resolve(null);
     const valueId = this.nextId++;
     return new Promise(resolve => {
-      this.scienceValues.set(valueId, resolve);
+      const timer = setTimeout(() => { this.scienceValues.delete(valueId); resolve(null); }, 20000);
+      this.scienceValues.set(valueId, value => { clearTimeout(timer); resolve(value); });
       this.tell(this.scienceWorker, { scienceValue: { source, lat, lon }, valueId });
     });
   }
@@ -283,6 +319,9 @@ class ImageryWorkers {
   scienceState(activeUrls: string[]) { this.tell(this.scienceWorker, { scienceState: { activeUrls } }); }
 
   disposeScience() {
+    this.scienceDisposed = true;
+    clearTimeout(this.restartTimers[this.scienceWorker]);
+    this.restartTimers[this.scienceWorker] = undefined;
     this.workers[this.scienceWorker]?.terminate(); this.workers[this.scienceWorker] = null;
     for (const [id, job] of this.jobs) if (job.worker === this.scienceWorker) { this.jobs.delete(id); job.done(parentMarkBitmap()); }
     this.busy[this.scienceWorker] = this.local[this.scienceWorker] = 0;
@@ -296,7 +335,8 @@ class ImageryWorkers {
     if (!this.workers[this.scienceWorker]) return Promise.resolve(null);
     const requestId = this.nextId++;
     return new Promise(resolve => {
-      this.scienceControls.set(requestId, resolve);
+      const timer = setTimeout(() => { this.scienceControls.delete(requestId); resolve(null); }, 5000);
+      this.scienceControls.set(requestId, value => { clearTimeout(timer); resolve(value); });
       this.tell(this.scienceWorker, trim ? { scienceTrim: trim, scienceRequestId: requestId } : { scienceStats: { requestId } });
     });
   }
@@ -370,13 +410,29 @@ class ImageryWorkers {
   /** A layer has reloaded its tiles. */
   settled(p: ReprojectedImageryProvider) { this.gapped.delete(p); }
 
-  /** A worker that crashed or could not start: its tiles (and later ones) come back transparent. */
-  private fail(worker: number, e: ErrorEvent) {
-    console.error('Imagery worker stopped:', e.message);
+  /** Release every caller on failure, retain parent photos, then recover the same source worker. */
+  private fail(worker: number, error: unknown) {
+    console.warn('Imagery worker stopped:', (error as { message?: unknown } | null)?.message ?? error);
     this.workers[worker]?.terminate();
     this.workers[worker] = null;
-    for (const [id, j] of this.jobs) if (j.worker === worker) { this.jobs.delete(id); j.done(blankTile()); }
+    for (const [id, j] of this.jobs) if (j.worker === worker) {
+      this.jobs.delete(id); this.gapped.add(j.owner); j.owner.noteGaps(); j.done(parentMarkBitmap());
+    }
     this.busy[worker] = this.local[worker] = 0;
+    if (worker === this.scienceWorker) {
+      for (const job of this.scienceWarm.values()) job.resolve(false);
+      for (const resolve of this.scienceValues.values()) resolve(null);
+      for (const resolve of this.scienceControls.values()) resolve(null);
+      this.scienceWarm.clear(); this.scienceValues.clear(); this.scienceControls.clear();
+      this.stats.science = null;
+      if (this.scienceDisposed) return;
+    }
+    if (this.restartTimers[worker] !== undefined || this.restartAttempts[worker] >= 2) return;
+    const attempt = ++this.restartAttempts[worker];
+    this.restartTimers[worker] = setTimeout(() => {
+      this.restartTimers[worker] = undefined;
+      this.start(worker);
+    }, 500 * 2 ** (attempt - 1));
   }
 }
 
@@ -684,7 +740,7 @@ function fixOf(folder: string, m: unknown): FixParams | undefined {
 export function createBaseMosaicProvider(o: { url?: string; credit: string }): ReprojectedImageryProvider {
   const folder = new URL(o.url ?? './data/base/', document.baseURI).href.replace(/\/?$/, '/');
   const set: BaseSet = (baseSet = { state: 'loading' });
-  void fetch(`${folder}base.json`).then(r => (r.ok ? r.json() : Promise.reject(new Error(String(r.status))))).then((m: { pictures?: Record<string, unknown>; fix?: unknown }) => {
+  void fetchJsonWithRetry<{ pictures?: Record<string, unknown>; fix?: unknown }>(`${folder}base.json`, { tries: 2, idleTimeoutMs: 8000, retryDelayMs: 500 }).then(m => {
     const phone = isPhoneGraphics();
     set.global = basePictureOf(folder, phone ? m.pictures?.quick : m.pictures?.global, level => level);
     set.quick = basePictureOf(folder, m.pictures?.quick, level => level);
@@ -693,7 +749,13 @@ export function createBaseMosaicProvider(o: { url?: string; credit: string }): R
     set.north = !phone && set.global && basePictureOf(folder, m.pictures?.north, level => level - set.global!.level - 1) || undefined;
     set.fix = fixOf(folder, (m as { fix?: unknown }).fix);
     set.state = set.global ? 'ready' : 'failed';
-  }).catch((e: unknown) => { console.warn('Local Moon picture not available:', e); set.state = 'failed'; });
+  }).catch((e: unknown) => { console.warn('Local Moon picture not available:', e); set.state = 'failed'; })
+    .finally(() => {
+      // Providers returned "not yet" while the metadata loaded. Wake the request-render scene,
+      // including the remote fallback when the local metadata could not be read.
+      for (const provider of overBase) provider.reloadNow();
+      imageryReloaded.raiseEvent();
+    });
   return new ReprojectedImageryProvider({
     rectangle: Rectangle.clone(Rectangle.MAX_VALUE),
     maximumLevel: 6,
@@ -1041,13 +1103,12 @@ export function createPolarPyramidProvider(o: { layers: string; minK: number; cr
   if (o.local !== null && typeof document !== 'undefined') {
     const folder = (local = new URL(o.local ?? './data/polar/t/', document.baseURI).href.replace(/\/?$/, '/'));
     listed = false;
-    const read = (triesLeft: number): Promise<void> =>
-      fetch(`${folder}index.json`).then(r => (r.ok ? r.json() : Promise.reject(new Error(String(r.status))))).then((json: unknown) => {
+    void fetchJsonWithRetry<unknown>(`${folder}index.json`, { tries: 2, idleTimeoutMs: 8000, retryDelayMs: 500 }).then(json => {
         const ix = parsePyramidIndex(json);
         if (ix && ix.layers === o.layers) { index = ix; workers().tell(worker, { pyramidIndex: json, base: folder }); }
-        else console.warn(`Stored south-pole photos not used: they are for "${ix?.layers ?? 'an unknown layer set'}", this layer asks for "${o.layers}".`);
-      }).catch((e: unknown) => (triesLeft > 0 ? new Promise<void>(res => setTimeout(res, 1500)).then(() => read(triesLeft - 1)) : console.warn('No list of stored south-pole photos, using the remote server only:', e)));
-    void read(1).finally(() => { listed = true; });
+        else { local = null; console.warn(`Stored south-pole photos not used: they are for "${ix?.layers ?? 'an unknown layer set'}", this layer asks for "${o.layers}".`); }
+      }).catch((e: unknown) => { local = null; console.warn('No list of stored south-pole photos, using the remote server only:', e); })
+      .finally(() => { listed = true; imageryReloaded.raiseEvent(); });
   }
   return new ReprojectedImageryProvider({
     rectangle: polarRectangle(POLAR_LIMIT_DEG),

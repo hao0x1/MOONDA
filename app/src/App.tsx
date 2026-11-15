@@ -64,7 +64,30 @@ export default function App() {
   useEffect(() => installLang(), []);
   const [names, setNames] = useState<MoonName[] | null>(null);
   const [manifest, setManifest] = useState<ScienceManifestEntry[]>([]);
-  useEffect(() => { loadNames().then(n => { setNames(n); setExploreNames(n); }); loadManifest().then(setManifest); }, []);
+  useEffect(() => {
+    loadNames().then(n => { setNames(n); setExploreNames(n); });
+    let live = true, fetching = false, retryMs = 5000;
+    let retry: ReturnType<typeof setTimeout> | undefined;
+    const refresh = () => {
+      if (!live || fetching) return;
+      clearTimeout(retry);
+      fetching = true;
+      const apply = (entries: ScienceManifestEntry[]) => {
+        if (!live) return;
+        setManifest(entries);
+        if (!entries.length) {
+          // The manifest loader releases a failed request, so a restored connection can recover without a reload.
+          retry = setTimeout(refresh, retryMs);
+          retryMs = Math.min(30000, retryMs * 2);
+        }
+      };
+      void loadManifest().then(apply, () => apply([])).finally(() => { fetching = false; });
+    };
+    const online = () => { retryMs = 5000; refresh(); };
+    refresh();
+    window.addEventListener('online', online);
+    return () => { live = false; clearTimeout(retry); window.removeEventListener('online', online); };
+  }, []);
   const scienceLayers = useMemo(() => manifest.map(scienceToLayer), [manifest]);
   const sciencePanelLayers = useMemo(() => scienceLayers.filter(l => !HIDDEN_SCIENCE.has(l.id)), [scienceLayers]);
   const heightDef = useMemo(() => {
@@ -135,16 +158,23 @@ export default function App() {
     const t = setTimeout(() => setLoadGone(true), 520); // after the fade-out
     return () => clearTimeout(t);
   }, [entered, load.done]);
-  const skipLoading = () => {
-    (window as unknown as { __moonda?: { skipLoading?: () => void } }).__moonda?.skipLoading?.();
-    // if the map cannot answer for some reason, never leave the user stuck on the loading screen
-    setTimeout(() => setLoad(cur => (cur.done ? cur : { ...cur, pct: 100, done: true })), 1500);
-  };
-  // Last resort: the map's loader has its own time limits (about 2 minutes at worst on a very slow network); never keep Enter off beyond that.
-  useEffect(() => {
-    const t = setTimeout(() => setLoad(cur => (cur.done ? cur : { ...cur, pct: 100, done: true })), 180000);
-    return () => clearTimeout(t);
+  const skipLoading = useCallback(() => {
+    const skip = (window as unknown as { __moonda?: { skipLoading?: () => void } }).__moonda?.skipLoading;
+    if (skip) {
+      // The map cancels its camera warm-up and restores navigation before reporting ready.
+      skip();
+      return;
+    }
+    // No map loader was installed (for example, graphics initialization failed).
+    setLoad(cur => (cur.done ? cur : { ...cur, pct: 100, done: true,
+      stages: cur.stages.map(s => s.state === 'waiting' || s.state === 'loading' ? { ...s, state: 'later' } : s) }));
   }, []);
+  // The deadline uses the same cancellation path as Skip: a ready UI must never leave a camera warm-up running.
+  useEffect(() => {
+    if (load.done) return;
+    const t = setTimeout(skipLoading, 180000);
+    return () => clearTimeout(t);
+  }, [skipLoading, load.done]);
   useEffect(() => installTips(), []);
 
   // A new arrival date keeps the same point in the mission (day 5 stays day 5) instead of jumping back to the landing.
@@ -564,6 +594,7 @@ export default function App() {
       stand: (lat: number, lon: number) => { setSelection({ type: 'pin', lat, lon }); setStandWhenReady(true); },
       select: (lat: number, lon: number) => setSelection({ type: 'pin', lat, lon }),
       selectPlace: (id: string) => { const place = PLACES_FOR_AI.find(p => p.id === id); if (place) setSelection({ type: 'place', place }); },
+      setLayer: (id: string, on: boolean) => setLayers(current => ({ ...current, [id]: on })),
       exit: requestExit,
       setTime: (ms: number) => { setPlaying(false); setCursor(ms); },
       setMast: setMastM, setDays, setArrival: setArrivalSafe, setLanguage: setLang,

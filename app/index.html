@@ -49,6 +49,9 @@
       .boot-line { position: absolute; left: 0; right: 0; bottom: -1px; height: 1px; overflow: hidden; }
       .boot-line i { position: absolute; inset: 0; transform-origin: left; transform: scaleX(var(--f, 0)); background: #eeeff1; transition: transform 400ms cubic-bezier(.2, .7, .2, 1); }
       .boot-line.busy i { transform: none; width: 30%; animation: boot-busy 1.4s ease-in-out infinite; }
+      .boot-recovery { align-self: stretch; margin-top: 20px; color: #b3b5bc; font-size: 14px; line-height: 1.5; }
+      .boot-recovery p { margin: 0 0 12px; }
+      .boot-recovery button { padding: 10px 16px; border: 1px solid #eeeff1; border-radius: 10px; background: #eeeff1; color: #05060a; font: inherit; cursor: pointer; }
       @keyframes boot-busy { from { transform: translateX(-100%); } to { transform: translateX(340%); } }
       @media (prefers-reduced-motion: reduce) { .boot-line.busy i { animation: none; width: 100%; opacity: .4; } }
     </style>
@@ -62,29 +65,91 @@
       // with no sign of progress. The production build calls this in place of its <script type="module">
       // (vite.config.ts, bootLoader); the dev server loads the code itself and the row just shows it is busy.
       window.__bootLoad = function (src, size) {
+        var PREFETCH_IDLE_MS = 20000, PREFETCH_TOTAL_MS = 90000, MODULE_MS = 45000;
         function show(f) {
           var n = document.getElementById('boot-app-n'), l = document.getElementById('boot-app-line');
           if (n) n.textContent = Math.round(f * 100) + '%';
           if (l) { l.classList.remove('busy'); l.style.setProperty('--f', String(f)); }
         }
-        function start() {
+        function recovery(message, terminal) {
+          function draw() {
+            var col = document.querySelector('.boot-col');
+            if (!col) return; // React has already replaced the static loading screen.
+            var box = document.getElementById('boot-recovery');
+            if (!box) { box = document.createElement('div'); box.id = 'boot-recovery'; box.className = 'boot-recovery'; col.appendChild(box); }
+            box.setAttribute('role', terminal ? 'alert' : 'status');
+            box.textContent = '';
+            var p = document.createElement('p'); p.textContent = message; box.appendChild(p);
+            if (terminal) {
+              var button = document.createElement('button'); button.type = 'button'; button.textContent = 'Reload MOONDA';
+              button.addEventListener('click', function () { location.reload(); }); box.appendChild(button);
+              var n = document.getElementById('boot-app-n'), line = document.getElementById('boot-app-line');
+              if (n) n.textContent = 'Could not load';
+              if (line) line.classList.remove('busy');
+            }
+          }
+          if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', draw, { once: true }); else draw();
+        }
+        function failed() { recovery('MOONDA couldn’t finish loading. Check your connection and try again.', true); }
+        function start(attempt) {
           var s = document.createElement('script');
-          s.type = 'module'; s.crossOrigin = ''; s.src = src;
+          var settled = false;
+          var timer = setTimeout(function () {
+            if (settled) return;
+            settled = true; s.onload = s.onerror = null;
+            // Removing a timed-out script cannot reliably cancel its execution. A second one could
+            // start two apps, so leave recovery to a full reload in this case.
+            failed();
+          }, MODULE_MS);
+          s.type = 'module'; s.crossOrigin = '';
+          s.src = attempt ? src + (src.indexOf('?') < 0 ? '?' : '&') + 'boot-retry=' + Date.now() : src;
+          s.onload = function () {
+            if (settled) return;
+            settled = true; clearTimeout(timer);
+            // A runtime error before React mounts must also leave a way to recover.
+            setTimeout(function () { if (document.querySelector('.boot-col')) failed(); }, 10000);
+          };
+          s.onerror = function () {
+            if (settled) return;
+            settled = true; clearTimeout(timer); s.remove();
+            if (!attempt) { recovery('The connection was interrupted. Trying again…', false); start(1); } else failed();
+          };
           document.head.appendChild(s);
         }
-        if (!size || !window.fetch || !window.ReadableStream) { start(); return; }
-        fetch(src, { credentials: 'same-origin' }).then(function (r) {
-          if (!r.ok || !r.body) throw new Error(String(r.status));
-          var reader = r.body.getReader(), got = 0;
-          function pump() {
-            return reader.read().then(function (x) {
-              if (x.done) return;
-              got += x.value.length; show(Math.min(0.99, got / size));
-              return pump();
-            });
+        if (!size || !window.fetch || !window.ReadableStream) { start(0); return; }
+        // A stalled fetch need not reject. Bound headers and each body read as well as the whole
+        // transfer; this timer exists before React (and its own loading watchdog) can start.
+        new Promise(function (resolve, reject) {
+          var ctl = window.AbortController ? new AbortController() : null;
+          var reader = null, over = false, idle, total;
+          function finish(error) {
+            if (over) return;
+            over = true; clearTimeout(idle); clearTimeout(total);
+            if (error) {
+              if (ctl) ctl.abort();
+              if (reader) reader.cancel().catch(function () {});
+              reject(error);
+            } else resolve();
           }
-          return pump();
-        }).then(function () { show(1); }, function () { /* the module script below loads it the normal way */ }).then(start);
+          function touch() { clearTimeout(idle); idle = setTimeout(function () { finish(new Error('Download stalled')); }, PREFETCH_IDLE_MS); }
+          total = setTimeout(function () { finish(new Error('Download timed out')); }, PREFETCH_TOTAL_MS);
+          touch();
+          fetch(src, { credentials: 'same-origin', signal: ctl ? ctl.signal : undefined }).then(function (r) {
+            if (over) { if (r.body) r.body.cancel().catch(function () {}); return; }
+            if (!r.ok || !r.body) throw new Error(String(r.status));
+            reader = r.body.getReader();
+            var got = 0;
+            function pump() {
+              return reader.read().then(function (x) {
+                if (over) return;
+                if (x.done) { finish(); return; }
+                got += x.value.length; show(Math.min(0.99, got / size)); touch();
+                return pump();
+              });
+            }
+            return pump();
+          }).catch(finish);
+        }).then(function () { show(1); }, function () { recovery('The connection was interrupted. Trying again…', false); }).then(function () { start(0); });
       };
     </script>
   </head>

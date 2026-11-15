@@ -4,14 +4,15 @@ import { useEffect, useState } from 'react';
 import { POLAR_EXTENT_M, POLAR_SIZE, type ScienceManifestEntry, type ScienceValueSource } from '../moon/layers';
 import { scienceRasterValueAt } from '../moon/imagery';
 import { toMap } from './terrain';
+import { fetchBytesWithRetry, fetchJsonWithRetry } from '../app/fetch';
 
 let manifest: Promise<ScienceManifestEntry[]> | null = null;
 export function loadManifest(): Promise<ScienceManifestEntry[]> {
   if (!manifest) {
-    manifest = fetch('./data/layers/manifest.json', { cache: 'no-cache' }) // the list of maps: always asked afresh (a week-old copy hid new layers from returning visitors)
-      .then(r => (r.ok ? r.json() : []))
+    manifest = fetchJsonWithRetry<ScienceManifestEntry[] | { layers: ScienceManifestEntry[] }>('./data/layers/manifest.json', { cache: 'no-cache', tries: 2, idleTimeoutMs: 5000, retryDelayMs: 500 })
       .then((m: ScienceManifestEntry[] | { layers: ScienceManifestEntry[] }) => (Array.isArray(m) ? m : m.layers ?? []))
-      .catch(() => []);
+      // A failed request must not cache an empty layer list for the rest of this visit.
+      .catch(() => { manifest = null; return []; });
   }
   return manifest;
 }
@@ -41,11 +42,11 @@ function grid(id: string) {
   if (!g) {
     g = { promise: Promise.resolve(null), lastUsed: performance.now(), bytes: 0 };
     const entry = g;
-    g.promise = fetch(`./data/layers/${id}.bin`).then(r => (r.ok ? r.arrayBuffer() : null)).then(b => {
+    g.promise = fetchBytesWithRetry(`./data/layers/${id}.bin`, { tries: 2 }).then(b => {
       const values = b ? new Uint16Array(b) : null;
       if (grids.get(id) === entry) { entry.bytes = values?.byteLength ?? 0; trimValueGrids(); }
       return values;
-    }).catch(() => null);
+    }).catch(() => { if (grids.get(id) === entry) grids.delete(id); return null; });
     grids.set(id, g);
   }
   g.lastUsed = performance.now();
@@ -61,11 +62,11 @@ async function sourceValue(source: ScienceValueSource, lat: number, lon: number)
     if (!promise) {
       promise = { promise: Promise.resolve(null), lastUsed: performance.now(), bytes: 0 };
       const entry = promise;
-      promise.promise = fetch(source.url).then(r => r.ok ? r.arrayBuffer() : null).then(b => {
+      promise.promise = fetchBytesWithRetry(source.url, { tries: 2 }).then(b => {
         const values = b ? new Uint8Array(b) : null;
         if (byteGrids.get(source.url) === entry) { entry.bytes = values?.byteLength ?? 0; trimValueGrids(); }
         return values;
-      }).catch(() => null);
+      }).catch(() => { if (byteGrids.get(source.url) === entry) byteGrids.delete(source.url); return null; });
       byteGrids.set(source.url, promise);
     }
     promise.lastUsed = performance.now();

@@ -16,40 +16,84 @@ export type SpotEntry =
   | { status: 'error'; message: string };
 
 const cache = new Map<string, SpotEntry>();
-const jobs = new Map<number, { key: string; req: WorkerRequest }>(); // sent to the worker, not answered yet
+const jobs = new Map<number, { key: string; req: WorkerRequest; timer: ReturnType<typeof setTimeout>; retries: number }>();
 const waiting = new Map<string, number>(); // how many promise callers wait for each spot
 const listeners = new Set<() => void>();
 /** route requests sent to the worker and not answered yet (kept apart from the spot jobs above) */
-const routes = new Map<number, { req: WorkerRequest; done: (r: RouteResult) => void; fail: (e: Error) => void }>();
+const routes = new Map<number, { req: WorkerRequest; done: (r: RouteResult) => void; fail: (e: Error) => void; retries: number }>();
 let nextId = 1;
-let heard = 0;                              // last time the worker said anything
+let heard = 0;                              // messages heard (also distinguishes replies in the same millisecond)
 let lastHeights: WorkerRequest | null = null;
 let warmed: WorkerRequest | null = null;
+let worker: Worker | null = null;
+const SPOT_TIMEOUT_MS = 60000;
 
 function makeWorker() {
-  const w = new Worker(new URL('./worker.ts', import.meta.url), { type: 'module' });
-  w.onmessage = onMessage;
-  return w;
+  try {
+    const w = new Worker(new URL('./worker.ts', import.meta.url), { type: 'module' });
+    w.onmessage = ev => { if (worker === w) onMessage(ev); };
+    const failed = (ev: Event) => { ev.preventDefault(); if (worker === w) restartWorker(); };
+    w.onerror = failed;
+    w.onmessageerror = failed;
+    return w;
+  } catch { return null; }
 }
-let worker = makeWorker();
 
-/** A worker that stopped answering is replaced by a fresh one, which gets the height maps and every unanswered job again. */
-function restartWorker() {
-  worker.terminate();
+function failPending(message: string) {
+  for (const [id, j] of [...jobs]) {
+    jobs.delete(id); clearTimeout(j.timer);
+    set(j.key, { status: 'error', message });
+  }
+  for (const [id, r] of [...routes]) { routes.delete(id); r.fail(new Error(message)); }
+}
+
+/** Create lazily so an unavailable module worker cannot prevent the app itself from opening. */
+function ensureWorker(skip?: WorkerRequest): Worker | null {
+  if (worker) return worker;
   worker = makeWorker();
-  if (lastHeights) worker.postMessage(lastHeights);
-  else if (warmed) worker.postMessage(warmed);
-  for (const j of jobs.values()) worker.postMessage(j.req);
-  for (const r of routes.values()) worker.postMessage(r.req);
+  try {
+    const initial = lastHeights ?? warmed;
+    if (initial && initial !== skip) worker?.postMessage(initial);
+  } catch { worker?.terminate(); worker = null; }
+  return worker;
+}
+
+/** Replay each unanswered request once, retaining its original deadline; repeated crashes become retryable errors. */
+function restartWorker() {
+  worker?.terminate(); worker = null;
+  for (const [id, j] of [...jobs]) {
+    if (j.retries++ === 0) continue;
+    jobs.delete(id); clearTimeout(j.timer);
+    set(j.key, { status: 'error', message: 'The calculator stopped. Select another spot, then try again.' });
+  }
+  for (const [id, r] of [...routes]) {
+    if (r.retries++ === 0) continue;
+    routes.delete(id); r.fail(new Error('The route calculator stopped. Try again.'));
+  }
+  if (!jobs.size && !routes.size) return;
+  const w = ensureWorker();
+  if (!w) { failPending('The calculator could not start. Select another spot, then try again.'); return; }
+  try {
+    for (const j of jobs.values()) w.postMessage(j.req);
+    for (const r of routes.values()) w.postMessage(r.req);
+  } catch { w.terminate(); worker = null; failPending('The calculator could not restart. Try again.'); }
+}
+
+function send(req: WorkerRequest) {
+  const w = ensureWorker(req);
+  if (!w) { failPending('The calculator could not start. Select another spot, then try again.'); return; }
+  try { w.postMessage(req); } catch { restartWorker(); }
 }
 
 /** Ask the worker if it is still alive; restart it when it does not answer within 3 s. */
 let checking: Promise<void> | null = null;
 function checkWorker(): Promise<void> {
   if (checking) return checking;
-  const asked = Date.now();
-  worker.postMessage({ type: 'ping' } satisfies WorkerRequest);
-  checking = new Promise<void>(res => setTimeout(() => { if (heard < asked) restartWorker(); checking = null; res(); }, 3000));
+  const w = worker;
+  if (!w) return Promise.resolve();
+  const asked = heard;
+  try { w.postMessage({ type: 'ping' } satisfies WorkerRequest); } catch { restartWorker(); return Promise.resolve(); }
+  checking = new Promise<void>(res => setTimeout(() => { if (worker === w && heard === asked) restartWorker(); checking = null; res(); }, 3000));
   return checking;
 }
 
@@ -64,7 +108,7 @@ function set(key: string, entry: SpotEntry) {
 
 function onMessage(ev: MessageEvent<WorkerResponse>) {
   const msg = ev.data;
-  heard = Date.now();
+  heard++;
   if (msg.type === 'pong') return;
   if (msg.type === 'route' || msg.type === 'routeError') {
     const r = routes.get(msg.id);
@@ -77,7 +121,7 @@ function onMessage(ev: MessageEvent<WorkerResponse>) {
   if (!job) return;
   if (msg.type === 'progress') set(job.key, { status: 'loading', message: msg.message });
   else {
-    jobs.delete(msg.id);
+    jobs.delete(msg.id); clearTimeout(job.timer);
     if (msg.type === 'result') set(job.key, { status: 'ready', horizon: msg.horizon, timeline: msg.timeline });
     else set(job.key, { status: 'error', message: msg.message });
   }
@@ -85,7 +129,7 @@ function onMessage(ev: MessageEvent<WorkerResponse>) {
 
 /** Forget an unfinished spot (timed out or no longer wanted): the next request starts it afresh. */
 function dropSpot(key: string) {
-  for (const [id, j] of jobs) if (j.key === key) { jobs.delete(id); worker.postMessage({ type: 'cancel', id } satisfies WorkerRequest); }
+  for (const [id, j] of jobs) if (j.key === key) { jobs.delete(id); clearTimeout(j.timer); if (worker) send({ type: 'cancel', id }); }
   if (cache.get(key)?.status === 'loading') { cache.delete(key); listeners.forEach(l => l()); }
 }
 
@@ -94,13 +138,13 @@ function dropSpot(key: string) {
 export function shareHeights(h: { meta: DemMeta | null; global: Int16Array | null; overview: Int16Array | null }) {
   if (!h.meta || !h.global || !h.overview) return;
   lastHeights = { type: 'heights', dataBase: new URL('./data/', document.baseURI).href, meta: h.meta, global: h.global, overview: h.overview };
-  worker.postMessage(lastHeights);
+  send(lastHeights);
 }
 
 /** Start loading the height maps in the background (call once after the page has drawn). */
 export function warmUp() {
   warmed = { type: 'warm', dataBase: new URL('./data/', document.baseURI).href };
-  worker.postMessage(warmed);
+  send(warmed);
 }
 
 export function requestSpot(spec: SpotSpec) {
@@ -110,8 +154,14 @@ export function requestSpot(spec: SpotSpec) {
   const id = nextId++;
   set(key, { status: 'loading', message: 'Starting…' });
   const req: WorkerRequest = { type: 'analyse', id, ...spec, stepMin: stepMinutesFor(spec.days), dataBase: new URL('./data/', document.baseURI).href };
-  jobs.set(id, { key, req });
-  worker.postMessage(req);
+  const timer = setTimeout(() => {
+    if (!jobs.delete(id)) return;
+    set(key, { status: 'error', message: 'The calculation took too long. Select another spot, then try again.' });
+    if (worker) send({ type: 'cancel', id });
+    void checkWorker();
+  }, SPOT_TIMEOUT_MS);
+  jobs.set(id, { key, req, timer, retries: 0 });
+  send(req);
 }
 
 const subscribe = (l: () => void) => { listeners.add(l); return () => listeners.delete(l); };
@@ -177,11 +227,16 @@ export function planRouteAsync(o: { from: { lat: number; lon: number }; to: { la
   const id = nextId++;
   const req: WorkerRequest = { type: 'route', id, dataBase: new URL('./data/', document.baseURI).href, ...o };
   return new Promise<RouteResult>((done, fail) => {
-    const stop = () => { if (routes.delete(id)) { worker.postMessage({ type: 'cancel', id } satisfies WorkerRequest); fail(new DOMException('Aborted', 'AbortError')); } };
+    const clean = () => { clearTimeout(timer); signal?.removeEventListener('abort', stop); };
+    const stop = () => { if (routes.delete(id)) { clean(); if (worker) send({ type: 'cancel', id }); fail(new DOMException('Aborted', 'AbortError')); } };
     if (signal?.aborted) { fail(new DOMException('Aborted', 'AbortError')); return; }
     signal?.addEventListener('abort', stop, { once: true });
-    const timer = setTimeout(() => { if (routes.delete(id)) fail(new Error('The route took too long')); }, 90000);
-    routes.set(id, { req, done: r => { clearTimeout(timer); done(r); }, fail: e => { clearTimeout(timer); fail(e); } });
-    worker.postMessage(req);
+    const timer = setTimeout(() => {
+      if (!routes.delete(id)) return;
+      clean(); if (worker) send({ type: 'cancel', id });
+      fail(new Error('The route took too long')); void checkWorker();
+    }, 90000);
+    routes.set(id, { req, retries: 0, done: r => { clean(); done(r); }, fail: e => { clean(); fail(e); } });
+    send(req);
   });
 }

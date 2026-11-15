@@ -6,24 +6,12 @@
 // page and by the skyline calculator in the background worker.
 
 import { MOON_RADIUS_M } from './ephemeris.ts';
+import { fetchBytesWithRetry } from '../app/fetch';
 
 const R = MOON_RADIUS_M;
 
-/** Download a file completely, trying again (up to 4 times, waiting longer each time) if the connection drops. */
-async function fetchBytes(url: string, tries = 4): Promise<ArrayBuffer> {
-  let last: unknown;
-  for (let i = 0; i < tries; i++) {
-    try {
-      const r = await fetch(url);
-      if (!r.ok) throw new Error(`${r.status} ${url}`);
-      return await r.arrayBuffer();
-    } catch (e) {
-      last = e;
-      await new Promise(res => setTimeout(res, 800 * 2 ** i));
-    }
-  }
-  throw last instanceof Error ? last : new Error(String(last));
-}
+/** Retry a silent connection without cutting off healthy, slow 46 MB transfers. */
+const fetchBytes = (url: string, tries = 4) => fetchBytesWithRetry(url, { tries, idleTimeoutMs: 15000, retryDelayMs: 800 });
 const DEG = Math.PI / 180;
 // The polar maps and the global map disagree by up to a few hundred metres at 80°S. Between
 // 80.5°S and 80°S we fade from the polar map to the global one so there is no cliff on the line.
@@ -47,6 +35,7 @@ export class MoonHeights {
   overview: Int16Array | null = null;
   tiles = new Map<string, Int16Array | null>();
   private pendingTiles = new Map<string, Promise<void>>();
+  private failedTiles = new Map<string, number>();
   readonly ready: Promise<void>;
   private base: string;
 
@@ -80,11 +69,13 @@ export class MoonHeights {
     const jobs: Promise<void>[] = [];
     for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) {
       const key = `${c}_${r}`;
-      if (this.tiles.has(key)) continue;
+      if (this.tiles.get(key) || Date.now() - (this.failedTiles.get(key) ?? -Infinity) < 20000) continue;
       let p = this.pendingTiles.get(key);
       if (!p) {
         p = fetchBytes(`${this.base}dem/${t.dir}/${key}.bin`, 3)
-          .then(b => { this.tiles.set(key, new Int16Array(b)); }).catch(() => { this.tiles.set(key, null); });
+          .then(b => { this.tiles.set(key, new Int16Array(b)); this.failedTiles.delete(key); })
+          .catch(() => { this.tiles.set(key, null); this.failedTiles.set(key, Date.now()); })
+          .finally(() => { this.pendingTiles.delete(key); });
         this.pendingTiles.set(key, p);
       }
       jobs.push(p);

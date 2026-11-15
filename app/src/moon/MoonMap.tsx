@@ -24,7 +24,7 @@ import { toCartesian, toTrueLatLon, trueToDisplayVec } from './frame';
 import { cancelOffscreenImagery, captureVisibleLayerTiles, createBaseMosaicProvider, createMoonTrekProvider, createPolarPyramidProvider, createPolarRasterProvider, createScienceRasterProvider, createSeamFixProvider, imageryPending, imageryReloaded, releaseScienceLayers, setScienceLayersActive, warmScienceRasters, warmVisibleLayerTiles, type ReprojectedImageryProvider } from './imagery';
 import { createCraterLayer } from './craterLayer';
 import { NameLabels } from './labels';
-import { LanderView, type LanderSpec, type SkyState } from './lander';
+import { landerLink, LanderView, type LanderSpec, type SkyState } from './lander';
 import { POLAR_EXTENT_M, SHARP_POLAR_LAYERS, scienceToLayer, type LayerDef, type ScienceRasterSource } from './layers';
 import { LolaTerrainProvider } from './lolaTerrain';
 import { attachNavigation, cameraHeadingPitch, poseGlobe, poseLookingAt, type Navigation } from './navigation';
@@ -321,7 +321,7 @@ export const MoonMap = forwardRef<MoonMapHandle, Props>(function MoonMap(props, 
     });
     viewer.cesiumWidget.screenSpaceEventHandler.removeInputAction(ScreenSpaceEventType.LEFT_DOUBLE_CLICK);
 
-    heights.ready.then(() => { if (!viewer.isDestroyed() && cb.current.layers.terrain !== false) viewer.terrainProvider = new LolaTerrainProvider(heights) as never; });
+    heights.ready.then(() => { if (!viewer.isDestroyed() && (cb.current.layers.terrain !== false || cb.current.lander)) viewer.terrainProvider = new LolaTerrainProvider(heights) as never; }).catch(error => console.warn('Moon terrain unavailable:', error));
     heights.ready.then(() => shareHeights(heights)).catch(() => {}); // the background calculator reuses this download
     setExploreHeights(heights); // the minimap and the trail read the same height maps
 
@@ -362,7 +362,7 @@ export const MoonMap = forwardRef<MoonMapHandle, Props>(function MoonMap(props, 
       // Artemis regions, famous spots and past landings: icon + name, both placed by the label manager so nothing overlaps
       labels.setPlaces(PLACES, heights, Object.fromEntries(Object.entries(ICON).map(([k, image]) => [k, { image, size: k === 'mission' ? 20 : 22 }])));
       labels.update(); scene.requestRender();
-    });
+    }).catch(() => {}); // Missing heights are reported by the terrain loader; keep the map usable.
     // Names and icons keep clear of the pins and of the Sun/Earth spots.
     const pinScratchR = new Cartesian3(), pinWinR = new Cartesian2();
     labels.reserved = [
@@ -548,7 +548,8 @@ export const MoonMap = forwardRef<MoonMapHandle, Props>(function MoonMap(props, 
 
     // Behind the loading screen: load data and quietly visit the south-pole views so they are instant later.
     const debug = debugHook as { progress?: LoadProgress; skipLoading?: () => void };
-    debug.skipLoading = () => { skipPreload.current = true; };
+    const preloadController = new AbortController();
+    debug.skipLoading = () => { skipPreload.current = true; preloadController.abort(); };
     navRef.current.enabled = false;
     void runPreload(viewer, {
       heightsReady: heights.ready,
@@ -570,7 +571,13 @@ export const MoonMap = forwardRef<MoonMapHandle, Props>(function MoonMap(props, 
         // Capture and queue this view before preload moves the camera to the pole.
         let visible = warmVisibleLayerTiles(viewer, switchableProviders(imagery.current), LAYER_WARM_MS, opening);
         let overlays = isPhoneGraphics() || !flat ? Promise.resolve(true) : boundedLayerWarm(flat.warmOverlays(flatLayerOverlays(currentDefs, ALL_SCIENCE_SWITCHES)), LAYER_WARM_MS);
-        const manifest = await loadManifest();
+        const manifestJob = loadManifest();
+        // Include the manifest in this view's warming budget. A stalled list must not
+        // extend a five-second warm-up into the outer ninety-second preload deadline.
+        const manifestReady = await boundedLayerWarm(manifestJob.then(() => true), Math.max(0, deadline - performance.now()));
+        if (!manifestReady || viewer.isDestroyed() || skipPreload.current) return false;
+        const manifest = await manifestJob;
+        if (!manifest.length) return false;
         const defs = manifest.map(scienceToLayer).filter(d => SCIENCE_SWITCHES.has(d.id));
         if (viewer.isDestroyed()) return false;
         prepareScienceLayers(viewer, imagery.current, defs);
@@ -615,9 +622,10 @@ export const MoonMap = forwardRef<MoonMapHandle, Props>(function MoonMap(props, 
         cb.current.onLoadProgress?.(p);
       },
       cancelled: () => skipPreload.current,
+      signal: preloadController.signal,
     });
 
-    return () => { offContextLoss(); document.removeEventListener('visibilitychange', visible); setPhoneSurfaceGraphics(false); releaseScienceLayers(); flat?.destroy(); offQuality(); offReload(); offPhotoCull(); clearTimeout(photoCullTimer); resizeObs.disconnect(); panelObs.disconnect(); clearTimeout(settle); navRef.current?.destroy(); lander.destroy(); markersRef.current?.destroy(); labels.destroy(); sky.destroy(); skyRef.current = null; viewer.destroy(); viewerRef.current = null; };
+    return () => { offContextLoss(); document.removeEventListener('visibilitychange', visible); setPhoneSurfaceGraphics(false); releaseScienceLayers(); flat?.destroy(); offQuality(); offReload(); offPhotoCull(); clearTimeout(photoCullTimer); resizeObs.disconnect(); panelObs.disconnect(); clearTimeout(settle); navRef.current?.destroy(); lander.destroy(); markersRef.current?.destroy(); labels.destroy(); sky.destroy(); skyRef.current = null; viewer.destroy(); preloadController.abort(); viewerRef.current = null; };
   }, []);
 
   // Names
@@ -625,7 +633,7 @@ export const MoonMap = forwardRef<MoonMapHandle, Props>(function MoonMap(props, 
     const labels = labelsRef.current, heights = heightsRef.current;
     if (!labels || !heights || !props.names) return;
     let live = true;
-    Promise.all([document.fonts.load('500 13px "Inter Variable"'), heights.ready]).finally(() => {
+    Promise.all([document.fonts.load('500 13px "Inter Variable"'), heights.ready]).catch(() => {}).finally(() => {
       if (!live) return;
       labels.setNames(props.names!, heights);
       labels.update();
@@ -677,18 +685,25 @@ export const MoonMap = forwardRef<MoonMapHandle, Props>(function MoonMap(props, 
     viewer.scene.requestRender();
   }, [props.layers, props.opacity, props.scienceLayers, props.lander]);
 
-  // 3D mountains on/off
+  // The globe's mountains switch does not remove the real ground needed by the rover.
+  // Keep terrain during the entire surface transition, then restore the globe preference.
   useEffect(() => {
     const viewer = viewerRef.current, heights = heightsRef.current;
     if (!viewer || !heights) return;
-    heights.ready.then(() => {
-      if (viewer.isDestroyed()) return;
-      const want3d = props.layers.terrain !== false;
+    let live = true, lastPhase = landerLink.phase;
+    const apply = () => {
+      if (!live || viewer.isDestroyed() || !heights.global) return;
+      const want3d = cb.current.layers.terrain !== false || !!cb.current.lander || landerLink.phase !== 'off';
       const is3d = viewer.terrainProvider instanceof LolaTerrainProvider;
       if (want3d && !is3d) viewer.terrainProvider = new LolaTerrainProvider(heights) as never;
       if (!want3d && is3d) viewer.terrainProvider = new EllipsoidTerrainProvider({ ellipsoid: MOON_ELLIPSOID });
+    };
+    heights.ready.then(apply).catch(() => {});
+    const off = landerLink.subscribe(() => {
+      if (landerLink.phase !== lastPhase) { lastPhase = landerLink.phase; apply(); }
     });
-  }, [props.layers.terrain]);
+    return () => { live = false; off(); };
+  }, [props.layers.terrain, props.lander]);
 
   // A ground polyline uses the terrain's depth, including our rotated lunar tiles.
   useEffect(() => {
@@ -824,7 +839,12 @@ export const MoonMap = forwardRef<MoonMapHandle, Props>(function MoonMap(props, 
       const spec = props.lander, sky = props.sky;
       void prefetchMapHeightAt(spec.lat, spec.lon);
       void mapImagery.warmScienceAt(spec.lat, spec.lon, cb.current.scienceLayers);
-      const go = () => { setPhoneSurfaceGraphics(true); nav.enabled = false; lander.enter(spec, sky, spec.faceAz); };
+      const go = () => {
+        const viewer = viewerRef.current, heights = heightsRef.current;
+        if (!cb.current.lander || !viewer || viewer.isDestroyed()) return;
+        if (heights?.global && !(viewer.terrainProvider instanceof LolaTerrainProvider)) viewer.terrainProvider = new LolaTerrainProvider(heights) as never;
+        setPhoneSurfaceGraphics(true); nav.enabled = false; lander.enter(spec, sky, spec.faceAz);
+      };
       const modes = modesRef.current;
       // from the flat map: first a shortened move back to the globe at that spot
       if (modes && modes.mode === 'flat') void modes.toGlobe({ at: { lat: spec.lat, lon: spec.lon, km: 40 }, fast: true, handOff: go });
