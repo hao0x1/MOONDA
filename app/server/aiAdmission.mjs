@@ -1,6 +1,7 @@
 // Durable admission uses finite, write-once permits in a site-wide Blobs store.
 // A permit is claimed ONLY with atomic onlyIfNew. There are no mutable counters,
 // read-modify-write operations, refunds, leases, or request-time deletions.
+// Completion receipts are separate, immutable audit objects; they never alter permits.
 // Partial claims stay consumed if a later scope fails: this can reduce available
 // capacity, but concurrent edge isolates can never create extra permits.
 
@@ -16,6 +17,23 @@ const encoder = new TextEncoder();
 const HOUR_MS = 3_600_000;
 const DAY_MS = 86_400_000;
 const CAMBODIA_OFFSET = 7 * HOUR_MS;
+const FINISH_REASONS = new Set(['complete', 'completed', 'done', 'eof', 'finished', 'cancelled', 'timeout', 'network', 'upstream-error', 'rejected', 'handler-error']);
+const USAGE_FIELDS = ['prompt_tokens', 'completion_tokens', 'total_tokens', 'prompt_cache_hit_tokens', 'prompt_cache_miss_tokens', 'reasoning_tokens'];
+
+function completionFields(details) {
+  const input = details && typeof details === 'object' ? details : {};
+  const result = { reason: FINISH_REASONS.has(input.reason) ? input.reason : 'finished' };
+  if (Number.isSafeInteger(input.status) && input.status >= 100 && input.status <= 599) result.status = input.status;
+  if (Number.isFinite(input.elapsedMs) && input.elapsedMs >= 0 && input.elapsedMs <= DAY_MS) result.elapsedMs = Math.round(input.elapsedMs);
+  if (input.usage && typeof input.usage === 'object') {
+    const usage = {};
+    for (const field of USAGE_FIELDS) {
+      if (Number.isSafeInteger(input.usage[field]) && input.usage[field] >= 0) usage[field] = input.usage[field];
+    }
+    if (Object.keys(usage).length) result.usage = usage;
+  }
+  return result;
+}
 
 function lowerLimit(env, name, ceiling) {
   const value = env?.(name);
@@ -104,11 +122,22 @@ export function createAdmission({ getStore, now = Date.now } = {}) {
         const expiresAt = reason === 'client-hourly' ? hourEnd : dayEnd;
         if (!await claim(permits, prefix, capacity, needed, { ...receipt, expiresAt, scope: reason })) return denied(reason, retryAfter);
       }
+      const tokenUnits = unitsNeeded * ADMISSION_LIMITS.unitSize;
+      const auditKey = `v1/audit/${day}/${crypto.randomUUID()}`;
+      let completion;
       return {
-        ok: true, clientId, tokenUnits: unitsNeeded * ADMISSION_LIMITS.unitSize,
-        // Accepted/partially consumed permits are never refunded. Keep the same
-        // lifecycle API as the stream handler; finishing does not mutate storage.
-        async release() {},
+        ok: true, clientId, tokenUnits, auditKey,
+        release(details) {
+          if (!completion) completion = Promise.resolve().then(async () => {
+            const audit = {
+              requestId: receipt.requestId, clientId, createdAt: current,
+              reservedUnits: tokenUnits, ...completionFields(details),
+            };
+            const result = await permits.setJSON(auditKey, audit, { onlyIfNew: true });
+            if (result?.modified !== true) throw new Error('audit-not-created');
+          });
+          return completion;
+        },
       };
     } catch {
       // Driver errors can contain credentials. Return a fixed code and fail closed.

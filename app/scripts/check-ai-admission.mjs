@@ -8,7 +8,7 @@ const ip = '192.0.2.1';
 let sequence = 0;
 let current = Date.parse('2026-11-15T17:15:00Z'); // 00:15 Cambodia
 const env = values => name => values[name];
-function fixture({ stale = false, fail = false } = {}) {
+function fixture({ stale = false, fail = false, auditFails = false } = {}) {
   const records = new Map();
   let writes = 0;
   const store = {
@@ -22,6 +22,7 @@ function fixture({ stale = false, fail = false } = {}) {
       await Promise.resolve(); // interleave all contenders before atomic check/create
       if (fail) throw new Error('storage unavailable');
       writes++;
+      if (auditFails && key.startsWith('v1/audit/')) throw new Error('audit unavailable');
       if (records.has(key)) return { modified: false };
       records.set(key, structuredClone(value));
       return { modified: true, etag: crypto.randomUUID() };
@@ -53,11 +54,31 @@ assert(hourRace.filter(result => !result.ok).every(result => result.reason === '
 const first = hourRace.find(result => result.ok);
 const writeCount = hourly.writes();
 const recordCount = hourly.records.size;
-await first.release();
-await first.release();
-assert.equal(hourly.writes(), writeCount);
-assert.equal(hourly.records.size, recordCount);
+const quotaSnapshot = JSON.stringify([...hourly.records]);
+await Promise.all([
+  first.release({ reason: 'done', elapsedMs: 123.4, status: 200, usage: { prompt_tokens: 12, completion_tokens: 8, total_tokens: 20, arbitrary: secret, reasoning_tokens: NaN }, prompt: secret }),
+  first.release({ reason: 'network', elapsedMs: 999 }),
+]);
+assert.equal(hourly.writes(), writeCount + 1);
+assert.equal(hourly.records.size, recordCount + 1);
+assert.equal(JSON.stringify([...hourly.records].filter(([key]) => !key.startsWith('v1/audit/'))), quotaSnapshot);
+const audit = hourly.records.get(first.auditKey);
+assert.deepEqual(audit.usage, { prompt_tokens: 12, completion_tokens: 8, total_tokens: 20 });
+assert.equal(audit.reason, 'done');
+assert.equal(audit.elapsedMs, 123);
+assert.equal(audit.status, 200);
+assert.equal(audit.reservedUnits, first.tokenUnits);
+assert(!JSON.stringify(audit).includes(secret));
 assert.equal((await request(hourly.make(), { env: env({ AI_IP_HOURLY_LIMIT: '3' }) })).reason, 'client-hourly');
+
+const auditFailure = fixture({ auditFails: true });
+const failedCompletion = await request(auditFailure.make(), { env: env({ AI_IP_HOURLY_LIMIT: '1' }) });
+assert(failedCompletion.ok);
+const failedQuota = JSON.stringify([...auditFailure.records]);
+await assert.rejects(failedCompletion.release({ reason: 'done' }), /audit unavailable/);
+await assert.rejects(failedCompletion.release({ reason: 'done' }), /audit unavailable/);
+assert.equal(JSON.stringify([...auditFailure.records]), failedQuota);
+assert.equal((await request(auditFailure.make(), { env: env({ AI_IP_HOURLY_LIMIT: '1' }) })).reason, 'client-hourly');
 
 const global = fixture({ stale: true });
 const globalRace = await Promise.all(Array.from({ length: 40 }, (_, n) => request(global.make(), { ip: `198.51.100.${n + 1}`, env: env({ AI_GLOBAL_DAILY_LIMIT: '4' }) })));
@@ -100,4 +121,4 @@ for (const [key, receipt] of fullBudget.records) {
   assert(!JSON.stringify(receipt).includes(secret));
   assert.deepEqual(Object.keys(receipt).sort(), ['clientId', 'createdAt', 'expiresAt', 'requestId', 'scope']);
 }
-console.log('AI permit checks passed: concurrent atomic creates, stale listings, hourly/daily/global limits, reserved budget, partial claims, Cambodia midnight, no refunds, HMAC, and fail-closed storage.');
+console.log('AI permit checks passed: concurrent atomic creates, stale listings, hourly/daily/global limits, reserved budget, immutable completion audit, partial claims, Cambodia midnight, no refunds, HMAC, and fail-closed storage.');

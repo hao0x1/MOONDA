@@ -58,9 +58,10 @@ export function createHandler({ reserve = admit, proxy = proxyChat } = {}) {
       log('blocked', { clientId: admission.clientId, reason: admission.reason });
       return json(admission.status, admission.error, admission.retryAfter ? { 'retry-after': String(admission.retryAfter) } : {});
     }
-    const common = { clientId: admission.clientId, inputBytes: parsed.bytes, reservedUnits: admission.tokenUnits, model: env('DEEPSEEK_MODEL') || 'deepseek-v4-pro' };
+    const common = { clientId: admission.clientId, auditKey: admission.auditKey, inputBytes: parsed.bytes, reservedUnits: admission.tokenUnits, model: env('DEEPSEEK_MODEL') || 'deepseek-v4-pro' };
     log('admitted', common);
     let released = false;
+    let observedUsage;
     let endLifecycle;
     // Register before returning headers: late waitUntil calls can lose stream-end logs.
     const lifecycle = new Promise(resolve => { endLifecycle = resolve; });
@@ -69,13 +70,13 @@ export function createHandler({ reserve = admit, proxy = proxyChat } = {}) {
       if (released) return;
       released = true;
       log('finished', { ...common, ...detail });
-      const pending = admission.release().catch(() => log('release-failed', { clientId: admission.clientId })).finally(endLifecycle);
+      const pending = admission.release({ ...detail, usage: observedUsage }).catch(() => log('release-failed', { clientId: admission.clientId })).finally(endLifecycle);
       return pending;
     };
     try {
       const response = await proxy(parsed.body, {
         key, model: env('DEEPSEEK_MODEL'), baseUrl: env('DEEPSEEK_BASE_URL'), signal: req.signal,
-        onUsage: usage => log('usage', { clientId: admission.clientId, ...usage }), onFinish: finish,
+        onUsage: usage => { observedUsage = usage; log('usage', { clientId: admission.clientId, ...usage }); }, onFinish: finish,
       });
       if (!response.ok) await finish({ reason: 'rejected', status: response.status });
       response.headers.set('x-moonda-ai-guard', '2026-11-16');

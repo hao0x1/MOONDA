@@ -44,6 +44,12 @@ keys, chat contents, or raw client IPs. Set `MOONDA_AI_AUDIT_SECRET` to a
 stable random server-only secret to preserve identifiers across API-key
 rotations; otherwise the provider key is the HMAC secret.
 
+Completion receipts are also appended as immutable `v1/audit/<day>/<uuid>`
+objects in the admission store. This keeps the record available beyond the
+hosting plan's short console-log window. Completion writes never refund or
+alter permits. Old permits and audit receipts are retained; their date-scoped
+keys prevent reuse after expiration. No automatic deletion job is installed.
+
 ## Credential replacement
 
 Create a replacement DeepSeek key, update `DEEPSEEK_API_KEY` in Netlify's
