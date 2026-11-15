@@ -1,7 +1,7 @@
 // Real-GPU startup, navigation and terrain-switch regression against a built or live app.
 // node scripts/check-loading-browser.mjs --url http://127.0.0.1:5195/ --out ../outputs/loading-fixes-2026-11-15/local [--fault]
 import assert from 'node:assert/strict';
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import puppeteer from 'puppeteer-core';
 import { acquireBrowserLease } from './browserLease.mjs';
@@ -12,7 +12,7 @@ const base = new URL(flag('--url', 'http://127.0.0.1:5195/'));
 base.searchParams.set('start', '');
 const out = resolve(flag('--out', '../outputs/loading-fixes-2026-11-15/browser'));
 mkdirSync(out, { recursive: true });
-const result = { url: base.href, checks: [], runs: [], errors: [], requestFailures: [] };
+const result = { url: base.href, cachedAssets: args.includes('--cached-assets'), checks: [], runs: [], errors: [], requestFailures: [] };
 const save = () => writeFileSync(join(out, 'result.json'), JSON.stringify(result, null, 2));
 const lease = await acquireBrowserLease({ script: 'check-loading-browser.mjs', noteDir: out });
 const profile = mkdtempSync(join(out, 'chrome-profile-'));
@@ -27,6 +27,20 @@ try {
   });
   await lease.afterLaunch(browser);
   const page = (await browser.pages())[0];
+  if (result.cachedAssets) {
+    // Simulate an already-cached visit using the byte-identical, unchanged data assets.
+    // HTML, application JS, worker code and CSS still come from the live deployment.
+    await page.setRequestInterception(true);
+    const dist = resolve('dist');
+    page.on('request', request => {
+      const url = new URL(request.url());
+      const path = resolve(dist, `.${url.pathname}`);
+      if (url.origin === base.origin && /^\/(data|lander|sky|audio|intro)\//.test(url.pathname) && path.startsWith(`${dist}/`) && existsSync(path)) {
+        const mime = path.endsWith('.json') || path.endsWith('.gltf') ? 'application/json' : path.endsWith('.jpg') ? 'image/jpeg' : path.endsWith('.png') ? 'image/png' : path.endsWith('.webp') ? 'image/webp' : path.endsWith('.mp4') ? 'video/mp4' : path.endsWith('.m4a') ? 'audio/mp4' : 'application/octet-stream';
+        void request.respond({ status: 200, contentType: mime, body: readFileSync(path), headers: { 'cache-control': 'public,max-age=3600' } }).catch(() => {});
+      } else void request.continue().catch(() => {});
+    });
+  }
   page.on('pageerror', error => { result.errors.push(String(error.stack ?? error)); save(); });
   page.on('requestfailed', request => result.requestFailures.push({ url: request.url(), error: request.failure()?.errorText }));
   await page.evaluateOnNewDocument(fault => {
