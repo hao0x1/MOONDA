@@ -1,0 +1,37 @@
+{
+  "title": "Top user agents",
+  "dateFrom": "2026-11-15T17:00:00.000Z",
+  "dateTo": "2026-11-15T18:00:00.000Z",
+  "data": [
+    {
+      "Name": "Python/3.14 aiohttp/3.14.5",
+      "Value": 980,
+      "Share": 0.908248
+    },
+    {
+      "Name": "curl/8.22.0",
+      "Value": 88,
+      "Share": 0.081557
+    },
+    {
+      "Name": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Mobile Safari/537.36",
+      "Value": 3,
+      "Share": 0.00278
+    },
+    {
+      "Name": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Safari/537.36",
+      "Value": 3,
+      "Share": 0.00278
+    },
+    {
+      "Name": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.6.1 Mobile/15E148 Safari/604.1",
+      "Value": 3,
+      "Share": 0.00278
+    },
+    {
+      "Name": "Google-Lens",
+      "Value": 2,
+      "Share": 0.001854
+    }
+  ]
+}

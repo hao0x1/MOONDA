@@ -1,0 +1,10 @@
+{"event":"cold","ready":true,"readyMs":51200,"index":[],"expectedHashMatches":true,"laterStages":["layers","pole"],"renderOverlay":null}
+{"event":"landing","ready":true,"readyMs":1778,"phase":"on","cameraClearanceM":2.0000000000750333,"renderOverlay":null}
+TypeError: Cannot read properties of undefined (reading 'setView')
+    at evaluate (evaluate at file:///Volumes/CodexWork/Projects/MOONDA/outputs/pitch-2026-11-15/live-check.mjs:206:18, <anonymous>:1:28)
+    at #evaluate (file:///Volumes/CodexWork/Projects/MOONDA/app/node_modules/puppeteer-core/lib/puppeteer/cdp/ExecutionContext.js:402:19)
+    at async ExecutionContext.evaluate (file:///Volumes/CodexWork/Projects/MOONDA/app/node_modules/puppeteer-core/lib/puppeteer/cdp/ExecutionContext.js:288:16)
+    at async IsolatedWorld.evaluate (file:///Volumes/CodexWork/Projects/MOONDA/app/node_modules/puppeteer-core/lib/puppeteer/cdp/IsolatedWorld.js:104:16)
+    at async CdpFrame.evaluate (file:///Volumes/CodexWork/Projects/MOONDA/app/node_modules/puppeteer-core/lib/puppeteer/api/Frame.js:364:20)
+    at async CdpPage.evaluate (file:///Volumes/CodexWork/Projects/MOONDA/app/node_modules/puppeteer-core/lib/puppeteer/api/Page.js:832:20)
+    at async file:///Volumes/CodexWork/Projects/MOONDA/outputs/pitch-2026-11-15/live-check.mjs:206:7

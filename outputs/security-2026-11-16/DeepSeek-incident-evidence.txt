@@ -1,0 +1,36 @@
+MOONDA billing evidence — incident-window rows from DeepSeek export
+
+MOONDA incident evidence summary
+Window: 2026-11-15 17:00:00–18:00:00 UTC / 2026-11-16 00:00–01:00 UTC+7
+Destination: https://moonda.us/api/ai
+Observed source: 113.130.126.113
+Cloudflare network label: AS38901 / EZECOM / Cambodia
+
+Cloudflare dashboard observations:
+- 1,079 requests to /api/ai; 1,074 from the stated IP; other source addresses omitted here.
+- User-agent totals: Python/3.14 aiohttp/3.14.5=980; curl/8.22.0=88.
+- Status totals: 200=362; 503=709; 499=6; 405=2.
+- POST-only view: 1,077 requests. Two GET/405 requests excluded.
+- Individual sampled record: 2026-11-15 17:14:00 UTC, source113.130.126.113, POST /api/ai, HTTP/1.1, Python/3.14 aiohttp/3.14.5, Not mitigated, Dynamic.
+
+Limitations: Cloudflare analytics may be sampled; user-agent strings are client-controlled. The individual operating the connection is unknown. Shared network/proxy/compromised-device use is possible. No source port was available. No request body, prompt or full API key was recovered. Edge and provider billing records cannot be matched one-to-one.
+
+Original native Cloudflare export SHA-256 values (retained by operator):
+7294d754f03b2b77ab3c5b3383b0979be606bd94d0b3f112a94e9c8497dd1eb5  top-client-ips_20261115T1700Z_20261115T1800Z.json
+008b4edc3272171146078b18660fa396711658620efc432435af7416359a420a  top-user-agents_20261115T1700Z_20261115T1800Z.json
+89bdc8c87621f78be92891b2868f7972dc87c4ea56a827684a998f3c642c4dce  requests-by-status-code_20261115T1700Z_20261115T1800Z.json
+
+DeepSeek usage export (incident-hour rows only):
+
+amount-2026-11-16_2026-11-16.csv
+user_id,start_time_iso,end_time_iso,model,name,api_key_name,api_key,type,price,amount
+Google-af1d0b40-9f08-4e8b-9559-654e8b85c879,2026-11-16T00:00:00+07:00,2026-11-16T01:00:00+07:00,deepseek-v4-pro,deepseek-v4-pro,moonda,sk-0df82***********************c593,output_tokens,0.0000135,2540242
+Google-af1d0b40-9f08-4e8b-9559-654e8b85c879,2026-11-16T00:00:00+07:00,2026-11-16T01:00:00+07:00,deepseek-v4-pro,deepseek-v4-pro,moonda,sk-0df82***********************c593,request_count,,353
+Google-af1d0b40-9f08-4e8b-9559-654e8b85c879,2026-11-16T00:00:00+07:00,2026-11-16T01:00:00+07:00,deepseek-v4-pro,deepseek-v4-pro,moonda,sk-0df82***********************c593,input_cache_hit_tokens,0.00000015,13140608
+Google-af1d0b40-9f08-4e8b-9559-654e8b85c879,2026-11-16T00:00:00+07:00,2026-11-16T01:00:00+07:00,deepseek-v4-pro,deepseek-v4-pro,moonda,sk-0df82***********************c593,input_cache_miss_tokens,0.0000045,266761
+Original full export SHA-256: 32bf7f8c2c97d6efd2ad12497edcc969a0a33ac947f2be355bf5528a6270f957
+
+cost-2026-11-16_2026-11-16.csv
+user_id,start_time_iso,end_time_iso,model,name,wallet_type,cost,currency
+Google-af1d0b40-9f08-4e8b-9559-654e8b85c879,2026-11-16T00:00:00+07:00,2026-11-16T01:00:00+07:00,deepseek-v4-pro,deepseek-v4-pro,Paid,37.4647827000000000,CNY
+Original full export SHA-256: c41d29aacc14e7ea3eb7f86ee740eb1271069162fe0fc32ec57393b25757b1bc

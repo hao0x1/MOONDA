@@ -1,0 +1,1338 @@
+{
+  "url": "http://127.0.0.1:5195/?start=",
+  "checks": [
+    "full-quality startup completes with monotonic progress",
+    "stalled photo metadata retries in the real browser",
+    "navigation works immediately after entry"
+  ],
+  "runs": [
+    {
+      "name": "cold",
+      "progress": {
+        "pct": 100,
+        "step": "Ready",
+        "done": true,
+        "stages": [
+          {
+            "id": "app",
+            "state": "done",
+            "frac": null,
+            "ms": 1062
+          },
+          {
+            "id": "photo",
+            "state": "done",
+            "frac": null,
+            "ms": 9174
+          },
+          {
+            "id": "mountains",
+            "state": "done",
+            "frac": null,
+            "ms": 9490
+          },
+          {
+            "id": "sky",
+            "state": "done",
+            "frac": null,
+            "ms": 1562
+          },
+          {
+            "id": "layers",
+            "state": "later",
+            "frac": null,
+            "ms": 5798
+          },
+          {
+            "id": "science",
+            "state": "done",
+            "frac": null,
+            "ms": 207
+          },
+          {
+            "id": "pole",
+            "state": "done",
+            "frac": null,
+            "ms": 15720
+          },
+          {
+            "id": "surface",
+            "state": "done",
+            "frac": null,
+            "ms": 12
+          },
+          {
+            "id": "music",
+            "state": "off",
+            "frac": null
+          }
+        ]
+      },
+      "samples": [
+        {
+          "at": 1203.3999999761581,
+          "pct": 14,
+          "done": false
+        },
+        {
+          "at": 1293.7000000476837,
+          "pct": 14,
+          "done": false
+        },
+        {
+          "at": 1505.3999999761581,
+          "pct": 14,
+          "done": false
+        },
+        {
+          "at": 1611.1000000238419,
+          "pct": 14,
+          "done": false
+        },
+        {
+          "at": 1686.3000000715256,
+          "pct": 14,
+          "done": false
+        },
+        {
+          "at": 1785.6000000238419,
+          "pct": 14,
+          "done": false
+        },
+        {
+          "at": 1885.7000000476837,
+          "pct": 14,
+          "done": false
+        },
+        {
+          "at": 1985.6000000238419,
+          "pct": 14,
+          "done": false
+        },
+        {
+          "at": 2086,
+          "pct": 14,
+          "done": false
+        },
+        {
+          "at": 2186.100000023842,
+          "pct": 14,
+          "done": false
+        },
+        {
+          "at": 2286.3000000715256,
+          "pct": 14,
+          "done": false
+        },
+        {
+          "at": 2386.2000000476837,
+          "pct": 14,
+          "done": false
+        },
+        {
+          "at": 2631.2000000476837,
+          "pct": 23,
+          "done": false
+        },
+        {
+          "at": 2686.2000000476837,
+          "pct": 23,
+          "done": false
+        },
+        {
+          "at": 2785.899999976158,
+          "pct": 23,
+          "done": false
+        },
+        {
+          "at": 2885.399999976158,
+          "pct": 23,
+          "done": false
+        },
+        {
+          "at": 2985.7000000476837,
+          "pct": 23,
+          "done": false
+        },
+        {
+          "at": 3106.8000000715256,
+          "pct": 23,
+          "done": false
+        },
+        {
+          "at": 3188.5,
+          "pct": 23,
+          "done": false
+        },
+        {
+          "at": 3286.5,
+          "pct": 23,
+          "done": false
+        },
+        {
+          "at": 3386.3000000715256,
+          "pct": 23,
+          "done": false
+        },
+        {
+          "at": 3486.399999976158,
+          "pct": 23,
+          "done": false
+        },
+        {
+          "at": 3587.100000023842,
+          "pct": 23,
+          "done": false
+        },
+        {
+          "at": 3685.899999976158,
+          "pct": 23,
+          "done": false
+        },
+        {
+          "at": 3785.7000000476837,
+          "pct": 23,
+          "done": false
+        },
+        {
+          "at": 3886.2000000476837,
+          "pct": 23,
+          "done": false
+        },
+        {
+          "at": 3985.600000023842,
+          "pct": 23,
+          "done": false
+        },
+        {
+          "at": 4085.399999976158,
+          "pct": 23,
+          "done": false
+        },
+        {
+          "at": 4186.200000047684,
+          "pct": 23,
+          "done": false
+        },
+        {
+          "at": 4286.300000071526,
+          "pct": 23,
+          "done": false
+        },
+        {
+          "at": 4386.100000023842,
+          "pct": 23,
+          "done": false
+        },
+        {
+          "at": 4486.100000023842,
+          "pct": 23,
+          "done": false
+        },
+        {
+          "at": 4587.300000071526,
+          "pct": 23,
+          "done": false
+        },
+        {
+          "at": 4686.5,
+          "pct": 23,
+          "done": false
+        },
+        {
+          "at": 4799.100000023842,
+          "pct": 23,
+          "done": false
+        },
+        {
+          "at": 4887.800000071526,
+          "pct": 23,
+          "done": false
+        },
+        {
+          "at": 4986.600000023842,
+          "pct": 23,
+          "done": false
+        },
+        {
+          "at": 5086.100000023842,
+          "pct": 23,
+          "done": false
+        },
+        {
+          "at": 5186.300000071526,
+          "pct": 23,
+          "done": false
+        },
+        {
+          "at": 5286.100000023842,
+          "pct": 23,
+          "done": false
+        },
+        {
+          "at": 5543.600000023842,
+          "pct": 23,
+          "done": false
+        },
+        {
+          "at": 5585.899999976158,
+          "pct": 23,
+          "done": false
+        },
+        {
+          "at": 5686.200000047684,
+          "pct": 23,
+          "done": false
+        },
+        {
+          "at": 5786.300000071526,
+          "pct": 23,
+          "done": false
+        },
+        {
+          "at": 5887.399999976158,
+          "pct": 23,
+          "done": false
+        },
+        {
+          "at": 5987.300000071526,
+          "pct": 23,
+          "done": false
+        },
+        {
+          "at": 6089,
+          "pct": 23,
+          "done": false
+        },
+        {
+          "at": 6189.100000023842,
+          "pct": 23,
+          "done": false
+        },
+        {
+          "at": 6289,
+          "pct": 23,
+          "done": false
+        },
+        {
+          "at": 6387.700000047684,
+          "pct": 23,
+          "done": false
+        },
+        {
+          "at": 6489,
+          "pct": 23,
+          "done": false
+        },
+        {
+          "at": 6588.5,
+          "pct": 23,
+          "done": false
+        },
+        {
+          "at": 6687.300000071526,
+          "pct": 23,
+          "done": false
+        },
+        {
+          "at": 6788.399999976158,
+          "pct": 23,
+          "done": false
+        },
+        {
+          "at": 6888.200000047684,
+          "pct": 23,
+          "done": false
+        },
+        {
+          "at": 6987.899999976158,
+          "pct": 23,
+          "done": false
+        },
+        {
+          "at": 7086.399999976158,
+          "pct": 23,
+          "done": false
+        },
+        {
+          "at": 7186.5,
+          "pct": 23,
+          "done": false
+        },
+        {
+          "at": 7288.600000023842,
+          "pct": 23,
+          "done": false
+        },
+        {
+          "at": 7389.200000047684,
+          "pct": 23,
+          "done": false
+        },
+        {
+          "at": 7487.800000071526,
+          "pct": 23,
+          "done": false
+        },
+        {
+          "at": 7588.5,
+          "pct": 23,
+          "done": false
+        },
+        {
+          "at": 7685.399999976158,
+          "pct": 23,
+          "done": false
+        },
+        {
+          "at": 7786.5,
+          "pct": 23,
+          "done": false
+        },
+        {
+          "at": 7886.300000071526,
+          "pct": 23,
+          "done": false
+        },
+        {
+          "at": 7987.399999976158,
+          "pct": 23,
+          "done": false
+        },
+        {
+          "at": 8087.800000071526,
+          "pct": 23,
+          "done": false
+        },
+        {
+          "at": 8187.700000047684,
+          "pct": 23,
+          "done": false
+        },
+        {
+          "at": 8288.200000047684,
+          "pct": 23,
+          "done": false
+        },
+        {
+          "at": 8385.5,
+          "pct": 23,
+          "done": false
+        },
+        {
+          "at": 8485.899999976158,
+          "pct": 23,
+          "done": false
+        },
+        {
+          "at": 8587.399999976158,
+          "pct": 23,
+          "done": false
+        },
+        {
+          "at": 8687.600000023842,
+          "pct": 23,
+          "done": false
+        },
+        {
+          "at": 8786.399999976158,
+          "pct": 23,
+          "done": false
+        },
+        {
+          "at": 8885.700000047684,
+          "pct": 23,
+          "done": false
+        },
+        {
+          "at": 8985.800000071526,
+          "pct": 23,
+          "done": false
+        },
+        {
+          "at": 9086.200000047684,
+          "pct": 23,
+          "done": false
+        },
+        {
+          "at": 9186.100000023842,
+          "pct": 23,
+          "done": false
+        },
+        {
+          "at": 9286.600000023842,
+          "pct": 23,
+          "done": false
+        },
+        {
+          "at": 9386.899999976158,
+          "pct": 23,
+          "done": false
+        },
+        {
+          "at": 9487.899999976158,
+          "pct": 23,
+          "done": false
+        },
+        {
+          "at": 9630.399999976158,
+          "pct": 23,
+          "done": false
+        },
+        {
+          "at": 9691.899999976158,
+          "pct": 23,
+          "done": false
+        },
+        {
+          "at": 9785.399999976158,
+          "pct": 23,
+          "done": false
+        },
+        {
+          "at": 9885.800000071526,
+          "pct": 23,
+          "done": false
+        },
+        {
+          "at": 9986.5,
+          "pct": 23,
+          "done": false
+        },
+        {
+          "at": 10085.899999976158,
+          "pct": 23,
+          "done": false
+        },
+        {
+          "at": 10187,
+          "pct": 24,
+          "done": false
+        },
+        {
+          "at": 10286.200000047684,
+          "pct": 24,
+          "done": false
+        },
+        {
+          "at": 10385.399999976158,
+          "pct": 24,
+          "done": false
+        },
+        {
+          "at": 10485.800000071526,
+          "pct": 24,
+          "done": false
+        },
+        {
+          "at": 10609.600000023842,
+          "pct": 71,
+          "done": false
+        },
+        {
+          "at": 10692.5,
+          "pct": 73,
+          "done": false
+        },
+        {
+          "at": 10787.200000047684,
+          "pct": 80,
+          "done": false
+        },
+        {
+          "at": 10886.700000047684,
+          "pct": 83,
+          "done": false
+        },
+        {
+          "at": 10986.200000047684,
+          "pct": 83,
+          "done": false
+        },
+        {
+          "at": 11085.899999976158,
+          "pct": 83,
+          "done": false
+        },
+        {
+          "at": 11186.300000071526,
+          "pct": 83,
+          "done": false
+        },
+        {
+          "at": 11286.200000047684,
+          "pct": 83,
+          "done": false
+        },
+        {
+          "at": 11386.800000071526,
+          "pct": 83,
+          "done": false
+        },
+        {
+          "at": 11486.700000047684,
+          "pct": 83,
+          "done": false
+        },
+        {
+          "at": 11586.100000023842,
+          "pct": 83,
+          "done": false
+        },
+        {
+          "at": 11687.700000047684,
+          "pct": 83,
+          "done": false
+        },
+        {
+          "at": 11793.5,
+          "pct": 88,
+          "done": false
+        },
+        {
+          "at": 11892.300000071526,
+          "pct": 88,
+          "done": false
+        },
+        {
+          "at": 11992.300000071526,
+          "pct": 88,
+          "done": false
+        },
+        {
+          "at": 12092.700000047684,
+          "pct": 88,
+          "done": false
+        },
+        {
+          "at": 12191.899999976158,
+          "pct": 88,
+          "done": false
+        },
+        {
+          "at": 12288.800000071526,
+          "pct": 88,
+          "done": false
+        },
+        {
+          "at": 12388.399999976158,
+          "pct": 88,
+          "done": false
+        },
+        {
+          "at": 12491.899999976158,
+          "pct": 88,
+          "done": false
+        },
+        {
+          "at": 12589.800000071526,
+          "pct": 88,
+          "done": false
+        },
+        {
+          "at": 12691.5,
+          "pct": 88,
+          "done": false
+        },
+        {
+          "at": 12787.300000071526,
+          "pct": 88,
+          "done": false
+        },
+        {
+          "at": 12886.399999976158,
+          "pct": 88,
+          "done": false
+        },
+        {
+          "at": 12986.200000047684,
+          "pct": 88,
+          "done": false
+        },
+        {
+          "at": 13086.600000023842,
+          "pct": 88,
+          "done": false
+        },
+        {
+          "at": 13185.600000023842,
+          "pct": 88,
+          "done": false
+        },
+        {
+          "at": 13286.399999976158,
+          "pct": 88,
+          "done": false
+        },
+        {
+          "at": 13386.600000023842,
+          "pct": 88,
+          "done": false
+        },
+        {
+          "at": 13486.899999976158,
+          "pct": 88,
+          "done": false
+        },
+        {
+          "at": 13585.800000071526,
+          "pct": 88,
+          "done": false
+        },
+        {
+          "at": 13686.600000023842,
+          "pct": 88,
+          "done": false
+        },
+        {
+          "at": 13786.600000023842,
+          "pct": 88,
+          "done": false
+        },
+        {
+          "at": 13886.700000047684,
+          "pct": 88,
+          "done": false
+        },
+        {
+          "at": 13986.5,
+          "pct": 88,
+          "done": false
+        },
+        {
+          "at": 14086.700000047684,
+          "pct": 88,
+          "done": false
+        },
+        {
+          "at": 14186.600000023842,
+          "pct": 88,
+          "done": false
+        },
+        {
+          "at": 14286.5,
+          "pct": 89,
+          "done": false
+        },
+        {
+          "at": 14386.5,
+          "pct": 89,
+          "done": false
+        },
+        {
+          "at": 14486.300000071526,
+          "pct": 89,
+          "done": false
+        },
+        {
+          "at": 14586.5,
+          "pct": 89,
+          "done": false
+        },
+        {
+          "at": 14686.399999976158,
+          "pct": 89,
+          "done": false
+        },
+        {
+          "at": 14786.899999976158,
+          "pct": 89,
+          "done": false
+        },
+        {
+          "at": 14886.300000071526,
+          "pct": 89,
+          "done": false
+        },
+        {
+          "at": 14986.300000071526,
+          "pct": 89,
+          "done": false
+        },
+        {
+          "at": 15086.600000023842,
+          "pct": 89,
+          "done": false
+        },
+        {
+          "at": 15186.200000047684,
+          "pct": 89,
+          "done": false
+        },
+        {
+          "at": 15287,
+          "pct": 89,
+          "done": false
+        },
+        {
+          "at": 15387.399999976158,
+          "pct": 90,
+          "done": false
+        },
+        {
+          "at": 15488.200000047684,
+          "pct": 90,
+          "done": false
+        },
+        {
+          "at": 15586.800000071526,
+          "pct": 90,
+          "done": false
+        },
+        {
+          "at": 15691,
+          "pct": 91,
+          "done": false
+        },
+        {
+          "at": 15786.899999976158,
+          "pct": 91,
+          "done": false
+        },
+        {
+          "at": 15886.600000023842,
+          "pct": 91,
+          "done": false
+        },
+        {
+          "at": 15987,
+          "pct": 92,
+          "done": false
+        },
+        {
+          "at": 16086.200000047684,
+          "pct": 92,
+          "done": false
+        },
+        {
+          "at": 16185.600000023842,
+          "pct": 92,
+          "done": false
+        },
+        {
+          "at": 16285.800000071526,
+          "pct": 92,
+          "done": false
+        },
+        {
+          "at": 16386.600000023842,
+          "pct": 94,
+          "done": false
+        },
+        {
+          "at": 16487.100000023842,
+          "pct": 94,
+          "done": false
+        },
+        {
+          "at": 16586.300000071526,
+          "pct": 94,
+          "done": false
+        },
+        {
+          "at": 16686,
+          "pct": 94,
+          "done": false
+        },
+        {
+          "at": 16786.399999976158,
+          "pct": 94,
+          "done": false
+        },
+        {
+          "at": 16886.5,
+          "pct": 94,
+          "done": false
+        },
+        {
+          "at": 16991.200000047684,
+          "pct": 94,
+          "done": false
+        },
+        {
+          "at": 17085.800000071526,
+          "pct": 94,
+          "done": false
+        },
+        {
+          "at": 17186.300000071526,
+          "pct": 94,
+          "done": false
+        },
+        {
+          "at": 17286.700000047684,
+          "pct": 94,
+          "done": false
+        },
+        {
+          "at": 17387.200000047684,
+          "pct": 94,
+          "done": false
+        },
+        {
+          "at": 17486.200000047684,
+          "pct": 94,
+          "done": false
+        },
+        {
+          "at": 17586.700000047684,
+          "pct": 94,
+          "done": false
+        },
+        {
+          "at": 17686.200000047684,
+          "pct": 94,
+          "done": false
+        },
+        {
+          "at": 17786.5,
+          "pct": 94,
+          "done": false
+        },
+        {
+          "at": 17886.300000071526,
+          "pct": 94,
+          "done": false
+        },
+        {
+          "at": 17986.200000047684,
+          "pct": 94,
+          "done": false
+        },
+        {
+          "at": 18086.899999976158,
+          "pct": 94,
+          "done": false
+        },
+        {
+          "at": 18188.5,
+          "pct": 94,
+          "done": false
+        },
+        {
+          "at": 18286.600000023842,
+          "pct": 94,
+          "done": false
+        },
+        {
+          "at": 18387.100000023842,
+          "pct": 94,
+          "done": false
+        },
+        {
+          "at": 18486.700000047684,
+          "pct": 94,
+          "done": false
+        },
+        {
+          "at": 18585.5,
+          "pct": 94,
+          "done": false
+        },
+        {
+          "at": 18686.100000023842,
+          "pct": 94,
+          "done": false
+        },
+        {
+          "at": 18786.600000023842,
+          "pct": 94,
+          "done": false
+        },
+        {
+          "at": 18886.600000023842,
+          "pct": 94,
+          "done": false
+        },
+        {
+          "at": 18986.300000071526,
+          "pct": 94,
+          "done": false
+        },
+        {
+          "at": 19086,
+          "pct": 94,
+          "done": false
+        },
+        {
+          "at": 19195.100000023842,
+          "pct": 99,
+          "done": false
+        },
+        {
+          "at": 19292.5,
+          "pct": 99,
+          "done": false
+        },
+        {
+          "at": 19392.600000023842,
+          "pct": 99,
+          "done": false
+        },
+        {
+          "at": 19492.100000023842,
+          "pct": 99,
+          "done": false
+        },
+        {
+          "at": 19616.700000047684,
+          "pct": 99,
+          "done": false
+        },
+        {
+          "at": 19692.899999976158,
+          "pct": 99,
+          "done": false
+        },
+        {
+          "at": 19794,
+          "pct": 99,
+          "done": false
+        },
+        {
+          "at": 19890,
+          "pct": 99,
+          "done": false
+        },
+        {
+          "at": 19991.300000071526,
+          "pct": 99,
+          "done": false
+        },
+        {
+          "at": 20088,
+          "pct": 99,
+          "done": false
+        },
+        {
+          "at": 20187.300000071526,
+          "pct": 99,
+          "done": false
+        },
+        {
+          "at": 20287.700000047684,
+          "pct": 99,
+          "done": false
+        },
+        {
+          "at": 20387.200000047684,
+          "pct": 99,
+          "done": false
+        },
+        {
+          "at": 20488.300000071526,
+          "pct": 99,
+          "done": false
+        },
+        {
+          "at": 20588,
+          "pct": 99,
+          "done": false
+        },
+        {
+          "at": 20688,
+          "pct": 99,
+          "done": false
+        },
+        {
+          "at": 20787.100000023842,
+          "pct": 99,
+          "done": false
+        },
+        {
+          "at": 20887.399999976158,
+          "pct": 99,
+          "done": false
+        },
+        {
+          "at": 20987.700000047684,
+          "pct": 99,
+          "done": false
+        },
+        {
+          "at": 21088.800000071526,
+          "pct": 99,
+          "done": false
+        },
+        {
+          "at": 21187.5,
+          "pct": 99,
+          "done": false
+        },
+        {
+          "at": 21287.300000071526,
+          "pct": 99,
+          "done": false
+        },
+        {
+          "at": 21388.200000047684,
+          "pct": 99,
+          "done": false
+        },
+        {
+          "at": 21488.200000047684,
+          "pct": 99,
+          "done": false
+        },
+        {
+          "at": 21592.300000071526,
+          "pct": 99,
+          "done": false
+        },
+        {
+          "at": 21687.700000047684,
+          "pct": 99,
+          "done": false
+        },
+        {
+          "at": 21787.700000047684,
+          "pct": 99,
+          "done": false
+        },
+        {
+          "at": 21887.700000047684,
+          "pct": 99,
+          "done": false
+        },
+        {
+          "at": 21987.300000071526,
+          "pct": 99,
+          "done": false
+        },
+        {
+          "at": 22088.100000023842,
+          "pct": 99,
+          "done": false
+        },
+        {
+          "at": 22188.300000071526,
+          "pct": 99,
+          "done": false
+        },
+        {
+          "at": 22287.399999976158,
+          "pct": 99,
+          "done": false
+        },
+        {
+          "at": 22396.399999976158,
+          "pct": 99,
+          "done": false
+        },
+        {
+          "at": 22488.399999976158,
+          "pct": 99,
+          "done": false
+        },
+        {
+          "at": 22589.100000023842,
+          "pct": 99,
+          "done": false
+        },
+        {
+          "at": 22689.899999976158,
+          "pct": 99,
+          "done": false
+        },
+        {
+          "at": 22787.600000023842,
+          "pct": 99,
+          "done": false
+        },
+        {
+          "at": 22887.200000047684,
+          "pct": 99,
+          "done": false
+        },
+        {
+          "at": 22989.100000023842,
+          "pct": 99,
+          "done": false
+        },
+        {
+          "at": 23087.800000071526,
+          "pct": 99,
+          "done": false
+        },
+        {
+          "at": 23187.600000023842,
+          "pct": 99,
+          "done": false
+        },
+        {
+          "at": 23287.600000023842,
+          "pct": 99,
+          "done": false
+        },
+        {
+          "at": 23388,
+          "pct": 99,
+          "done": false
+        },
+        {
+          "at": 23487.600000023842,
+          "pct": 99,
+          "done": false
+        },
+        {
+          "at": 23587.5,
+          "pct": 99,
+          "done": false
+        },
+        {
+          "at": 23687.200000047684,
+          "pct": 99,
+          "done": false
+        },
+        {
+          "at": 23787.600000023842,
+          "pct": 99,
+          "done": false
+        },
+        {
+          "at": 23887.100000023842,
+          "pct": 99,
+          "done": false
+        },
+        {
+          "at": 23987.200000047684,
+          "pct": 99,
+          "done": false
+        },
+        {
+          "at": 24087.600000023842,
+          "pct": 99,
+          "done": false
+        },
+        {
+          "at": 24187.800000071526,
+          "pct": 99,
+          "done": false
+        },
+        {
+          "at": 24287.600000023842,
+          "pct": 99,
+          "done": false
+        },
+        {
+          "at": 24387.700000047684,
+          "pct": 99,
+          "done": false
+        },
+        {
+          "at": 24488.100000023842,
+          "pct": 99,
+          "done": false
+        },
+        {
+          "at": 24587.600000023842,
+          "pct": 99,
+          "done": false
+        },
+        {
+          "at": 24687.300000071526,
+          "pct": 99,
+          "done": false
+        },
+        {
+          "at": 24786.399999976158,
+          "pct": 99,
+          "done": false
+        },
+        {
+          "at": 24886.600000023842,
+          "pct": 99,
+          "done": false
+        },
+        {
+          "at": 24986.600000023842,
+          "pct": 99,
+          "done": false
+        },
+        {
+          "at": 25087.899999976158,
+          "pct": 99,
+          "done": false
+        },
+        {
+          "at": 25187.200000047684,
+          "pct": 99,
+          "done": false
+        },
+        {
+          "at": 25287.600000023842,
+          "pct": 99,
+          "done": false
+        },
+        {
+          "at": 25386.399999976158,
+          "pct": 99,
+          "done": false
+        },
+        {
+          "at": 25488.100000023842,
+          "pct": 99,
+          "done": false
+        },
+        {
+          "at": 25587.399999976158,
+          "pct": 99,
+          "done": false
+        },
+        {
+          "at": 25686.600000023842,
+          "pct": 99,
+          "done": false
+        },
+        {
+          "at": 25786.899999976158,
+          "pct": 99,
+          "done": false
+        },
+        {
+          "at": 25887.399999976158,
+          "pct": 99,
+          "done": false
+        },
+        {
+          "at": 25986.899999976158,
+          "pct": 99,
+          "done": false
+        },
+        {
+          "at": 26087.300000071526,
+          "pct": 99,
+          "done": false
+        },
+        {
+          "at": 26187,
+          "pct": 99,
+          "done": false
+        },
+        {
+          "at": 26288.399999976158,
+          "pct": 99,
+          "done": false
+        },
+        {
+          "at": 26386.300000071526,
+          "pct": 99,
+          "done": false
+        },
+        {
+          "at": 26486.399999976158,
+          "pct": 99,
+          "done": false
+        }
+      ],
+      "fault": {
+        "baseAttempts": 2
+      },
+      "quality": "full",
+      "elapsedMs": 26583
+    }
+  ],
+  "errors": [],
+  "requestFailures": [],
+  "failure": "TimeoutError: Waiting for selector `#layer-terrain` failed\n    at CSSQueryHandler.waitFor (file:///Volumes/CodexWork/Projects/MOONDA/app/node_modules/puppeteer-core/lib/puppeteer/common/QueryHandler.js:211:46)\n    at async CdpFrame.waitForSelector (file:///Volumes/CodexWork/Projects/MOONDA/app/node_modules/puppeteer-core/lib/puppeteer/api/Frame.js:546:21)\n    at async CdpPage.waitForSelector (file:///Volumes/CodexWork/Projects/MOONDA/app/node_modules/puppeteer-core/lib/puppeteer/api/Page.js:1482:20)\n    at async file:///Volumes/CodexWork/Projects/MOONDA/app/scripts/check-loading-browser.mjs:83:3"
+}

@@ -1,0 +1,31 @@
+To: api-service@deepseek.com
+Subject: MOONDA API abuse: request for refund or account credit of CNY37.46
+
+Hello DeepSeek API Support,
+
+Please investigate suspected automated abuse of my MOONDA API proxy and consider refunding CNY37.46 or granting an equivalent account credit for the affected usage.
+
+Account email: zhihaowu003@gmail.com
+Affected API key label: moonda (old key revoked; replacement active)
+Model: deepseek-v4-pro
+Incident window: 16 November 2026, 00:00–01:00 Cambodia time (15 November 2026, 17:00–18:00 UTC)
+
+Your per-key export records 353 requests and CNY37.4647827 charged during that hour:
+- 13,140,608 cached input tokens
+- 266,761 uncached input tokens
+- 2,540,242 output tokens
+- 15,947,611 total tokens
+
+At the same time, Cloudflare's view of https://moonda.us/api/ai shows 1,079 endpoint requests, with 1,074 attributed to one source IP. Python aiohttp and curl traffic dominate, concentrated around 00:06–00:14 Cambodia time. I have attached the relevant billing-export rows and a short traffic summary.
+
+MOONDA calls DeepSeek server-side, so your logs may show our hosting provider's egress address rather than the original website visitor. The edge records and provider billing cannot be matched one-to-one.
+
+We found that our public proxy lacked adequate usage controls, allowing automated requests to incur charges. We have not established a leaked API key or identified the operator. I have replaced the key, revoked the old key, and deployed server-side rate limits and a shared daily allowance. The site continues to work with the replacement key.
+
+Please preserve relevant per-key request, usage and billing records, confirm the affected usage, and review whether a refund or courtesy account credit is possible. Please also check for related anomalous usage immediately before or after this window and advise whether it warrants a broader review.
+
+Please acknowledge receipt and provide a case reference. No full API key or other credentials are included.
+
+Zhihao Wu
+MOONDA operator
+https://moonda.us

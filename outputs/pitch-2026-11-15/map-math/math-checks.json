@@ -1,0 +1,417 @@
+{
+  "source": "Current MapEngine.ts FlatMapProjection and surfaceProjection.ts, compiled by the installed TypeScript",
+  "compilerVersion": "7.0.2",
+  "cases": 33,
+  "points": 16352,
+  "maxGroundErrorM": 5.111588643742636e-7,
+  "maxScreenErrorM": 0.000013705837424076828,
+  "results": [
+    {
+      "place": "connecting-ridge",
+      "acrossM": 60,
+      "blend": 0,
+      "points": 500,
+      "maxGroundErrorM": 5.057576890223164e-7,
+      "maxScreenErrorM": 5.057745959753791e-7
+    },
+    {
+      "place": "connecting-ridge",
+      "acrossM": 200,
+      "blend": 0,
+      "points": 500,
+      "maxGroundErrorM": 7.406987679549225e-8,
+      "maxScreenErrorM": 7.407412728154014e-8
+    },
+    {
+      "place": "connecting-ridge",
+      "acrossM": 10000,
+      "blend": 0,
+      "points": 500,
+      "maxGroundErrorM": 6.249799176395613e-8,
+      "maxScreenErrorM": 6.249722418454271e-8
+    },
+    {
+      "place": "connecting-ridge",
+      "acrossM": 300000,
+      "blend": 0,
+      "points": 500,
+      "maxGroundErrorM": 5.362963230762774e-8,
+      "maxScreenErrorM": 5.370249931531376e-8
+    },
+    {
+      "place": "connecting-ridge",
+      "acrossM": 500000,
+      "blend": 0,
+      "points": 500,
+      "maxGroundErrorM": 1.6742921671478074e-7,
+      "maxScreenErrorM": 1.6743657131330613e-7
+    },
+    {
+      "place": "connecting-ridge",
+      "acrossM": 700000,
+      "blend": 0.0631689415264154,
+      "points": 500,
+      "maxGroundErrorM": 3.6263783404404e-8,
+      "maxScreenErrorM": 3.663385048871758e-8
+    },
+    {
+      "place": "connecting-ridge",
+      "acrossM": 1200000,
+      "blend": 0.34975937233728294,
+      "points": 500,
+      "maxGroundErrorM": 3.047953647012928e-8,
+      "maxScreenErrorM": 3.551185112193417e-8
+    },
+    {
+      "place": "connecting-ridge",
+      "acrossM": 2200000,
+      "blend": 0.7508689616860195,
+      "points": 500,
+      "maxGroundErrorM": 1.851918922608199e-8,
+      "maxScreenErrorM": 2.352738359578726e-8
+    },
+    {
+      "place": "connecting-ridge",
+      "acrossM": 3500000,
+      "blend": 0.9637456038900521,
+      "points": 500,
+      "maxGroundErrorM": 2.1856300969806317e-8,
+      "maxScreenErrorM": 2.644956111907959e-7
+    },
+    {
+      "place": "connecting-ridge",
+      "acrossM": 4500000,
+      "blend": 1,
+      "points": 500,
+      "maxGroundErrorM": 2.5461567850937687e-8,
+      "maxScreenErrorM": 9.313225746154785e-10
+    },
+    {
+      "place": "connecting-ridge",
+      "acrossM": 10916406.152693814,
+      "blend": 1,
+      "points": 442,
+      "maxGroundErrorM": 1.2576437673681104e-7,
+      "maxScreenErrorM": 9.313225746154785e-10
+    },
+    {
+      "place": "apollo11",
+      "acrossM": 60,
+      "blend": 0,
+      "points": 500,
+      "maxGroundErrorM": 5.075261175892094e-8,
+      "maxScreenErrorM": 0.0000033510806185756967
+    },
+    {
+      "place": "apollo11",
+      "acrossM": 200,
+      "blend": 0,
+      "points": 500,
+      "maxGroundErrorM": 1.2777098840544295e-8,
+      "maxScreenErrorM": 2.7334317564964294e-7
+    },
+    {
+      "place": "apollo11",
+      "acrossM": 10000,
+      "blend": 0,
+      "points": 500,
+      "maxGroundErrorM": 7.457810819365699e-8,
+      "maxScreenErrorM": 0.0000042431645215549606
+    },
+    {
+      "place": "apollo11",
+      "acrossM": 300000,
+      "blend": 0,
+      "points": 500,
+      "maxGroundErrorM": 2.256550273775148e-8,
+      "maxScreenErrorM": 0.0000017462298274040222
+    },
+    {
+      "place": "apollo11",
+      "acrossM": 500000,
+      "blend": 0,
+      "points": 500,
+      "maxGroundErrorM": 2.176325236471361e-7,
+      "maxScreenErrorM": 0.000005651290246630466
+    },
+    {
+      "place": "apollo11",
+      "acrossM": 700000,
+      "blend": 0.0631689415264154,
+      "points": 500,
+      "maxGroundErrorM": 1.8792829028318264e-8,
+      "maxScreenErrorM": 8.242204785346985e-7
+    },
+    {
+      "place": "apollo11",
+      "acrossM": 1200000,
+      "blend": 0.34975937233728294,
+      "points": 500,
+      "maxGroundErrorM": 4.344659667102715e-8,
+      "maxScreenErrorM": 0.00000508069326976401
+    },
+    {
+      "place": "apollo11",
+      "acrossM": 2200000,
+      "blend": 0.7508689616860195,
+      "points": 500,
+      "maxGroundErrorM": 1.3598036875561e-7,
+      "maxScreenErrorM": 0.000013705837424076828
+    },
+    {
+      "place": "apollo11",
+      "acrossM": 3500000,
+      "blend": 0.9637456038900521,
+      "points": 500,
+      "maxGroundErrorM": 6.36617827922069e-8,
+      "maxScreenErrorM": 1.3900437920140383e-7
+    },
+    {
+      "place": "apollo11",
+      "acrossM": 4500000,
+      "blend": 1,
+      "points": 500,
+      "maxGroundErrorM": 9.567350042289089e-8,
+      "maxScreenErrorM": 1.862645149230957e-9
+    },
+    {
+      "place": "apollo11",
+      "acrossM": 10916406.152693814,
+      "blend": 1,
+      "points": 459,
+      "maxGroundErrorM": 1.6973995795815822e-8,
+      "maxScreenErrorM": 1.862645149230957e-9
+    },
+    {
+      "place": "owner",
+      "acrossM": 60,
+      "blend": 0,
+      "points": 500,
+      "maxGroundErrorM": 8.79599970293857e-8,
+      "maxScreenErrorM": 1.0507504005766319e-7
+    },
+    {
+      "place": "owner",
+      "acrossM": 200,
+      "blend": 0,
+      "points": 500,
+      "maxGroundErrorM": 5.111588643742636e-7,
+      "maxScreenErrorM": 5.404918283950818e-7
+    },
+    {
+      "place": "owner",
+      "acrossM": 10000,
+      "blend": 0,
+      "points": 500,
+      "maxGroundErrorM": 8.409983551313583e-8,
+      "maxScreenErrorM": 1.0764760577752621e-7
+    },
+    {
+      "place": "owner",
+      "acrossM": 300000,
+      "blend": 0,
+      "points": 500,
+      "maxGroundErrorM": 1.8904030746348366e-8,
+      "maxScreenErrorM": 3.169576837726242e-8
+    },
+    {
+      "place": "owner",
+      "acrossM": 500000,
+      "blend": 0,
+      "points": 500,
+      "maxGroundErrorM": 2.701559950668682e-8,
+      "maxScreenErrorM": 2.7568564034282573e-8
+    },
+    {
+      "place": "owner",
+      "acrossM": 700000,
+      "blend": 0.0631689415264154,
+      "points": 500,
+      "maxGroundErrorM": 3.981252623279008e-7,
+      "maxScreenErrorM": 5.584512273775402e-7
+    },
+    {
+      "place": "owner",
+      "acrossM": 1200000,
+      "blend": 0.34975937233728294,
+      "points": 500,
+      "maxGroundErrorM": 2.7246589597101044e-8,
+      "maxScreenErrorM": 2.517547364008329e-8
+    },
+    {
+      "place": "owner",
+      "acrossM": 2200000,
+      "blend": 0.7508689616860195,
+      "points": 500,
+      "maxGroundErrorM": 1.8930820003024028e-8,
+      "maxScreenErrorM": 1.0732962350934847e-7
+    },
+    {
+      "place": "owner",
+      "acrossM": 3500000,
+      "blend": 0.9637456038900521,
+      "points": 500,
+      "maxGroundErrorM": 2.08327876169539e-8,
+      "maxScreenErrorM": 2.139713615179062e-7
+    },
+    {
+      "place": "owner",
+      "acrossM": 4500000,
+      "blend": 1,
+      "points": 500,
+      "maxGroundErrorM": 8.488226169999015e-9,
+      "maxScreenErrorM": 1.862645149230957e-9
+    },
+    {
+      "place": "owner",
+      "acrossM": 10916406.152693814,
+      "blend": 1,
+      "points": 451,
+      "maxGroundErrorM": 6.635419027179266e-8,
+      "maxScreenErrorM": 1.3969838619232178e-9
+    }
+  ],
+  "boundaries": [
+    {
+      "place": "connecting-ridge",
+      "acrossM": 500000,
+      "relativeSpanChange": 2e-8,
+      "movementM": 9.948429093419088e-11
+    },
+    {
+      "place": "connecting-ridge",
+      "acrossM": 4500000,
+      "relativeSpanChange": 2e-8,
+      "movementM": 4.748119855164806e-10
+    },
+    {
+      "place": "apollo11",
+      "acrossM": 500000,
+      "relativeSpanChange": 2e-8,
+      "movementM": 1.9281341303378356e-10
+    },
+    {
+      "place": "apollo11",
+      "acrossM": 4500000,
+      "relativeSpanChange": 2e-8,
+      "movementM": 7.275957614183426e-12
+    },
+    {
+      "place": "owner",
+      "acrossM": 500000,
+      "relativeSpanChange": 2e-8,
+      "movementM": 1.4551915228366852e-11
+    },
+    {
+      "place": "owner",
+      "acrossM": 4500000,
+      "relativeSpanChange": 2e-8,
+      "movementM": 4.80661711590515e-10
+    }
+  ],
+  "farBounds": [
+    {
+      "place": "connecting-ridge",
+      "offsetM": 0,
+      "widthM": 10916406.152693814,
+      "heightM": 5458203.076346907,
+      "repeatsEastWest": true,
+      "rejectsBeyondPoles": true,
+      "wrapChecks": [
+        {
+          "x": 5458204.076346907,
+          "wrappedX": -5458202.076346907,
+          "errorM": 9.644507414918735e-11,
+          "finite": true
+        },
+        {
+          "x": -5458204.076346907,
+          "wrappedX": 5458202.076346907,
+          "errorM": 4.822253707459367e-10,
+          "finite": true
+        },
+        {
+          "x": 16374610.22904072,
+          "wrappedX": -5458202.076346908,
+          "errorM": 1.4466761122378104e-9,
+          "finite": true
+        },
+        {
+          "x": -16374610.22904072,
+          "wrappedX": 5458202.076346908,
+          "errorM": 1.3502310380886229e-9,
+          "finite": true
+        }
+      ]
+    },
+    {
+      "place": "apollo11",
+      "offsetM": 0,
+      "widthM": 10916406.152693814,
+      "heightM": 5458203.076346907,
+      "repeatsEastWest": true,
+      "rejectsBeyondPoles": true,
+      "wrapChecks": [
+        {
+          "x": 5458204.076346907,
+          "wrappedX": -5458202.076346907,
+          "errorM": 0,
+          "finite": true
+        },
+        {
+          "x": -5458204.076346907,
+          "wrappedX": 5458202.076346907,
+          "errorM": 0,
+          "finite": true
+        },
+        {
+          "x": 16374610.22904072,
+          "wrappedX": -5458202.076346908,
+          "errorM": 1.5431211863869976e-9,
+          "finite": true
+        },
+        {
+          "x": -16374610.22904072,
+          "wrappedX": 5458202.076346908,
+          "errorM": 1.5431211863869976e-9,
+          "finite": true
+        }
+      ]
+    },
+    {
+      "place": "owner",
+      "offsetM": 0,
+      "widthM": 10916406.152693814,
+      "heightM": 5458203.076346907,
+      "repeatsEastWest": true,
+      "rejectsBeyondPoles": true,
+      "wrapChecks": [
+        {
+          "x": 5458204.076346907,
+          "wrappedX": -5458202.076346907,
+          "errorM": 7.715605931934988e-10,
+          "finite": true
+        },
+        {
+          "x": -5458204.076346907,
+          "wrappedX": 5458202.076346907,
+          "errorM": 6.751155190443114e-10,
+          "finite": true
+        },
+        {
+          "x": 16374610.22904072,
+          "wrappedX": -5458202.076346908,
+          "errorM": 1.5431211863869976e-9,
+          "finite": true
+        },
+        {
+          "x": -16374610.22904072,
+          "wrappedX": 5458202.076346908,
+          "errorM": 2.3146817795804964e-9,
+          "finite": true
+        }
+      ]
+    }
+  ],
+  "failures": []
+}

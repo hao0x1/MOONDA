@@ -1,0 +1,363 @@
+{
+  "result": "PASS",
+  "baselineModuleSha256": "144d119139c2ac4830d78e6680b282e94552dcd99124d88d451a5ddab45acf5a",
+  "beforePath": "/private/tmp/claude-501/-Volumes-CodexWork-Projects-MOONDA/4ec40458-1a1b-4580-bbfb-7871a2a20abe/scratchpad/codex2/K/motion-before-final/result.json",
+  "afterPath": "/private/tmp/claude-501/-Volumes-CodexWork-Projects-MOONDA/4ec40458-1a1b-4580-bbfb-7871a2a20abe/scratchpad/codex2/K/motion-after-final/result.json",
+  "motions": [
+    {
+      "motion": "slow zoom in",
+      "before": {
+        "frames": 838,
+        "zeroFrames": 393,
+        "staleFrames": 393,
+        "largeDropFrames": 369,
+        "unfadedLargeDropFrames": 369,
+        "maxDrop": 1,
+        "minRetention": 0,
+        "meanRetention": 0.16891891891891891,
+        "minCount": 0,
+        "maxCount": 400,
+        "p95FrameMs": 22.700000047683716
+      },
+      "after": {
+        "frames": 836,
+        "zeroFrames": 0,
+        "staleFrames": 0,
+        "largeDropFrames": 0,
+        "unfadedLargeDropFrames": 0,
+        "maxDrop": 0.1076923076923077,
+        "minRetention": 0.8923076923076922,
+        "meanRetention": 0.9933701911970039,
+        "minCount": 55,
+        "maxCount": 340,
+        "p95FrameMs": 22.799999952316284
+      },
+      "maxUnfadedDrop": 0.017857142857142856,
+      "afterEndHeightKm": 59.06535258912994
+    },
+    {
+      "motion": "slow zoom out",
+      "before": {
+        "frames": 838,
+        "zeroFrames": 396,
+        "staleFrames": 396,
+        "largeDropFrames": 364,
+        "unfadedLargeDropFrames": 364,
+        "maxDrop": 1,
+        "minRetention": 0,
+        "meanRetention": 0.1746031746031746,
+        "minCount": 0,
+        "maxCount": 400,
+        "p95FrameMs": 21.700000047683716
+      },
+      "after": {
+        "frames": 841,
+        "zeroFrames": 0,
+        "staleFrames": 0,
+        "largeDropFrames": 0,
+        "unfadedLargeDropFrames": 0,
+        "maxDrop": 0.0029239766081871343,
+        "minRetention": 0.9825072886297376,
+        "meanRetention": 0.9989132409146811,
+        "minCount": 56,
+        "maxCount": 343,
+        "p95FrameMs": 22.5
+      },
+      "maxUnfadedDrop": 0,
+      "afterEndHeightKm": 799.999950584501
+    },
+    {
+      "motion": "fast zoom in",
+      "before": {
+        "frames": 183,
+        "zeroFrames": 87,
+        "staleFrames": 87,
+        "largeDropFrames": 43,
+        "unfadedLargeDropFrames": 43,
+        "maxDrop": 1,
+        "minRetention": 0,
+        "meanRetention": 0.5473684210526316,
+        "minCount": 0,
+        "maxCount": 400,
+        "p95FrameMs": 21.200000047683716
+      },
+      "after": {
+        "frames": 181,
+        "zeroFrames": 0,
+        "staleFrames": 0,
+        "largeDropFrames": 1,
+        "unfadedLargeDropFrames": 0,
+        "maxDrop": 0.36,
+        "minRetention": 0.64,
+        "meanRetention": 0.9738754676508312,
+        "minCount": 48,
+        "maxCount": 341,
+        "p95FrameMs": 20.899999976158142
+      },
+      "maxUnfadedDrop": 0.14018691588785046,
+      "afterEndHeightKm": 59.06545566905127
+    },
+    {
+      "motion": "fast zoom out",
+      "before": {
+        "frames": 185,
+        "zeroFrames": 65,
+        "staleFrames": 65,
+        "largeDropFrames": 65,
+        "unfadedLargeDropFrames": 65,
+        "maxDrop": 1,
+        "minRetention": 0,
+        "meanRetention": 0.453781512605042,
+        "minCount": 0,
+        "maxCount": 400,
+        "p95FrameMs": 22.200000047683716
+      },
+      "after": {
+        "frames": 169,
+        "zeroFrames": 0,
+        "staleFrames": 0,
+        "largeDropFrames": 0,
+        "unfadedLargeDropFrames": 0,
+        "maxDrop": 0.0029239766081871343,
+        "minRetention": 0.9237536656891495,
+        "meanRetention": 0.9945974064996522,
+        "minCount": 56,
+        "maxCount": 343,
+        "p95FrameMs": 23.100000023841858
+      },
+      "maxUnfadedDrop": 0,
+      "afterEndHeightKm": 800.0005835108226
+    },
+    {
+      "motion": "pan",
+      "before": {
+        "frames": 284,
+        "zeroFrames": 69,
+        "staleFrames": 69,
+        "largeDropFrames": 65,
+        "unfadedLargeDropFrames": 65,
+        "maxDrop": 1,
+        "minRetention": 0,
+        "meanRetention": 0.6955023364485983,
+        "minCount": 0,
+        "maxCount": 400,
+        "p95FrameMs": 24.199999928474426
+      },
+      "after": {
+        "frames": 285,
+        "zeroFrames": 0,
+        "staleFrames": 0,
+        "largeDropFrames": 0,
+        "unfadedLargeDropFrames": 0,
+        "maxDrop": 0.011799410029498525,
+        "minRetention": 0.9882005899705015,
+        "meanRetention": 0.9991451111765567,
+        "minCount": 319,
+        "maxCount": 342,
+        "p95FrameMs": 22.899999976158142
+      },
+      "maxUnfadedDrop": 0.011799410029498525,
+      "afterEndHeightKm": null
+    },
+    {
+      "motion": "turn",
+      "before": {
+        "frames": 284,
+        "zeroFrames": 127,
+        "staleFrames": 127,
+        "largeDropFrames": 56,
+        "unfadedLargeDropFrames": 56,
+        "maxDrop": 1,
+        "minRetention": 0,
+        "meanRetention": 0.6405128205128205,
+        "minCount": 0,
+        "maxCount": 400,
+        "p95FrameMs": 22.90000009536743
+      },
+      "after": {
+        "frames": 283,
+        "zeroFrames": 0,
+        "staleFrames": 0,
+        "largeDropFrames": 0,
+        "unfadedLargeDropFrames": 0,
+        "maxDrop": 0.019178082191780823,
+        "minRetention": 0.9780821917808219,
+        "meanRetention": 0.9981415500203599,
+        "minCount": 277,
+        "maxCount": 376,
+        "p95FrameMs": 22.299999952316284
+      },
+      "maxUnfadedDrop": 0.019178082191780823,
+      "afterEndHeightKm": null
+    }
+  ],
+  "allowedFadeExceptions": [
+    {
+      "motion": "fast zoom in",
+      "fromCount": 75,
+      "toCount": 48,
+      "dropFraction": 0.36,
+      "heightFromKm": 64.83573835486034,
+      "heightToKm": 64.15609621860064,
+      "removedCount": 27,
+      "priorAlphas": [
+        0.007,
+        0.007,
+        0.007,
+        0.007,
+        0.007,
+        0.007,
+        0.007,
+        0.007,
+        0.007,
+        0.006,
+        0.006,
+        0.006,
+        0.005,
+        0.004,
+        0.004,
+        0.004,
+        0.004,
+        0.002,
+        0.002,
+        0.002,
+        0.002,
+        0.002,
+        0.002,
+        0.002,
+        0.002,
+        0.001,
+        0.001
+      ],
+      "allRemovedAlreadyFadingOut": true,
+      "retiringPoolCount": 29
+    }
+  ],
+  "screenshots": [
+    {
+      "path": "/private/tmp/claude-501/-Volumes-CodexWork-Projects-MOONDA/4ec40458-1a1b-4580-bbfb-7871a2a20abe/scratchpad/codex2/K/motion-after-final/zoom-mid-01.png",
+      "metadata": {
+        "offsetTop": 0,
+        "pageScaleFactor": 1,
+        "deviceWidth": 1440,
+        "deviceHeight": 900,
+        "scrollOffsetX": 0,
+        "scrollOffsetY": 0,
+        "timestamp": 1794666952.270503,
+        "monotonicTimestamp": 641238.07014
+      },
+      "sha256": "55a2b7050d48474cdb022533171e4965f97f1c3550e46c7ed0cc3ce6b76946e4",
+      "visuallyInspected": true
+    },
+    {
+      "path": "/private/tmp/claude-501/-Volumes-CodexWork-Projects-MOONDA/4ec40458-1a1b-4580-bbfb-7871a2a20abe/scratchpad/codex2/K/motion-after-final/zoom-mid-02.png",
+      "metadata": {
+        "offsetTop": 0,
+        "pageScaleFactor": 1,
+        "deviceWidth": 1440,
+        "deviceHeight": 900,
+        "scrollOffsetX": 0,
+        "scrollOffsetY": 0,
+        "timestamp": 1794666952.28717,
+        "monotonicTimestamp": 641238.086806
+      },
+      "sha256": "95b3aa426e735fe810bb18af93e05086593cac9ea00414b4d73a5a01808db892",
+      "visuallyInspected": true
+    },
+    {
+      "path": "/private/tmp/claude-501/-Volumes-CodexWork-Projects-MOONDA/4ec40458-1a1b-4580-bbfb-7871a2a20abe/scratchpad/codex2/K/motion-after-final/zoom-mid-03.png",
+      "metadata": {
+        "offsetTop": 0,
+        "pageScaleFactor": 1,
+        "deviceWidth": 1440,
+        "deviceHeight": 900,
+        "scrollOffsetX": 0,
+        "scrollOffsetY": 0,
+        "timestamp": 1794666952.303836,
+        "monotonicTimestamp": 641238.103472
+      },
+      "sha256": "72af6fc850ad87659128ce42ae456623d0cd12a913b059068d7403f01ec8367f",
+      "visuallyInspected": true
+    },
+    {
+      "path": "/private/tmp/claude-501/-Volumes-CodexWork-Projects-MOONDA/4ec40458-1a1b-4580-bbfb-7871a2a20abe/scratchpad/codex2/K/motion-after-final/zoom-mid-04.png",
+      "metadata": {
+        "offsetTop": 0,
+        "pageScaleFactor": 1,
+        "deviceWidth": 1440,
+        "deviceHeight": 900,
+        "scrollOffsetX": 0,
+        "scrollOffsetY": 0,
+        "timestamp": 1794666952.320503,
+        "monotonicTimestamp": 641238.120138
+      },
+      "sha256": "2773eb05adb99f0fac75d92be57dd591906385b4632301a3b318f5eb8cb4ac36",
+      "visuallyInspected": true
+    },
+    {
+      "path": "/private/tmp/claude-501/-Volumes-CodexWork-Projects-MOONDA/4ec40458-1a1b-4580-bbfb-7871a2a20abe/scratchpad/codex2/K/motion-after-final/zoom-mid-05.png",
+      "metadata": {
+        "offsetTop": 0,
+        "pageScaleFactor": 1,
+        "deviceWidth": 1440,
+        "deviceHeight": 900,
+        "scrollOffsetX": 0,
+        "scrollOffsetY": 0,
+        "timestamp": 1794666952.337168,
+        "monotonicTimestamp": 641238.136804
+      },
+      "sha256": "d76a73d3e5777c8e6703944762f3285043b342c36280c9983ce97809104bfa11",
+      "visuallyInspected": true
+    },
+    {
+      "path": "/private/tmp/claude-501/-Volumes-CodexWork-Projects-MOONDA/4ec40458-1a1b-4580-bbfb-7871a2a20abe/scratchpad/codex2/K/motion-after-final/zoom-mid-06.png",
+      "metadata": {
+        "offsetTop": 0,
+        "pageScaleFactor": 1,
+        "deviceWidth": 1440,
+        "deviceHeight": 900,
+        "scrollOffsetX": 0,
+        "scrollOffsetY": 0,
+        "timestamp": 1794666952.353834,
+        "monotonicTimestamp": 641238.15347
+      },
+      "sha256": "012815ca594231eefd606b22965224fb0646086df846e876c369d048172d48e2",
+      "visuallyInspected": true
+    }
+  ],
+  "beforeErrors": [],
+  "afterErrors": [],
+  "beforeBrowserClosed": true,
+  "afterBrowserClosed": true,
+  "finalDiagnostics": {
+    "chunkBytes": 2143800,
+    "chunks": 97,
+    "smallBytes": 39804,
+    "indexBytes": 206269,
+    "canvasBytes": 20736000,
+    "metadataAllowance": 2097152,
+    "workAllowance": 6291456,
+    "geometryBytes": 324480,
+    "geometryLimitBytes": 2097152,
+    "managedReservedBytes": 31308212,
+    "limitBytes": 41943040,
+    "chunkLimitBytes": 12778628,
+    "evictions": 0,
+    "selectedRecords": 4096,
+    "rings": 376,
+    "activePool": 400,
+    "queued": 0,
+    "pathSegments": 11793,
+    "maxPathSegments": 32000,
+    "maxDiameterRatio": 0.24622011560312862,
+    "fadedRings": 0,
+    "hiddenOversized": 0,
+    "warmReady": true,
+    "warmBytes": 329749,
+    "warmLimitBytes": 3145728
+  },
+  "sampling": "Primary counts are browser RAF samples. Separate Cesium postRender rows agree on no empty layer or current-camera mismatch. Frame IDs report actual painted viewport-intersecting rims. A192x120alpha probe independently confirms nonempty output.",
+  "threshold": "No zero/empty frames, no current-vs-painted camera mismatch, no count drop above15% unless all removed prior IDs were already fading out.",
+  "calibration": "At DPR2 requested wheel delta-30 became WheelEvent.deltaY-15. Each run measures real wheel gain; endpoints reached59.1km(60km target) and800.0km.",
+  "discarded": "Preliminary motion-before ended221km and is excluded. Iteration1 motion-after had two unfaded fast-in misses and is excluded; its trace is preserved."
+}

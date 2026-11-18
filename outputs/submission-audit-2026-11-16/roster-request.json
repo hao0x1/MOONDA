@@ -1,0 +1,15 @@
+{
+  "query": "query Teams($first: Int!, $after: String, $filtering: [Filter!], $q: String) { teams(first: $first, after: $after, filtering: $filtering, q: $q) { totalCount pageInfo { hasNextPage endCursor } edges { cursor node { id title meta {relativeUrl} projectSubmitted project projectDetails { id name summary demoLink projectLink details solution aiReferences aiToolsUsage dataReferences projectReferences isSubmitted savedAt submittedAt } location event } } } }",
+  "variables": {
+    "first": 100,
+    "after": "",
+    "q": "",
+    "filtering": [
+      {
+        "field": "location",
+        "value": "aWQ6NTQ2MTU=",
+        "compare": "id"
+      }
+    ]
+  }
+}

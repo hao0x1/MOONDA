@@ -1,0 +1,701 @@
+{
+ "steps": [
+  {
+   "do": "eval",
+   "ms": 23198,
+   "note": "{\"done\":true}"
+  },
+  {
+   "do": "wait",
+   "ms": 701
+  },
+  {
+   "do": "eval",
+   "ms": 3,
+   "note": "{\"resolutionScale\":1,\"msaaSamples\":2,\"fxaa\":false,\"maxSSE\":1,\"useDefaultRenderLoop\":true}"
+  },
+  {
+   "do": "eval",
+   "ms": 2155,
+   "note": "{\"phase\":\"on\",\"stats\":{\"enterMs\":1859,\"loadMs\":1459,\"loadTimedOut\":false,\"detailMs\":2598,\"rocksMs\":625,\"recentreMs\":0,\"recentres\":0,\"exitMs\":0,\"shadowBuildMs\":29,\"shadowSweepMs\":8.7,\"meanBuildMs\":10,\""
+  },
+  {
+   "do": "wait",
+   "ms": 2501
+  },
+  {
+   "do": "eval",
+   "ms": 1,
+   "note": "{\"viewport\":{\"width\":1440,\"height\":900,\"dpr\":2},\"tiles\":342,\"triangles\":931458,\"levels\":{\"6\":6,\"7\":11,\"8\":11,\"9\":16,\"10\":18,\"11\":21,\"12\":25,\"13\":24,\"14\":24,\"15\":21,\"16\":24,\"17\":19,\"18\":24,\"19\":24,\"20\""
+  },
+  {
+   "do": "eval",
+   "ms": 0,
+   "note": "\"reset\""
+  },
+  {
+   "do": "wait",
+   "ms": 801
+  },
+  {
+   "do": "eval",
+   "ms": 1
+  },
+  {
+   "do": "wait",
+   "ms": 2001
+  },
+  {
+   "do": "eval",
+   "ms": 1,
+   "note": "{\"viewport\":{\"width\":1440,\"height\":900,\"dpr\":2},\"tiles\":355,\"triangles\":872775,\"levels\":{\"6\":5,\"7\":13,\"8\":10,\"9\":14,\"10\":14,\"11\":20,\"12\":22,\"13\":21,\"14\":26,\"15\":24,\"16\":27,\"17\":22,\"18\":24,\"19\":26,\"20\""
+  },
+  {
+   "do": "shot",
+   "ms": 474,
+   "note": "/Volumes/CodexWork/Projects/MOONDA/outputs/pitch-2026-11-15/far-ab/current1.png"
+  },
+  {
+   "do": "keydown",
+   "ms": 10
+  },
+  {
+   "do": "measure",
+   "ms": 6011
+  },
+  {
+   "do": "keyup",
+   "ms": 0
+  },
+  {
+   "do": "eval",
+   "ms": 0,
+   "note": "{\"viewport\":{\"width\":1440,\"height\":900,\"dpr\":2},\"tiles\":326,\"triangles\":795098,\"levels\":{\"5\":1,\"6\":5,\"7\":9,\"8\":6,\"9\":16,\"10\":12,\"11\":20,\"12\":23,\"13\":21,\"14\":25,\"15\":23,\"16\":25,\"17\":21,\"18\":22,\"19\":20,"
+  },
+  {
+   "do": "eval",
+   "ms": 1,
+   "note": "\"reset\""
+  },
+  {
+   "do": "wait",
+   "ms": 801
+  },
+  {
+   "do": "eval",
+   "ms": 1
+  },
+  {
+   "do": "wait",
+   "ms": 2001
+  },
+  {
+   "do": "eval",
+   "ms": 1,
+   "note": "{\"viewport\":{\"width\":1440,\"height\":900,\"dpr\":2},\"tiles\":322,\"triangles\":650825,\"levels\":{\"6\":1,\"7\":11,\"8\":8,\"9\":5,\"10\":10,\"11\":15,\"12\":18,\"13\":22,\"14\":22,\"15\":24,\"16\":27,\"17\":22,\"18\":24,\"19\":26,\"20\":2"
+  },
+  {
+   "do": "shot",
+   "ms": 362,
+   "note": "/Volumes/CodexWork/Projects/MOONDA/outputs/pitch-2026-11-15/far-ab/candidate1.png"
+  },
+  {
+   "do": "keydown",
+   "ms": 1
+  },
+  {
+   "do": "measure",
+   "ms": 6002
+  },
+  {
+   "do": "keyup",
+   "ms": 0
+  },
+  {
+   "do": "eval",
+   "ms": 0,
+   "note": "{\"viewport\":{\"width\":1440,\"height\":900,\"dpr\":2},\"tiles\":300,\"triangles\":573519,\"levels\":{\"6\":2,\"7\":6,\"8\":8,\"9\":5,\"10\":11,\"11\":11,\"12\":19,\"13\":21,\"14\":25,\"15\":23,\"16\":25,\"17\":21,\"18\":22,\"19\":20,\"20\":26"
+  },
+  {
+   "do": "eval",
+   "ms": 1,
+   "note": "\"reset\""
+  },
+  {
+   "do": "wait",
+   "ms": 802
+  },
+  {
+   "do": "eval",
+   "ms": 0
+  },
+  {
+   "do": "wait",
+   "ms": 2001
+  },
+  {
+   "do": "eval",
+   "ms": 1,
+   "note": "{\"viewport\":{\"width\":1440,\"height\":900,\"dpr\":2},\"tiles\":322,\"triangles\":650825,\"levels\":{\"6\":1,\"7\":11,\"8\":8,\"9\":5,\"10\":10,\"11\":15,\"12\":18,\"13\":22,\"14\":22,\"15\":24,\"16\":27,\"17\":22,\"18\":24,\"19\":26,\"20\":2"
+  },
+  {
+   "do": "shot",
+   "ms": 399,
+   "note": "/Volumes/CodexWork/Projects/MOONDA/outputs/pitch-2026-11-15/far-ab/candidate2.png"
+  },
+  {
+   "do": "keydown",
+   "ms": 1
+  },
+  {
+   "do": "measure",
+   "ms": 6008
+  },
+  {
+   "do": "keyup",
+   "ms": 1
+  },
+  {
+   "do": "eval",
+   "ms": 0,
+   "note": "{\"viewport\":{\"width\":1440,\"height\":900,\"dpr\":2},\"tiles\":299,\"triangles\":572936,\"levels\":{\"6\":2,\"7\":6,\"8\":8,\"9\":5,\"10\":11,\"11\":11,\"12\":18,\"13\":21,\"14\":25,\"15\":23,\"16\":26,\"17\":20,\"18\":22,\"19\":20,\"20\":26"
+  },
+  {
+   "do": "eval",
+   "ms": 1,
+   "note": "\"reset\""
+  },
+  {
+   "do": "wait",
+   "ms": 800
+  },
+  {
+   "do": "eval",
+   "ms": 13
+  },
+  {
+   "do": "wait",
+   "ms": 2001
+  },
+  {
+   "do": "eval",
+   "ms": 1,
+   "note": "{\"viewport\":{\"width\":1440,\"height\":900,\"dpr\":2},\"tiles\":355,\"triangles\":872775,\"levels\":{\"6\":5,\"7\":13,\"8\":10,\"9\":14,\"10\":14,\"11\":20,\"12\":22,\"13\":21,\"14\":26,\"15\":24,\"16\":27,\"17\":22,\"18\":24,\"19\":26,\"20\""
+  },
+  {
+   "do": "shot",
+   "ms": 379,
+   "note": "/Volumes/CodexWork/Projects/MOONDA/outputs/pitch-2026-11-15/far-ab/current2.png"
+  },
+  {
+   "do": "keydown",
+   "ms": 1
+  },
+  {
+   "do": "measure",
+   "ms": 6001
+  },
+  {
+   "do": "keyup",
+   "ms": 1
+  },
+  {
+   "do": "eval",
+   "ms": 0,
+   "note": "{\"viewport\":{\"width\":1440,\"height\":900,\"dpr\":2},\"tiles\":329,\"triangles\":792986,\"levels\":{\"5\":1,\"6\":5,\"7\":9,\"8\":6,\"9\":16,\"10\":12,\"11\":20,\"12\":22,\"13\":21,\"14\":24,\"15\":23,\"16\":26,\"17\":21,\"18\":22,\"19\":20,"
+  },
+  {
+   "do": "eval",
+   "ms": 0,
+   "note": "true"
+  }
+ ],
+ "measures": {
+  "current1": {
+   "frames": 310,
+   "fps": 51.8,
+   "medianMs": 16.7,
+   "p95Ms": 33.4,
+   "maxMs": 83.3,
+   "over33ms": 46,
+   "over100ms": 0,
+   "longTasks": 1
+  },
+  "candidate1": {
+   "frames": 332,
+   "fps": 55.5,
+   "medianMs": 16.7,
+   "p95Ms": 33.3,
+   "maxMs": 100,
+   "over33ms": 20,
+   "over100ms": 0,
+   "longTasks": 2
+  },
+  "candidate2": {
+   "frames": 308,
+   "fps": 51.5,
+   "medianMs": 16.7,
+   "p95Ms": 33.4,
+   "maxMs": 83.4,
+   "over33ms": 48,
+   "over100ms": 0,
+   "longTasks": 1
+  },
+  "current2": {
+   "frames": 303,
+   "fps": 50.6,
+   "medianMs": 16.7,
+   "p95Ms": 33.4,
+   "maxMs": 100.1,
+   "over33ms": 50,
+   "over100ms": 1,
+   "longTasks": 2
+  }
+ },
+ "evals": {
+  "startup": {
+   "done": true
+  },
+  "mainMoonBefore": {
+   "resolutionScale": 1,
+   "msaaSamples": 2,
+   "fxaa": false,
+   "maxSSE": 1,
+   "useDefaultRenderLoop": true
+  },
+  "roverReady": {
+   "phase": "on",
+   "stats": {
+    "enterMs": 1859,
+    "loadMs": 1459,
+    "loadTimedOut": false,
+    "detailMs": 2598,
+    "rocksMs": 625,
+    "recentreMs": 0,
+    "recentres": 0,
+    "exitMs": 0,
+    "shadowBuildMs": 29,
+    "shadowSweepMs": 8.7,
+    "meanBuildMs": 10,
+    "sunHere": 1,
+    "worstFrame": {
+     "out": 33,
+     "load": 100,
+     "in": 117,
+     "leaveOut": 0,
+     "leaveLoad": 0,
+     "leaveIn": 0
+    },
+    "cameraClearanceM": 2.0000000000750333,
+    "cameraMinClearanceM": 1.2840266162443186,
+    "cameraMinBeforeM": 1.2840266162443186,
+    "cameraGroundSource": "ancestor",
+    "cameraGroundLevel": 18,
+    "cameraGuardLifts": 0,
+    "cameraGuardMaxLiftM": 0,
+    "cameraBoomClips": 0,
+    "cameraGuardMissing": 0,
+    "cameraGuardReselects": 0,
+    "roverGroundReseats": 5,
+    "groundReadyMode": "fine",
+    "groundSourceLevel": 18,
+    "groundCameraSourceLevel": 18,
+    "groundWheelSourceLevel": 18,
+    "groundCentreSourceLevel": 18,
+    "openMeterMs": 1,
+    "openParkMs": 0,
+    "openRocksMs": 38,
+    "fineFirstMs": 1463,
+    "shadowReadyMs": 609,
+    "driveGpuReadyMs": 192,
+    "openQueueHigh": 0,
+    "openQueueMedium": 242,
+    "openQueueLow": 0
+   }
+  },
+  "abSetup": {
+   "viewport": {
+    "width": 1440,
+    "height": 900,
+    "dpr": 2
+   },
+   "tiles": 342,
+   "triangles": 931458,
+   "levels": {
+    "6": 6,
+    "7": 11,
+    "8": 11,
+    "9": 16,
+    "10": 18,
+    "11": 21,
+    "12": 25,
+    "13": 24,
+    "14": 24,
+    "15": 21,
+    "16": 24,
+    "17": 19,
+    "18": 24,
+    "19": 24,
+    "20": 27,
+    "21": 23,
+    "22": 20,
+    "23": 4
+   },
+   "underRoverDrawLevel": 21,
+   "underRoverSourceLevel": 18,
+   "resScale": 0.7856742013183862,
+   "lod": 1,
+   "gpuMs": 21.424781043147643,
+   "fog": {
+    "density": 0.000033333333333333335,
+    "sse": 2
+   },
+   "speed": 0,
+   "heading": 274.18785095214844,
+   "phase": "on"
+  },
+  "current1Reset": "reset",
+  "current1Before": {
+   "viewport": {
+    "width": 1440,
+    "height": 900,
+    "dpr": 2
+   },
+   "tiles": 355,
+   "triangles": 872775,
+   "levels": {
+    "6": 5,
+    "7": 13,
+    "8": 10,
+    "9": 14,
+    "10": 14,
+    "11": 20,
+    "12": 22,
+    "13": 21,
+    "14": 26,
+    "15": 24,
+    "16": 27,
+    "17": 22,
+    "18": 24,
+    "19": 26,
+    "20": 24,
+    "21": 27,
+    "22": 25,
+    "23": 11
+   },
+   "underRoverDrawLevel": 22,
+   "underRoverSourceLevel": 18,
+   "resScale": 0.7856742013183862,
+   "lod": 1,
+   "gpuMs": 20.568074340328614,
+   "fog": {
+    "density": 0.000033333333333333335,
+    "sse": 2
+   },
+   "speed": 0,
+   "heading": 274.18785095214844,
+   "phase": "on"
+  },
+  "current1After": {
+   "viewport": {
+    "width": 1440,
+    "height": 900,
+    "dpr": 2
+   },
+   "tiles": 326,
+   "triangles": 795098,
+   "levels": {
+    "5": 1,
+    "6": 5,
+    "7": 9,
+    "8": 6,
+    "9": 16,
+    "10": 12,
+    "11": 20,
+    "12": 23,
+    "13": 21,
+    "14": 25,
+    "15": 23,
+    "16": 25,
+    "17": 21,
+    "18": 22,
+    "19": 20,
+    "20": 26,
+    "21": 20,
+    "22": 24,
+    "23": 7
+   },
+   "underRoverDrawLevel": 22,
+   "underRoverSourceLevel": 18,
+   "resScale": 0.625,
+   "lod": 0,
+   "gpuMs": 15.3080294549121,
+   "fog": {
+    "density": 0.000033333333333333335,
+    "sse": 2
+   },
+   "speed": 1.656433379859864,
+   "heading": 272.73328442800255,
+   "phase": "on"
+  },
+  "candidate1Reset": "reset",
+  "candidate1Before": {
+   "viewport": {
+    "width": 1440,
+    "height": 900,
+    "dpr": 2
+   },
+   "tiles": 322,
+   "triangles": 650825,
+   "levels": {
+    "6": 1,
+    "7": 11,
+    "8": 8,
+    "9": 5,
+    "10": 10,
+    "11": 15,
+    "12": 18,
+    "13": 22,
+    "14": 22,
+    "15": 24,
+    "16": 27,
+    "17": 22,
+    "18": 24,
+    "19": 26,
+    "20": 24,
+    "21": 27,
+    "22": 25,
+    "23": 11
+   },
+   "underRoverDrawLevel": 22,
+   "underRoverSourceLevel": 18,
+   "resScale": 0.7856742013183862,
+   "lod": 1,
+   "gpuMs": 18.124800341448125,
+   "fog": {
+    "density": 0.00005555555555555556,
+    "sse": 3
+   },
+   "speed": 0,
+   "heading": 274.18785095214844,
+   "phase": "on"
+  },
+  "candidate1After": {
+   "viewport": {
+    "width": 1440,
+    "height": 900,
+    "dpr": 2
+   },
+   "tiles": 300,
+   "triangles": 573519,
+   "levels": {
+    "6": 2,
+    "7": 6,
+    "8": 8,
+    "9": 5,
+    "10": 11,
+    "11": 11,
+    "12": 19,
+    "13": 21,
+    "14": 25,
+    "15": 23,
+    "16": 25,
+    "17": 21,
+    "18": 22,
+    "19": 20,
+    "20": 26,
+    "21": 20,
+    "22": 24,
+    "23": 11
+   },
+   "underRoverDrawLevel": 22,
+   "underRoverSourceLevel": 18,
+   "resScale": 0.6748903117837175,
+   "lod": 0,
+   "gpuMs": 14.039143620574643,
+   "fog": {
+    "density": 0.00005555555555555556,
+    "sse": 3
+   },
+   "speed": 1.6465623617809009,
+   "heading": 272.4266828770965,
+   "phase": "on"
+  },
+  "candidate2Reset": "reset",
+  "candidate2Before": {
+   "viewport": {
+    "width": 1440,
+    "height": 900,
+    "dpr": 2
+   },
+   "tiles": 322,
+   "triangles": 650825,
+   "levels": {
+    "6": 1,
+    "7": 11,
+    "8": 8,
+    "9": 5,
+    "10": 10,
+    "11": 15,
+    "12": 18,
+    "13": 22,
+    "14": 22,
+    "15": 24,
+    "16": 27,
+    "17": 22,
+    "18": 24,
+    "19": 26,
+    "20": 24,
+    "21": 27,
+    "22": 25,
+    "23": 11
+   },
+   "underRoverDrawLevel": 22,
+   "underRoverSourceLevel": 18,
+   "resScale": 0.7856742013183862,
+   "lod": 1,
+   "gpuMs": 17.25665304748994,
+   "fog": {
+    "density": 0.00005555555555555556,
+    "sse": 3
+   },
+   "speed": 0,
+   "heading": 274.18785095214844,
+   "phase": "on"
+  },
+  "candidate2After": {
+   "viewport": {
+    "width": 1440,
+    "height": 900,
+    "dpr": 2
+   },
+   "tiles": 299,
+   "triangles": 572936,
+   "levels": {
+    "6": 2,
+    "7": 6,
+    "8": 8,
+    "9": 5,
+    "10": 11,
+    "11": 11,
+    "12": 18,
+    "13": 21,
+    "14": 25,
+    "15": 23,
+    "16": 26,
+    "17": 20,
+    "18": 22,
+    "19": 20,
+    "20": 26,
+    "21": 20,
+    "22": 24,
+    "23": 11
+   },
+   "underRoverDrawLevel": 22,
+   "underRoverSourceLevel": 18,
+   "resScale": 0.625,
+   "lod": 0,
+   "gpuMs": 13.73155259864008,
+   "fog": {
+    "density": 0.00005555555555555556,
+    "sse": 3
+   },
+   "speed": 1.6649329830154762,
+   "heading": 273.36200665905403,
+   "phase": "on"
+  },
+  "current2Reset": "reset",
+  "current2Before": {
+   "viewport": {
+    "width": 1440,
+    "height": 900,
+    "dpr": 2
+   },
+   "tiles": 355,
+   "triangles": 872775,
+   "levels": {
+    "6": 5,
+    "7": 13,
+    "8": 10,
+    "9": 14,
+    "10": 14,
+    "11": 20,
+    "12": 22,
+    "13": 21,
+    "14": 26,
+    "15": 24,
+    "16": 27,
+    "17": 22,
+    "18": 24,
+    "19": 26,
+    "20": 24,
+    "21": 27,
+    "22": 25,
+    "23": 11
+   },
+   "underRoverDrawLevel": 22,
+   "underRoverSourceLevel": 18,
+   "resScale": 0.7856742013183862,
+   "lod": 1,
+   "gpuMs": 20.00667707724683,
+   "fog": {
+    "density": 0.000033333333333333335,
+    "sse": 2
+   },
+   "speed": 0,
+   "heading": 274.18785095214844,
+   "phase": "on"
+  },
+  "current2After": {
+   "viewport": {
+    "width": 1440,
+    "height": 900,
+    "dpr": 2
+   },
+   "tiles": 329,
+   "triangles": 792986,
+   "levels": {
+    "5": 1,
+    "6": 5,
+    "7": 9,
+    "8": 6,
+    "9": 16,
+    "10": 12,
+    "11": 20,
+    "12": 22,
+    "13": 21,
+    "14": 24,
+    "15": 23,
+    "16": 26,
+    "17": 21,
+    "18": 22,
+    "19": 20,
+    "20": 26,
+    "21": 20,
+    "22": 24,
+    "23": 11
+   },
+   "underRoverDrawLevel": 22,
+   "underRoverSourceLevel": 18,
+   "resScale": 0.625,
+   "lod": 0,
+   "gpuMs": 26.53144843643676,
+   "fog": {
+    "density": 0.000033333333333333335,
+    "sse": 2
+   },
+   "speed": 1.6451994614878647,
+   "heading": 272.1213905137963,
+   "phase": "on"
+  },
+  "restoreFog": true
+ },
+ "errors": [],
+ "shots": [
+  "/Volumes/CodexWork/Projects/MOONDA/outputs/pitch-2026-11-15/far-ab/current1.png",
+  "/Volumes/CodexWork/Projects/MOONDA/outputs/pitch-2026-11-15/far-ab/candidate1.png",
+  "/Volumes/CodexWork/Projects/MOONDA/outputs/pitch-2026-11-15/far-ab/candidate2.png",
+  "/Volumes/CodexWork/Projects/MOONDA/outputs/pitch-2026-11-15/far-ab/current2.png"
+ ],
+ "gpu": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5, Unspecified Version)"
+}

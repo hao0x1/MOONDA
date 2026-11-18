@@ -26,3 +26,47 @@ chrome-profile/
 # One person's editor settings, and the output of browser checks run without --out
 .vscode/
 scratchpad/
+# --- added by migration 2026-11-18 ---
+node_modules/
+.venv/
+venv/
+__pycache__/
+.pytest_cache/
+.DS_Store
+.env
+.env.*
+!.env*.example
+!.env*.sample
+!.env*.template
+._*
+*.pem
+*.key
+*.p12
+*.pfx
+*.keystore
+*.jks
+id_rsa*
+id_ed25519*
+*service-account*.json
+.gradle/
+DerivedData/
+.next/
+# nested repos / worktrees (handled separately)
+# files over 50 MB (kept on SSD only)
+/assets-codex/features/out/psr-fraction-4096.npy
+/assets-codex/features/downloads/psr-complete/LPSR_80S_20MPP_ADJ.TIF
+/data-raw/pds-lola-global-ldem64/slope-native-codes.u8
+/data-raw/pds-lola-global-ldem64/ldem_64.img
+/data-raw/pds-lola-global-ldem64/danger-native-codes.u8
+/data-raw/source/reference-v2/lroc-color-2025-8k.tif
+/data-raw/source/reference-v2/ldem-16-float.tif
+/data-raw/source/reference-v2/lroc-color-2025-16k.tif
+/data-raw/source/terrain-raw/polar-far-80m.tif
+/data-raw/pds-lola-illumination/avgvisib_65s_240m_201608.img
+/data-raw/pds-lola-illumination/lpsr_65s_240m_201608.img
+/data-raw/pds-lola-illumination/avgvisib_65s_240m_201608_earth.img
+/data-raw/pds-diviner-prp/dlre_prp_south.zip
+/data-raw/usgs-robbins-craters/lunar_crater_database_robbins_2018.zip
+/data-raw/usgs-robbins-craters/lunar_crater_database_robbins_2018_bundle/data/lunar_crater_database_robbins_2018.csv
+/data-raw/pds-diviner-prp-north/dlre_prp_north.zip
+/outputs/pitch-2026-11-15/rock-check-profile/

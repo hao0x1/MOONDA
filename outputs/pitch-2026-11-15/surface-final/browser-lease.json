@@ -1,0 +1,24 @@
+{
+  "lockPath": "/private/tmp/moonda-headless-browser.lock",
+  "pid": 96331,
+  "script": "check-surface-safety.mjs",
+  "notes": [
+    {
+      "at": "2026-11-15T04:44:57.718Z",
+      "event": "requested"
+    },
+    {
+      "at": "2026-11-15T04:44:57.768Z",
+      "event": "acquired"
+    },
+    {
+      "at": "2026-11-15T04:44:58.472Z",
+      "event": "Chrome started alone",
+      "chromePid": 96346
+    },
+    {
+      "at": "2026-11-15T04:46:27.553Z",
+      "event": "released"
+    }
+  ]
+}

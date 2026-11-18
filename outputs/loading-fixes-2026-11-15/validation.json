@@ -1,0 +1,117 @@
+{
+  "commit": "f5b2a26c294c1e3915ee46d00906d3cfad733dc9",
+  "deployment": {
+    "site_id": "269d4d9b-4cc9-4a41-a232-73bbcb6eb3ed",
+    "site_name": "moonda-lunar-navigator",
+    "deploy_id": "6af9da67b22b60a285b07763",
+    "deploy_url": "https://6af9da67b22b60a285b07763--moonda-lunar-navigator.netlify.app",
+    "logs": "https://app.netlify.com/projects/moonda-lunar-navigator/deploys/6af9da67b22b60a285b07763",
+    "function_logs": "https://app.netlify.com/projects/moonda-lunar-navigator/logs/functions",
+    "edge_function_logs": "https://app.netlify.com/projects/moonda-lunar-navigator/logs/edge-functions",
+    "url": "https://moonda.us"
+  },
+  "domains": [
+    {
+      "url": "https://moonda.us/",
+      "entry": "./assets/index--Ch_e90l.js",
+      "recovery": true,
+      "bytes": 13629
+    },
+    {
+      "url": "https://moonda-lunar-navigator.netlify.app/",
+      "entry": "./assets/index--Ch_e90l.js",
+      "recovery": true,
+      "bytes": 13955
+    }
+  ],
+  "regression_tests": {
+    "boot": 8,
+    "data_downloads": 8,
+    "startup_and_manifest": 13,
+    "imagery_workers_and_metadata": 7,
+    "science_workers": 7,
+    "total": 43,
+    "result": "passed"
+  },
+  "build": "passed TypeScript and Vite production build",
+  "lint": "default oxlint passes; existing repository warnings remain (strict deny-warnings audit is not clean)",
+  "local_browser": {
+    "passed": true,
+    "injected_photo_stall": true,
+    "runs": [
+      {
+        "name": "cold",
+        "elapsedMs": 24117
+      },
+      {
+        "name": "warm",
+        "elapsedMs": 14883
+      }
+    ],
+    "checks": [
+      "full-quality startup completes with monotonic progress",
+      "stalled photo metadata retries in the real browser",
+      "navigation works immediately after entry",
+      "Stand here opens safely with globe mountains switched off",
+      "exit restores the terrain preference and original Moon quality"
+    ],
+    "runtimeErrors": [],
+    "surfaceGroundLevel": 18,
+    "restoredRendering": {
+      "sse": 1,
+      "resolution": 1,
+      "msaa": 2,
+      "quality": "full"
+    }
+  },
+  "graphics_quality_files_and_assets_unchanged": true,
+  "identified_findings_fixed": 11,
+  "live_browser": {
+    "uncached_network": {
+      "startupPassed": true,
+      "coldReadyMs": 124585,
+      "checksPassed": [
+        "full-quality startup completes with monotonic progress",
+        "stalled photo metadata retries in the real browser",
+        "navigation works immediately after entry"
+      ],
+      "runtimeErrors": [],
+      "surfaceCheck": "did not finish within70s because the full terrain download was still pending; not a verified surface pass"
+    },
+    "cached_assets": {
+      "passed": true,
+      "assetSource": "unchanged byte-identical local data simulating browser cache; live HTML, app JS, workers and CSS",
+      "runs": [
+        {
+          "name": "cold",
+          "elapsedMs": 30671
+        },
+        {
+          "name": "warm",
+          "elapsedMs": 15443
+        }
+      ],
+      "checks": [
+        "full-quality startup completes with monotonic progress",
+        "stalled photo metadata retries in the real browser",
+        "navigation works immediately after entry",
+        "Stand here opens safely with globe mountains switched off",
+        "exit restores the terrain preference and original Moon quality"
+      ],
+      "runtimeErrors": [],
+      "surfaceGroundLevel": 18,
+      "surfaceLoadMs": 1512,
+      "restoredRendering": {
+        "sse": 1,
+        "resolution": 1,
+        "msaa": 2,
+        "quality": "full"
+      }
+    }
+  },
+  "test_commit": "ccf7010d4358b4d2eff31b1e47bc76152dce23b5",
+  "completed_local_date": "2026-11-15",
+  "limitations": [
+    "Large first-visit data transfers can remain slow; initial loading now has recovery and bounded waits. Full production surface validation used unchanged cached data to separate recovery/renderer behavior from transfer speed."
+  ]
+}

@@ -1,0 +1,102 @@
+{
+  "captured_at_utc": "2026-11-15T23:07:32.890969+00:00",
+  "scope": "Read-only Cloudflare dashboard investigation; no settings or permissions changed.",
+  "domain": "moonda.us",
+  "window_utc": {
+    "from": "2026-11-15T17:00:00Z",
+    "to": "2026-11-15T18:00:00Z"
+  },
+  "window_cambodia": "2026-11-16 00:00–01:00 GMT+7",
+  "aggregate_filter": {
+    "clientRequestPath": "/api/ai"
+  },
+  "aggregate_dashboard_url": "https://dash.cloudflare.com/2a57d79fda1cdea62284debf3eb3fa7e/moonda.us/analytics/requests?filters=%5B%5B%7B%22key%22%3A%22clientRequestPath%22%2C%22operator%22%3A%22eq%22%2C%22value%22%3A%22%2Fapi%2Fai%22%7D%5D%5D&time=2026-11-15T17:00:00Z/2026-11-15T18:00:00Z",
+  "aggregate_counts": {
+    "all_methods": 1079,
+    "http_2xx": 362,
+    "http_5xx": 709,
+    "http_4xx": 8,
+    "status_503": 709,
+    "status_200": 362,
+    "status_499": 6,
+    "status_405": 2
+  },
+  "post_filtered_dashboard_observation": {
+    "requests": 1077,
+    "status_200": 362,
+    "status_503": 709,
+    "status_499": 6,
+    "excluded_get_status_405": 2,
+    "source_ips_displayed": [
+      "113.130.126.113",
+      "202.62.53.0"
+    ],
+    "user_agents": {
+      "Python/3.14 aiohttp/3.14.5": 980,
+      "curl/8.22.0": 88,
+      "Android Chrome157": 3,
+      "Windows Chrome157": 3,
+      "iPhone Safari": 3
+    }
+  },
+  "dominant_source": {
+    "ip": "113.130.126.113",
+    "path_requests": 1074,
+    "share": 0.995366,
+    "country": "Cambodia",
+    "asn": 38901,
+    "network": "EZECOM CO., LTD.",
+    "identity": "Unknown; IP may be shared NAT, a VPN exit, or owner/test network. Cannot identify a person."
+  },
+  "sample_record": {
+    "local_time": "2026-11-16 00:14:00 GMT+7",
+    "utc": "2026-11-15T17:14:00Z",
+    "ip": "113.130.126.113",
+    "country": "Cambodia",
+    "asn": "38901 - EZECOM CO., LTD.",
+    "user_agent": "Python/3.14 aiohttp/3.14.5",
+    "method": "POST",
+    "http_version": "HTTP/1.1",
+    "host": "moonda.us",
+    "path": "/api/ai",
+    "mitigation": "Not mitigated",
+    "cache_status": "Dynamic",
+    "verified_bot_category": "None"
+  },
+  "sample_record_url": "https://dash.cloudflare.com/2a57d79fda1cdea62284debf3eb3fa7e/moonda.us/security/analytics?client-ip=113.130.126.113&http-method=POST&time=2026-11-15T17:06:00Z/2026-11-15T17:14:00Z",
+  "other_observations": [
+    "Same IP sent approximately 5.07k POSTs across all paths during incident hour, including many POST / at00:14; this includes more than the AI endpoint.",
+    "Same IP also had ordinary browser requests for the app and data assets at00:28–00:29. Expanded /api/ai sample00:29:05 used AndroidChrome157.",
+    "API successful requests mostly occurred00:01–00:14;503 errors concentrated00:10–00:14. Later small browser API activity00:28–00:29 and00:43.",
+    "The application currently lacks success/IP/token logging; edge request counts cannot establish billed-provider call counts or request contents."
+  ],
+  "limitations": [
+    "Cloudflare analytics and sampled logs may be sampled. These are edge counts, not a provider billing ledger.",
+    "Public-IP geolocation and ASN identify a network, not a person or motive.",
+    "User agent strings are client supplied and can be spoofed.",
+    "No request bodies, API keys, prompts, or response contents were recovered.",
+    "Requests bypassing moonda.us through Netlify fallback or direct DeepSeek API are outside these Cloudflare domain records.",
+    "No local authenticated Wrangler credentials were found, so evidence was recovered through the already-signed-in browser dashboard."
+  ],
+  "docs": [
+    "https://developers.cloudflare.com/waf/analytics/security-analytics/",
+    "https://developers.cloudflare.com/analytics/graphql-api/limits/"
+  ],
+  "files": [
+    {
+      "name": "requests-by-status-code_20261115T1700Z_20261115T1800Z.json",
+      "sha256": "89bdc8c87621f78be92891b2868f7972dc87c4ea56a827684a998f3c642c4dce",
+      "bytes": 8495
+    },
+    {
+      "name": "top-client-ips_20261115T1700Z_20261115T1800Z.json",
+      "sha256": "7294d754f03b2b77ab3c5b3383b0979be606bd94d0b3f112a94e9c8497dd1eb5",
+      "bytes": 477
+    },
+    {
+      "name": "top-user-agents_20261115T1700Z_20261115T1800Z.json",
+      "sha256": "008b4edc3272171146078b18660fa396711658620efc432435af7416359a420a",
+      "bytes": 975
+    }
+  ]
+}

@@ -1,0 +1,24 @@
+To: irt@ezecomcorp.com
+Subject: Abuse investigation request: 113.130.126.113 — 15 Nov 2026, 17:00–18:00 UTC
+
+Hello EZECOM Incident Response Team,
+
+I operate MOONDA at https://moonda.us. Please investigate suspected automated abuse from 113.130.126.113 against our paid AI endpoint, https://moonda.us/api/ai.
+
+The incident occurred on 16 November 2026, 00:00–01:00 Cambodia time (15 November 2026, 17:00–18:00 UTC), with most activity around 00:06–00:14 Cambodia time.
+
+Cloudflare's incident view shows 1,079 requests to this endpoint, with 1,074 attributed to that source IP. User-agent totals include 980 Python/3.14 aiohttp/3.14.5 requests and 88 curl/8.22.0 requests. A sampled record at 00:14:00 Cambodia time confirms an aiohttp POST from that IP. I have attached a summary of the relevant evidence.
+
+Separately, DeepSeek's per-key export records 353 Pro calls and CNY37.4647827 charged during the hour. These billing records cannot be matched one-to-one to Cloudflare requests. The Cloudflare analytics may be sampled.
+
+Please investigate this network activity and preserve any relevant address-assignment and connection records still available for the stated period. Please let me know what further technical evidence or formal process you require. I do not have the source port in the recovered Cloudflare record.
+
+The evidence does not identify the individual operating this connection. It could involve a shared network, proxy or compromised device. I am requesting an internal investigation, not public disclosure of subscriber information, and am not accusing a named person or group.
+
+A replacement API key is active; the old key was revoked. Server-side usage limits are now deployed.
+
+Please acknowledge receipt and provide a case reference.
+
+Zhihao Wu
+MOONDA operator
+https://moonda.us

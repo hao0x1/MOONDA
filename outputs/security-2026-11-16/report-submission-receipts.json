@@ -1,0 +1,49 @@
+{
+  "verifiedAtUtc": "2026-11-15 23:44:00 UTC",
+  "localTimezone": "Asia/Phnom_Penh",
+  "sender": "zhihaowu003@gmail.com",
+  "refundRequested": {
+    "amount": 37.46,
+    "currency": "CNY",
+    "alternative": "equivalent account credit",
+    "status": "requested; no approval established"
+  },
+  "messages": [
+    {
+      "messageId": "1a1e197dd0ba13a1",
+      "threadId": "1a1e197a411bafce",
+      "to": [
+        "irt@ezecomcorp.com"
+      ],
+      "subject": "Abuse investigation request: 113.130.126.113 — 15 Nov 2026, 17:00–18:00 UTC",
+      "labels": [
+        "SENT"
+      ],
+      "displayUrl": "https://mail.google.com/mail/u/?authuser=zhihaowu003%40gmail.com#all/1a1e197dd0ba13a1",
+      "attachments": [
+        {
+          "filename": "EZECOM-incident-evidence.txt",
+          "sizeBytes": 1481
+        }
+      ]
+    },
+    {
+      "messageId": "1a1e19823b7ca1d5",
+      "threadId": "1a1e197e5c27dc4e",
+      "to": [
+        "api-service@deepseek.com"
+      ],
+      "subject": "MOONDA API abuse: request for refund or account credit of CNY37.46",
+      "labels": [
+        "SENT"
+      ],
+      "displayUrl": "https://mail.google.com/mail/u/?authuser=zhihaowu003%40gmail.com#all/1a1e19823b7ca1d5",
+      "attachments": [
+        {
+          "filename": "DeepSeek-incident-evidence.txt",
+          "sizeBytes": 3000
+        }
+      ]
+    }
+  ]
+}

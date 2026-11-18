@@ -1,0 +1,211 @@
+[
+  {
+    "do": "eval",
+    "name": "startup",
+    "js": "(async()=>{window.__pitchMapWait=(condition,label,timeout=120000)=>new Promise((resolve,reject)=>{const begin=performance.now();const poll=()=>{try{if(condition())return resolve(true);if(performance.now()-begin>timeout)return reject(Error('Timed out: '+label));setTimeout(poll,100);}catch(error){reject(error);}};poll();});await window.__pitchMapWait(()=>window.__moondaTest&&window.__moonda?.progress?.done,'startup progress.done',150000);window.__moondaTest.setLanguage('en');const enter=document.querySelector('.start-enter');if(enter&&!enter.disabled)enter.click();document.querySelector('.moonda-tutorial-visible .moonda-tutorial-close')?.click();await window.__pitchMapWait(()=>!document.querySelector('.start-enter'),'start screen dismissal',10000);await new Promise(r=>setTimeout(r,300));await window.__pitchMapWait(()=>{document.querySelector('.moonda-tutorial-visible .moonda-tutorial-close')?.click();return !document.querySelector('.moonda-tutorial-visible');},'tutorial dismissal',10000);return {done:window.__moonda.progress.done};})()"
+  },
+  {
+    "do": "wait",
+    "ms": 700
+  },
+  {
+    "do": "eval",
+    "name": "mainMoonBefore",
+    "js": "(()=>{window.__pitchMoonQuality=()=>{const v=window.__viewer;return {resolutionScale:v.resolutionScale,msaaSamples:v.scene.msaaSamples,fxaa:v.scene.postProcessStages.fxaa.enabled,maxSSE:v.scene.globe.maximumScreenSpaceError,useDefaultRenderLoop:v.useDefaultRenderLoop};};window.__pitchMoonBefore=window.__pitchMoonQuality();window.__moondaTest.stand(-89.45,-137.3);return window.__pitchMoonBefore;})()"
+  },
+  {
+    "do": "eval",
+    "name": "roverReady",
+    "js": "(async()=>{await window.__pitchMapWait(()=>window.__moonda?.lander?.phase==='on'&&window.__moondaMinimap,'rover phase on',90000);return {phase:window.__moonda.lander.phase,stats:window.__moonda.lander.stats};})()"
+  },
+  {
+    "do": "wait",
+    "ms": 2500
+  },
+  {
+    "do": "eval",
+    "name": "abSetup",
+    "js": "(()=>{const L=window.__moonda.lander;window.__farABSnapshot=()=>{const C=window.__moondaCesium,v=window.__viewer,L=window.__moonda.lander,g=v.scene.globe,tiles=g._surface._tilesToRender,foot=g.ellipsoid.cartesianToCartographic(L.driver.feet);let tri=0,under=0,source=0;const levels={};for(const t of tiles){const m=t.data?.renderedMesh;if(m){tri+=(m.indexCountWithoutSkirts??m.indices?.length??0)/3;levels[t.level]=(levels[t.level]??0)+1;}if(C.Rectangle.contains(t.rectangle,foot)){under=Math.max(under,t.level);for(let p=t;p;p=p.parent){if(p.data?.terrainData&&!p.data.terrainData.wasCreatedByUpsampling?.()){source=Math.max(source,p.level);break;}}}}return {viewport:{width:innerWidth,height:innerHeight,dpr:devicePixelRatio},tiles:tiles.length,triangles:tri,levels,underRoverDrawLevel:under,underRoverSourceLevel:source,resScale:v.resolutionScale,lod:L.lod?.level,gpuMs:L.lod?.gpu,fog:{density:v.scene.fog.density,sse:v.scene.fog.screenSpaceErrorFactor},speed:L.driver.speed,heading:L.driver.heading,phase:L.phase};};return window.__farABSnapshot();})()"
+  },
+  {
+    "do": "eval",
+    "name": "current1Reset",
+    "js": "(()=>{const v=window.__viewer;v.scene.fog.density=0.000033333333333333335;v.scene.fog.screenSpaceErrorFactor=2;window.__roverLink.reset();return 'reset';})()"
+  },
+  {
+    "do": "wait",
+    "ms": 800
+  },
+  {
+    "do": "eval",
+    "js": "window.__landerLink.setView('third');window.__landerLink.setWalk(true);document.activeElement?.blur();window.__moonda.lander.kick();"
+  },
+  {
+    "do": "wait",
+    "ms": 2000
+  },
+  {
+    "do": "eval",
+    "name": "current1Before",
+    "js": "window.__farABSnapshot()"
+  },
+  {
+    "do": "shot",
+    "name": "current1"
+  },
+  {
+    "do": "keydown",
+    "key": "w"
+  },
+  {
+    "do": "measure",
+    "name": "current1",
+    "ms": 6000
+  },
+  {
+    "do": "keyup",
+    "key": "w"
+  },
+  {
+    "do": "eval",
+    "name": "current1After",
+    "js": "window.__farABSnapshot()"
+  },
+  {
+    "do": "eval",
+    "name": "candidate1Reset",
+    "js": "(()=>{const v=window.__viewer;v.scene.fog.density=0.00005555555555555556;v.scene.fog.screenSpaceErrorFactor=3;window.__roverLink.reset();return 'reset';})()"
+  },
+  {
+    "do": "wait",
+    "ms": 800
+  },
+  {
+    "do": "eval",
+    "js": "window.__landerLink.setView('third');window.__landerLink.setWalk(true);document.activeElement?.blur();window.__moonda.lander.kick();"
+  },
+  {
+    "do": "wait",
+    "ms": 2000
+  },
+  {
+    "do": "eval",
+    "name": "candidate1Before",
+    "js": "window.__farABSnapshot()"
+  },
+  {
+    "do": "shot",
+    "name": "candidate1"
+  },
+  {
+    "do": "keydown",
+    "key": "w"
+  },
+  {
+    "do": "measure",
+    "name": "candidate1",
+    "ms": 6000
+  },
+  {
+    "do": "keyup",
+    "key": "w"
+  },
+  {
+    "do": "eval",
+    "name": "candidate1After",
+    "js": "window.__farABSnapshot()"
+  },
+  {
+    "do": "eval",
+    "name": "candidate2Reset",
+    "js": "(()=>{const v=window.__viewer;v.scene.fog.density=0.00005555555555555556;v.scene.fog.screenSpaceErrorFactor=3;window.__roverLink.reset();return 'reset';})()"
+  },
+  {
+    "do": "wait",
+    "ms": 800
+  },
+  {
+    "do": "eval",
+    "js": "window.__landerLink.setView('third');window.__landerLink.setWalk(true);document.activeElement?.blur();window.__moonda.lander.kick();"
+  },
+  {
+    "do": "wait",
+    "ms": 2000
+  },
+  {
+    "do": "eval",
+    "name": "candidate2Before",
+    "js": "window.__farABSnapshot()"
+  },
+  {
+    "do": "shot",
+    "name": "candidate2"
+  },
+  {
+    "do": "keydown",
+    "key": "w"
+  },
+  {
+    "do": "measure",
+    "name": "candidate2",
+    "ms": 6000
+  },
+  {
+    "do": "keyup",
+    "key": "w"
+  },
+  {
+    "do": "eval",
+    "name": "candidate2After",
+    "js": "window.__farABSnapshot()"
+  },
+  {
+    "do": "eval",
+    "name": "current2Reset",
+    "js": "(()=>{const v=window.__viewer;v.scene.fog.density=0.000033333333333333335;v.scene.fog.screenSpaceErrorFactor=2;window.__roverLink.reset();return 'reset';})()"
+  },
+  {
+    "do": "wait",
+    "ms": 800
+  },
+  {
+    "do": "eval",
+    "js": "window.__landerLink.setView('third');window.__landerLink.setWalk(true);document.activeElement?.blur();window.__moonda.lander.kick();"
+  },
+  {
+    "do": "wait",
+    "ms": 2000
+  },
+  {
+    "do": "eval",
+    "name": "current2Before",
+    "js": "window.__farABSnapshot()"
+  },
+  {
+    "do": "shot",
+    "name": "current2"
+  },
+  {
+    "do": "keydown",
+    "key": "w"
+  },
+  {
+    "do": "measure",
+    "name": "current2",
+    "ms": 6000
+  },
+  {
+    "do": "keyup",
+    "key": "w"
+  },
+  {
+    "do": "eval",
+    "name": "current2After",
+    "js": "window.__farABSnapshot()"
+  },
+  {
+    "do": "eval",
+    "name": "restoreFog",
+    "js": "(()=>{const v=window.__viewer;v.scene.fog.density=1/30000;v.scene.fog.screenSpaceErrorFactor=2;return true;})()"
+  }
+]

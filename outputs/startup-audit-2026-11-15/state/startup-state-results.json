@@ -1,0 +1,4810 @@
+{
+  "method": "Executed unedited preload.ts in node:vm; browser/UI dependencies stubbed; accelerated fake timers; no real network or browser reproduction.",
+  "node": "v25.2.1",
+  "sourceSha256": "d3478417a8376e539823ffc26977fb6abcb8c6489b568c54eeac701b19d21e44",
+  "results": [
+    {
+      "name": "rejected DEM is marked done and starts science",
+      "finishedAt": 828,
+      "analyses": 1,
+      "at180": null,
+      "snapshots": [],
+      "final": {
+        "pct": 100,
+        "step": "start.step.ready",
+        "done": true,
+        "stages": [
+          {
+            "id": "app",
+            "state": "done",
+            "frac": null,
+            "ms": 0
+          },
+          {
+            "id": "photo",
+            "state": "done",
+            "frac": null,
+            "ms": 256
+          },
+          {
+            "id": "mountains",
+            "state": "done",
+            "frac": null,
+            "ms": 572
+          },
+          {
+            "id": "sky",
+            "state": "done",
+            "frac": null,
+            "ms": 0
+          },
+          {
+            "id": "layers",
+            "state": "done",
+            "frac": null,
+            "ms": 0
+          },
+          {
+            "id": "science",
+            "state": "done",
+            "frac": null,
+            "ms": 0
+          },
+          {
+            "id": "pole",
+            "state": "done",
+            "frac": null,
+            "ms": 0
+          },
+          {
+            "id": "surface",
+            "state": "done",
+            "frac": null,
+            "ms": 0
+          },
+          {
+            "id": "music",
+            "state": "off",
+            "frac": null
+          }
+        ]
+      },
+      "emittedProgress": [
+        {
+          "at": 0,
+          "p": {
+            "pct": 0,
+            "step": "start.step.start",
+            "done": false,
+            "stages": [
+              {
+                "id": "app",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "photo",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "mountains",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "sky",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "layers",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "science",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "pole",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "surface",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "music",
+                "state": "waiting",
+                "frac": null
+              }
+            ]
+          }
+        },
+        {
+          "at": 0,
+          "p": {
+            "pct": 4,
+            "step": "start.step.start",
+            "done": false,
+            "stages": [
+              {
+                "id": "app",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "photo",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "mountains",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "sky",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "layers",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "science",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "pole",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "surface",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "music",
+                "state": "off",
+                "frac": null
+              }
+            ]
+          }
+        },
+        {
+          "at": 0,
+          "p": {
+            "pct": 4,
+            "step": "start.stage.sky",
+            "done": false,
+            "stages": [
+              {
+                "id": "app",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "photo",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "mountains",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "sky",
+                "state": "loading",
+                "frac": null
+              },
+              {
+                "id": "layers",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "science",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "pole",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "surface",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "music",
+                "state": "off",
+                "frac": null
+              }
+            ]
+          }
+        },
+        {
+          "at": 0,
+          "p": {
+            "pct": 4,
+            "step": "start.stage.mountains",
+            "done": false,
+            "stages": [
+              {
+                "id": "app",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "photo",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "mountains",
+                "state": "loading",
+                "frac": null
+              },
+              {
+                "id": "sky",
+                "state": "loading",
+                "frac": null
+              },
+              {
+                "id": "layers",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "science",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "pole",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "surface",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "music",
+                "state": "off",
+                "frac": null
+              }
+            ]
+          }
+        },
+        {
+          "at": 0,
+          "p": {
+            "pct": 4,
+            "step": "start.stage.photo",
+            "done": false,
+            "stages": [
+              {
+                "id": "app",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "photo",
+                "state": "loading",
+                "frac": null
+              },
+              {
+                "id": "mountains",
+                "state": "loading",
+                "frac": null
+              },
+              {
+                "id": "sky",
+                "state": "loading",
+                "frac": null
+              },
+              {
+                "id": "layers",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "science",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "pole",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "surface",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "music",
+                "state": "off",
+                "frac": null
+              }
+            ]
+          }
+        },
+        {
+          "at": 0,
+          "p": {
+            "pct": 13,
+            "step": "start.stage.photo",
+            "done": false,
+            "stages": [
+              {
+                "id": "app",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "photo",
+                "state": "loading",
+                "frac": null
+              },
+              {
+                "id": "mountains",
+                "state": "loading",
+                "frac": null
+              },
+              {
+                "id": "sky",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "layers",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "science",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "pole",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "surface",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "music",
+                "state": "off",
+                "frac": null
+              }
+            ]
+          }
+        },
+        {
+          "at": 16,
+          "p": {
+            "pct": 24,
+            "step": "start.stage.photo",
+            "done": false,
+            "stages": [
+              {
+                "id": "app",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "photo",
+                "state": "loading",
+                "frac": 1
+              },
+              {
+                "id": "mountains",
+                "state": "loading",
+                "frac": null
+              },
+              {
+                "id": "sky",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "layers",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "science",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "pole",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "surface",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "music",
+                "state": "off",
+                "frac": null
+              }
+            ]
+          }
+        },
+        {
+          "at": 256,
+          "p": {
+            "pct": 24,
+            "step": "start.stage.mountains",
+            "done": false,
+            "stages": [
+              {
+                "id": "app",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "photo",
+                "state": "done",
+                "frac": null,
+                "ms": 256
+              },
+              {
+                "id": "mountains",
+                "state": "loading",
+                "frac": null
+              },
+              {
+                "id": "sky",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "layers",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "science",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "pole",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "surface",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "music",
+                "state": "off",
+                "frac": null
+              }
+            ]
+          }
+        },
+        {
+          "at": 572,
+          "p": {
+            "pct": 50,
+            "step": "start.step.start",
+            "done": false,
+            "stages": [
+              {
+                "id": "app",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "photo",
+                "state": "done",
+                "frac": null,
+                "ms": 256
+              },
+              {
+                "id": "mountains",
+                "state": "done",
+                "frac": null,
+                "ms": 572
+              },
+              {
+                "id": "sky",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "layers",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "science",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "pole",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "surface",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "music",
+                "state": "off",
+                "frac": null
+              }
+            ]
+          }
+        },
+        {
+          "at": 572,
+          "p": {
+            "pct": 50,
+            "step": "start.stage.science",
+            "done": false,
+            "stages": [
+              {
+                "id": "app",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "photo",
+                "state": "done",
+                "frac": null,
+                "ms": 256
+              },
+              {
+                "id": "mountains",
+                "state": "done",
+                "frac": null,
+                "ms": 572
+              },
+              {
+                "id": "sky",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "layers",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "science",
+                "state": "loading",
+                "frac": null
+              },
+              {
+                "id": "pole",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "surface",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "music",
+                "state": "off",
+                "frac": null
+              }
+            ]
+          }
+        },
+        {
+          "at": 572,
+          "p": {
+            "pct": 50,
+            "step": "start.stage.layers",
+            "done": false,
+            "stages": [
+              {
+                "id": "app",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "photo",
+                "state": "done",
+                "frac": null,
+                "ms": 256
+              },
+              {
+                "id": "mountains",
+                "state": "done",
+                "frac": null,
+                "ms": 572
+              },
+              {
+                "id": "sky",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "layers",
+                "state": "loading",
+                "frac": null
+              },
+              {
+                "id": "science",
+                "state": "loading",
+                "frac": null
+              },
+              {
+                "id": "pole",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "surface",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "music",
+                "state": "off",
+                "frac": null
+              }
+            ]
+          }
+        },
+        {
+          "at": 572,
+          "p": {
+            "pct": 50,
+            "step": "start.stage.layers",
+            "done": false,
+            "stages": [
+              {
+                "id": "app",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "photo",
+                "state": "done",
+                "frac": null,
+                "ms": 256
+              },
+              {
+                "id": "mountains",
+                "state": "done",
+                "frac": null,
+                "ms": 572
+              },
+              {
+                "id": "sky",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "layers",
+                "state": "loading",
+                "frac": null
+              },
+              {
+                "id": "science",
+                "state": "loading",
+                "frac": null
+              },
+              {
+                "id": "pole",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "surface",
+                "state": "loading",
+                "frac": null
+              },
+              {
+                "id": "music",
+                "state": "off",
+                "frac": null
+              }
+            ]
+          }
+        },
+        {
+          "at": 572,
+          "p": {
+            "pct": 50,
+            "step": "start.stage.layers",
+            "done": false,
+            "stages": [
+              {
+                "id": "app",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "photo",
+                "state": "done",
+                "frac": null,
+                "ms": 256
+              },
+              {
+                "id": "mountains",
+                "state": "done",
+                "frac": null,
+                "ms": 572
+              },
+              {
+                "id": "sky",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "layers",
+                "state": "loading",
+                "frac": null
+              },
+              {
+                "id": "science",
+                "state": "loading",
+                "frac": null
+              },
+              {
+                "id": "pole",
+                "state": "loading",
+                "frac": null
+              },
+              {
+                "id": "surface",
+                "state": "loading",
+                "frac": null
+              },
+              {
+                "id": "music",
+                "state": "off",
+                "frac": null
+              }
+            ]
+          }
+        },
+        {
+          "at": 572,
+          "p": {
+            "pct": 66,
+            "step": "start.stage.layers",
+            "done": false,
+            "stages": [
+              {
+                "id": "app",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "photo",
+                "state": "done",
+                "frac": null,
+                "ms": 256
+              },
+              {
+                "id": "mountains",
+                "state": "done",
+                "frac": null,
+                "ms": 572
+              },
+              {
+                "id": "sky",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "layers",
+                "state": "loading",
+                "frac": null
+              },
+              {
+                "id": "science",
+                "state": "loading",
+                "frac": null
+              },
+              {
+                "id": "pole",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "surface",
+                "state": "loading",
+                "frac": null
+              },
+              {
+                "id": "music",
+                "state": "off",
+                "frac": null
+              }
+            ]
+          }
+        },
+        {
+          "at": 572,
+          "p": {
+            "pct": 74,
+            "step": "start.stage.layers",
+            "done": false,
+            "stages": [
+              {
+                "id": "app",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "photo",
+                "state": "done",
+                "frac": null,
+                "ms": 256
+              },
+              {
+                "id": "mountains",
+                "state": "done",
+                "frac": null,
+                "ms": 572
+              },
+              {
+                "id": "sky",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "layers",
+                "state": "loading",
+                "frac": null
+              },
+              {
+                "id": "science",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "pole",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "surface",
+                "state": "loading",
+                "frac": null
+              },
+              {
+                "id": "music",
+                "state": "off",
+                "frac": null
+              }
+            ]
+          }
+        },
+        {
+          "at": 572,
+          "p": {
+            "pct": 89,
+            "step": "start.stage.layers",
+            "done": false,
+            "stages": [
+              {
+                "id": "app",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "photo",
+                "state": "done",
+                "frac": null,
+                "ms": 256
+              },
+              {
+                "id": "mountains",
+                "state": "done",
+                "frac": null,
+                "ms": 572
+              },
+              {
+                "id": "sky",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "layers",
+                "state": "loading",
+                "frac": null
+              },
+              {
+                "id": "science",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "pole",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "surface",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "music",
+                "state": "off",
+                "frac": null
+              }
+            ]
+          }
+        },
+        {
+          "at": 572,
+          "p": {
+            "pct": 99,
+            "step": "start.step.start",
+            "done": false,
+            "stages": [
+              {
+                "id": "app",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "photo",
+                "state": "done",
+                "frac": null,
+                "ms": 256
+              },
+              {
+                "id": "mountains",
+                "state": "done",
+                "frac": null,
+                "ms": 572
+              },
+              {
+                "id": "sky",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "layers",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "science",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "pole",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "surface",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "music",
+                "state": "off",
+                "frac": null
+              }
+            ]
+          }
+        },
+        {
+          "at": 828,
+          "p": {
+            "pct": 100,
+            "step": "start.step.ready",
+            "done": true,
+            "stages": [
+              {
+                "id": "app",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "photo",
+                "state": "done",
+                "frac": null,
+                "ms": 256
+              },
+              {
+                "id": "mountains",
+                "state": "done",
+                "frac": null,
+                "ms": 572
+              },
+              {
+                "id": "sky",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "layers",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "science",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "pole",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "surface",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "music",
+                "state": "off",
+                "frac": null
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "near-deadline heights plus stalled layers outlast UI failsafe",
+      "finishedAt": 201058,
+      "analyses": 1,
+      "at180": {
+        "done": false,
+        "pct": 89,
+        "stages": [
+          {
+            "id": "app",
+            "state": "done",
+            "frac": null,
+            "ms": 0
+          },
+          {
+            "id": "photo",
+            "state": "later",
+            "frac": null,
+            "ms": 20000
+          },
+          {
+            "id": "mountains",
+            "state": "later",
+            "frac": null,
+            "ms": 105058
+          },
+          {
+            "id": "sky",
+            "state": "done",
+            "frac": null,
+            "ms": 0
+          },
+          {
+            "id": "layers",
+            "state": "loading",
+            "frac": null
+          },
+          {
+            "id": "science",
+            "state": "done",
+            "frac": null,
+            "ms": 0
+          },
+          {
+            "id": "pole",
+            "state": "done",
+            "frac": null,
+            "ms": 0
+          },
+          {
+            "id": "surface",
+            "state": "done",
+            "frac": null,
+            "ms": 0
+          },
+          {
+            "id": "music",
+            "state": "off",
+            "frac": null
+          }
+        ]
+      },
+      "snapshots": [],
+      "final": {
+        "pct": 100,
+        "step": "start.step.ready",
+        "done": true,
+        "stages": [
+          {
+            "id": "app",
+            "state": "done",
+            "frac": null,
+            "ms": 0
+          },
+          {
+            "id": "photo",
+            "state": "later",
+            "frac": null,
+            "ms": 20000
+          },
+          {
+            "id": "mountains",
+            "state": "later",
+            "frac": null,
+            "ms": 105058
+          },
+          {
+            "id": "sky",
+            "state": "done",
+            "frac": null,
+            "ms": 0
+          },
+          {
+            "id": "layers",
+            "state": "later",
+            "frac": null,
+            "ms": 90000
+          },
+          {
+            "id": "science",
+            "state": "done",
+            "frac": null,
+            "ms": 0
+          },
+          {
+            "id": "pole",
+            "state": "done",
+            "frac": null,
+            "ms": 0
+          },
+          {
+            "id": "surface",
+            "state": "done",
+            "frac": null,
+            "ms": 0
+          },
+          {
+            "id": "music",
+            "state": "off",
+            "frac": null
+          }
+        ]
+      },
+      "emittedProgress": [
+        {
+          "at": 0,
+          "p": {
+            "pct": 0,
+            "step": "start.step.start",
+            "done": false,
+            "stages": [
+              {
+                "id": "app",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "photo",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "mountains",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "sky",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "layers",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "science",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "pole",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "surface",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "music",
+                "state": "waiting",
+                "frac": null
+              }
+            ]
+          }
+        },
+        {
+          "at": 0,
+          "p": {
+            "pct": 4,
+            "step": "start.step.start",
+            "done": false,
+            "stages": [
+              {
+                "id": "app",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "photo",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "mountains",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "sky",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "layers",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "science",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "pole",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "surface",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "music",
+                "state": "off",
+                "frac": null
+              }
+            ]
+          }
+        },
+        {
+          "at": 0,
+          "p": {
+            "pct": 4,
+            "step": "start.stage.sky",
+            "done": false,
+            "stages": [
+              {
+                "id": "app",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "photo",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "mountains",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "sky",
+                "state": "loading",
+                "frac": null
+              },
+              {
+                "id": "layers",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "science",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "pole",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "surface",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "music",
+                "state": "off",
+                "frac": null
+              }
+            ]
+          }
+        },
+        {
+          "at": 0,
+          "p": {
+            "pct": 4,
+            "step": "start.stage.mountains",
+            "done": false,
+            "stages": [
+              {
+                "id": "app",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "photo",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "mountains",
+                "state": "loading",
+                "frac": null
+              },
+              {
+                "id": "sky",
+                "state": "loading",
+                "frac": null
+              },
+              {
+                "id": "layers",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "science",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "pole",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "surface",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "music",
+                "state": "off",
+                "frac": null
+              }
+            ]
+          }
+        },
+        {
+          "at": 0,
+          "p": {
+            "pct": 4,
+            "step": "start.stage.photo",
+            "done": false,
+            "stages": [
+              {
+                "id": "app",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "photo",
+                "state": "loading",
+                "frac": null
+              },
+              {
+                "id": "mountains",
+                "state": "loading",
+                "frac": null
+              },
+              {
+                "id": "sky",
+                "state": "loading",
+                "frac": null
+              },
+              {
+                "id": "layers",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "science",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "pole",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "surface",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "music",
+                "state": "off",
+                "frac": null
+              }
+            ]
+          }
+        },
+        {
+          "at": 0,
+          "p": {
+            "pct": 13,
+            "step": "start.stage.photo",
+            "done": false,
+            "stages": [
+              {
+                "id": "app",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "photo",
+                "state": "loading",
+                "frac": null
+              },
+              {
+                "id": "mountains",
+                "state": "loading",
+                "frac": null
+              },
+              {
+                "id": "sky",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "layers",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "science",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "pole",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "surface",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "music",
+                "state": "off",
+                "frac": null
+              }
+            ]
+          }
+        },
+        {
+          "at": 20000,
+          "p": {
+            "pct": 24,
+            "step": "start.stage.mountains",
+            "done": false,
+            "stages": [
+              {
+                "id": "app",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "photo",
+                "state": "later",
+                "frac": null,
+                "ms": 20000
+              },
+              {
+                "id": "mountains",
+                "state": "loading",
+                "frac": null
+              },
+              {
+                "id": "sky",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "layers",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "science",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "pole",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "surface",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "music",
+                "state": "off",
+                "frac": null
+              }
+            ]
+          }
+        },
+        {
+          "at": 105058,
+          "p": {
+            "pct": 50,
+            "step": "start.step.start",
+            "done": false,
+            "stages": [
+              {
+                "id": "app",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "photo",
+                "state": "later",
+                "frac": null,
+                "ms": 20000
+              },
+              {
+                "id": "mountains",
+                "state": "later",
+                "frac": null,
+                "ms": 105058
+              },
+              {
+                "id": "sky",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "layers",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "science",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "pole",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "surface",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "music",
+                "state": "off",
+                "frac": null
+              }
+            ]
+          }
+        },
+        {
+          "at": 105058,
+          "p": {
+            "pct": 50,
+            "step": "start.stage.science",
+            "done": false,
+            "stages": [
+              {
+                "id": "app",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "photo",
+                "state": "later",
+                "frac": null,
+                "ms": 20000
+              },
+              {
+                "id": "mountains",
+                "state": "later",
+                "frac": null,
+                "ms": 105058
+              },
+              {
+                "id": "sky",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "layers",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "science",
+                "state": "loading",
+                "frac": null
+              },
+              {
+                "id": "pole",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "surface",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "music",
+                "state": "off",
+                "frac": null
+              }
+            ]
+          }
+        },
+        {
+          "at": 105058,
+          "p": {
+            "pct": 50,
+            "step": "start.stage.layers",
+            "done": false,
+            "stages": [
+              {
+                "id": "app",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "photo",
+                "state": "later",
+                "frac": null,
+                "ms": 20000
+              },
+              {
+                "id": "mountains",
+                "state": "later",
+                "frac": null,
+                "ms": 105058
+              },
+              {
+                "id": "sky",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "layers",
+                "state": "loading",
+                "frac": null
+              },
+              {
+                "id": "science",
+                "state": "loading",
+                "frac": null
+              },
+              {
+                "id": "pole",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "surface",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "music",
+                "state": "off",
+                "frac": null
+              }
+            ]
+          }
+        },
+        {
+          "at": 105058,
+          "p": {
+            "pct": 50,
+            "step": "start.stage.layers",
+            "done": false,
+            "stages": [
+              {
+                "id": "app",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "photo",
+                "state": "later",
+                "frac": null,
+                "ms": 20000
+              },
+              {
+                "id": "mountains",
+                "state": "later",
+                "frac": null,
+                "ms": 105058
+              },
+              {
+                "id": "sky",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "layers",
+                "state": "loading",
+                "frac": null
+              },
+              {
+                "id": "science",
+                "state": "loading",
+                "frac": null
+              },
+              {
+                "id": "pole",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "surface",
+                "state": "loading",
+                "frac": null
+              },
+              {
+                "id": "music",
+                "state": "off",
+                "frac": null
+              }
+            ]
+          }
+        },
+        {
+          "at": 105058,
+          "p": {
+            "pct": 50,
+            "step": "start.stage.layers",
+            "done": false,
+            "stages": [
+              {
+                "id": "app",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "photo",
+                "state": "later",
+                "frac": null,
+                "ms": 20000
+              },
+              {
+                "id": "mountains",
+                "state": "later",
+                "frac": null,
+                "ms": 105058
+              },
+              {
+                "id": "sky",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "layers",
+                "state": "loading",
+                "frac": null
+              },
+              {
+                "id": "science",
+                "state": "loading",
+                "frac": null
+              },
+              {
+                "id": "pole",
+                "state": "loading",
+                "frac": null
+              },
+              {
+                "id": "surface",
+                "state": "loading",
+                "frac": null
+              },
+              {
+                "id": "music",
+                "state": "off",
+                "frac": null
+              }
+            ]
+          }
+        },
+        {
+          "at": 105058,
+          "p": {
+            "pct": 66,
+            "step": "start.stage.layers",
+            "done": false,
+            "stages": [
+              {
+                "id": "app",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "photo",
+                "state": "later",
+                "frac": null,
+                "ms": 20000
+              },
+              {
+                "id": "mountains",
+                "state": "later",
+                "frac": null,
+                "ms": 105058
+              },
+              {
+                "id": "sky",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "layers",
+                "state": "loading",
+                "frac": null
+              },
+              {
+                "id": "science",
+                "state": "loading",
+                "frac": null
+              },
+              {
+                "id": "pole",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "surface",
+                "state": "loading",
+                "frac": null
+              },
+              {
+                "id": "music",
+                "state": "off",
+                "frac": null
+              }
+            ]
+          }
+        },
+        {
+          "at": 105058,
+          "p": {
+            "pct": 74,
+            "step": "start.stage.layers",
+            "done": false,
+            "stages": [
+              {
+                "id": "app",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "photo",
+                "state": "later",
+                "frac": null,
+                "ms": 20000
+              },
+              {
+                "id": "mountains",
+                "state": "later",
+                "frac": null,
+                "ms": 105058
+              },
+              {
+                "id": "sky",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "layers",
+                "state": "loading",
+                "frac": null
+              },
+              {
+                "id": "science",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "pole",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "surface",
+                "state": "loading",
+                "frac": null
+              },
+              {
+                "id": "music",
+                "state": "off",
+                "frac": null
+              }
+            ]
+          }
+        },
+        {
+          "at": 105058,
+          "p": {
+            "pct": 89,
+            "step": "start.stage.layers",
+            "done": false,
+            "stages": [
+              {
+                "id": "app",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "photo",
+                "state": "later",
+                "frac": null,
+                "ms": 20000
+              },
+              {
+                "id": "mountains",
+                "state": "later",
+                "frac": null,
+                "ms": 105058
+              },
+              {
+                "id": "sky",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "layers",
+                "state": "loading",
+                "frac": null
+              },
+              {
+                "id": "science",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "pole",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "surface",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "music",
+                "state": "off",
+                "frac": null
+              }
+            ]
+          }
+        },
+        {
+          "at": 195058,
+          "p": {
+            "pct": 99,
+            "step": "start.step.start",
+            "done": false,
+            "stages": [
+              {
+                "id": "app",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "photo",
+                "state": "later",
+                "frac": null,
+                "ms": 20000
+              },
+              {
+                "id": "mountains",
+                "state": "later",
+                "frac": null,
+                "ms": 105058
+              },
+              {
+                "id": "sky",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "layers",
+                "state": "later",
+                "frac": null,
+                "ms": 90000
+              },
+              {
+                "id": "science",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "pole",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "surface",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "music",
+                "state": "off",
+                "frac": null
+              }
+            ]
+          }
+        },
+        {
+          "at": 201058,
+          "p": {
+            "pct": 100,
+            "step": "start.step.ready",
+            "done": true,
+            "stages": [
+              {
+                "id": "app",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "photo",
+                "state": "later",
+                "frac": null,
+                "ms": 20000
+              },
+              {
+                "id": "mountains",
+                "state": "later",
+                "frac": null,
+                "ms": 105058
+              },
+              {
+                "id": "sky",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "layers",
+                "state": "later",
+                "frac": null,
+                "ms": 90000
+              },
+              {
+                "id": "science",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "pole",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "surface",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "music",
+                "state": "off",
+                "frac": null
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "supporting layer file 404 is marked done",
+      "finishedAt": 828,
+      "analyses": 1,
+      "at180": null,
+      "snapshots": [],
+      "final": {
+        "pct": 100,
+        "step": "start.step.ready",
+        "done": true,
+        "stages": [
+          {
+            "id": "app",
+            "state": "done",
+            "frac": null,
+            "ms": 0
+          },
+          {
+            "id": "photo",
+            "state": "done",
+            "frac": null,
+            "ms": 256
+          },
+          {
+            "id": "mountains",
+            "state": "done",
+            "frac": null,
+            "ms": 572
+          },
+          {
+            "id": "sky",
+            "state": "done",
+            "frac": null,
+            "ms": 0
+          },
+          {
+            "id": "layers",
+            "state": "done",
+            "frac": null,
+            "ms": 0
+          },
+          {
+            "id": "science",
+            "state": "done",
+            "frac": null,
+            "ms": 0
+          },
+          {
+            "id": "pole",
+            "state": "done",
+            "frac": null,
+            "ms": 0
+          },
+          {
+            "id": "surface",
+            "state": "done",
+            "frac": null,
+            "ms": 0
+          },
+          {
+            "id": "music",
+            "state": "off",
+            "frac": null
+          }
+        ]
+      },
+      "emittedProgress": [
+        {
+          "at": 0,
+          "p": {
+            "pct": 0,
+            "step": "start.step.start",
+            "done": false,
+            "stages": [
+              {
+                "id": "app",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "photo",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "mountains",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "sky",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "layers",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "science",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "pole",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "surface",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "music",
+                "state": "waiting",
+                "frac": null
+              }
+            ]
+          }
+        },
+        {
+          "at": 0,
+          "p": {
+            "pct": 4,
+            "step": "start.step.start",
+            "done": false,
+            "stages": [
+              {
+                "id": "app",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "photo",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "mountains",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "sky",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "layers",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "science",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "pole",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "surface",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "music",
+                "state": "off",
+                "frac": null
+              }
+            ]
+          }
+        },
+        {
+          "at": 0,
+          "p": {
+            "pct": 4,
+            "step": "start.stage.sky",
+            "done": false,
+            "stages": [
+              {
+                "id": "app",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "photo",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "mountains",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "sky",
+                "state": "loading",
+                "frac": null
+              },
+              {
+                "id": "layers",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "science",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "pole",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "surface",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "music",
+                "state": "off",
+                "frac": null
+              }
+            ]
+          }
+        },
+        {
+          "at": 0,
+          "p": {
+            "pct": 4,
+            "step": "start.stage.mountains",
+            "done": false,
+            "stages": [
+              {
+                "id": "app",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "photo",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "mountains",
+                "state": "loading",
+                "frac": null
+              },
+              {
+                "id": "sky",
+                "state": "loading",
+                "frac": null
+              },
+              {
+                "id": "layers",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "science",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "pole",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "surface",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "music",
+                "state": "off",
+                "frac": null
+              }
+            ]
+          }
+        },
+        {
+          "at": 0,
+          "p": {
+            "pct": 4,
+            "step": "start.stage.photo",
+            "done": false,
+            "stages": [
+              {
+                "id": "app",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "photo",
+                "state": "loading",
+                "frac": null
+              },
+              {
+                "id": "mountains",
+                "state": "loading",
+                "frac": null
+              },
+              {
+                "id": "sky",
+                "state": "loading",
+                "frac": null
+              },
+              {
+                "id": "layers",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "science",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "pole",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "surface",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "music",
+                "state": "off",
+                "frac": null
+              }
+            ]
+          }
+        },
+        {
+          "at": 0,
+          "p": {
+            "pct": 13,
+            "step": "start.stage.photo",
+            "done": false,
+            "stages": [
+              {
+                "id": "app",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "photo",
+                "state": "loading",
+                "frac": null
+              },
+              {
+                "id": "mountains",
+                "state": "loading",
+                "frac": null
+              },
+              {
+                "id": "sky",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "layers",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "science",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "pole",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "surface",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "music",
+                "state": "off",
+                "frac": null
+              }
+            ]
+          }
+        },
+        {
+          "at": 16,
+          "p": {
+            "pct": 24,
+            "step": "start.stage.photo",
+            "done": false,
+            "stages": [
+              {
+                "id": "app",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "photo",
+                "state": "loading",
+                "frac": 1
+              },
+              {
+                "id": "mountains",
+                "state": "loading",
+                "frac": null
+              },
+              {
+                "id": "sky",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "layers",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "science",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "pole",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "surface",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "music",
+                "state": "off",
+                "frac": null
+              }
+            ]
+          }
+        },
+        {
+          "at": 256,
+          "p": {
+            "pct": 24,
+            "step": "start.stage.mountains",
+            "done": false,
+            "stages": [
+              {
+                "id": "app",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "photo",
+                "state": "done",
+                "frac": null,
+                "ms": 256
+              },
+              {
+                "id": "mountains",
+                "state": "loading",
+                "frac": null
+              },
+              {
+                "id": "sky",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "layers",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "science",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "pole",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "surface",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "music",
+                "state": "off",
+                "frac": null
+              }
+            ]
+          }
+        },
+        {
+          "at": 572,
+          "p": {
+            "pct": 50,
+            "step": "start.step.start",
+            "done": false,
+            "stages": [
+              {
+                "id": "app",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "photo",
+                "state": "done",
+                "frac": null,
+                "ms": 256
+              },
+              {
+                "id": "mountains",
+                "state": "done",
+                "frac": null,
+                "ms": 572
+              },
+              {
+                "id": "sky",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "layers",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "science",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "pole",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "surface",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "music",
+                "state": "off",
+                "frac": null
+              }
+            ]
+          }
+        },
+        {
+          "at": 572,
+          "p": {
+            "pct": 50,
+            "step": "start.stage.science",
+            "done": false,
+            "stages": [
+              {
+                "id": "app",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "photo",
+                "state": "done",
+                "frac": null,
+                "ms": 256
+              },
+              {
+                "id": "mountains",
+                "state": "done",
+                "frac": null,
+                "ms": 572
+              },
+              {
+                "id": "sky",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "layers",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "science",
+                "state": "loading",
+                "frac": null
+              },
+              {
+                "id": "pole",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "surface",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "music",
+                "state": "off",
+                "frac": null
+              }
+            ]
+          }
+        },
+        {
+          "at": 572,
+          "p": {
+            "pct": 50,
+            "step": "start.stage.layers",
+            "done": false,
+            "stages": [
+              {
+                "id": "app",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "photo",
+                "state": "done",
+                "frac": null,
+                "ms": 256
+              },
+              {
+                "id": "mountains",
+                "state": "done",
+                "frac": null,
+                "ms": 572
+              },
+              {
+                "id": "sky",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "layers",
+                "state": "loading",
+                "frac": null
+              },
+              {
+                "id": "science",
+                "state": "loading",
+                "frac": null
+              },
+              {
+                "id": "pole",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "surface",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "music",
+                "state": "off",
+                "frac": null
+              }
+            ]
+          }
+        },
+        {
+          "at": 572,
+          "p": {
+            "pct": 50,
+            "step": "start.stage.layers",
+            "done": false,
+            "stages": [
+              {
+                "id": "app",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "photo",
+                "state": "done",
+                "frac": null,
+                "ms": 256
+              },
+              {
+                "id": "mountains",
+                "state": "done",
+                "frac": null,
+                "ms": 572
+              },
+              {
+                "id": "sky",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "layers",
+                "state": "loading",
+                "frac": null
+              },
+              {
+                "id": "science",
+                "state": "loading",
+                "frac": null
+              },
+              {
+                "id": "pole",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "surface",
+                "state": "loading",
+                "frac": null
+              },
+              {
+                "id": "music",
+                "state": "off",
+                "frac": null
+              }
+            ]
+          }
+        },
+        {
+          "at": 572,
+          "p": {
+            "pct": 50,
+            "step": "start.stage.layers",
+            "done": false,
+            "stages": [
+              {
+                "id": "app",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "photo",
+                "state": "done",
+                "frac": null,
+                "ms": 256
+              },
+              {
+                "id": "mountains",
+                "state": "done",
+                "frac": null,
+                "ms": 572
+              },
+              {
+                "id": "sky",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "layers",
+                "state": "loading",
+                "frac": null
+              },
+              {
+                "id": "science",
+                "state": "loading",
+                "frac": null
+              },
+              {
+                "id": "pole",
+                "state": "loading",
+                "frac": null
+              },
+              {
+                "id": "surface",
+                "state": "loading",
+                "frac": null
+              },
+              {
+                "id": "music",
+                "state": "off",
+                "frac": null
+              }
+            ]
+          }
+        },
+        {
+          "at": 572,
+          "p": {
+            "pct": 66,
+            "step": "start.stage.layers",
+            "done": false,
+            "stages": [
+              {
+                "id": "app",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "photo",
+                "state": "done",
+                "frac": null,
+                "ms": 256
+              },
+              {
+                "id": "mountains",
+                "state": "done",
+                "frac": null,
+                "ms": 572
+              },
+              {
+                "id": "sky",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "layers",
+                "state": "loading",
+                "frac": null
+              },
+              {
+                "id": "science",
+                "state": "loading",
+                "frac": null
+              },
+              {
+                "id": "pole",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "surface",
+                "state": "loading",
+                "frac": null
+              },
+              {
+                "id": "music",
+                "state": "off",
+                "frac": null
+              }
+            ]
+          }
+        },
+        {
+          "at": 572,
+          "p": {
+            "pct": 74,
+            "step": "start.stage.layers",
+            "done": false,
+            "stages": [
+              {
+                "id": "app",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "photo",
+                "state": "done",
+                "frac": null,
+                "ms": 256
+              },
+              {
+                "id": "mountains",
+                "state": "done",
+                "frac": null,
+                "ms": 572
+              },
+              {
+                "id": "sky",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "layers",
+                "state": "loading",
+                "frac": null
+              },
+              {
+                "id": "science",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "pole",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "surface",
+                "state": "loading",
+                "frac": null
+              },
+              {
+                "id": "music",
+                "state": "off",
+                "frac": null
+              }
+            ]
+          }
+        },
+        {
+          "at": 572,
+          "p": {
+            "pct": 89,
+            "step": "start.stage.layers",
+            "done": false,
+            "stages": [
+              {
+                "id": "app",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "photo",
+                "state": "done",
+                "frac": null,
+                "ms": 256
+              },
+              {
+                "id": "mountains",
+                "state": "done",
+                "frac": null,
+                "ms": 572
+              },
+              {
+                "id": "sky",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "layers",
+                "state": "loading",
+                "frac": null
+              },
+              {
+                "id": "science",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "pole",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "surface",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "music",
+                "state": "off",
+                "frac": null
+              }
+            ]
+          }
+        },
+        {
+          "at": 572,
+          "p": {
+            "pct": 94,
+            "step": "start.stage.layers",
+            "done": false,
+            "stages": [
+              {
+                "id": "app",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "photo",
+                "state": "done",
+                "frac": null,
+                "ms": 256
+              },
+              {
+                "id": "mountains",
+                "state": "done",
+                "frac": null,
+                "ms": 572
+              },
+              {
+                "id": "sky",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "layers",
+                "state": "loading",
+                "frac": 0.45
+              },
+              {
+                "id": "science",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "pole",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "surface",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "music",
+                "state": "off",
+                "frac": null
+              }
+            ]
+          }
+        },
+        {
+          "at": 572,
+          "p": {
+            "pct": 99,
+            "step": "start.step.start",
+            "done": false,
+            "stages": [
+              {
+                "id": "app",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "photo",
+                "state": "done",
+                "frac": null,
+                "ms": 256
+              },
+              {
+                "id": "mountains",
+                "state": "done",
+                "frac": null,
+                "ms": 572
+              },
+              {
+                "id": "sky",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "layers",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "science",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "pole",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "surface",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "music",
+                "state": "off",
+                "frac": null
+              }
+            ]
+          }
+        },
+        {
+          "at": 828,
+          "p": {
+            "pct": 100,
+            "step": "start.step.ready",
+            "done": true,
+            "stages": [
+              {
+                "id": "app",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "photo",
+                "state": "done",
+                "frac": null,
+                "ms": 256
+              },
+              {
+                "id": "mountains",
+                "state": "done",
+                "frac": null,
+                "ms": 572
+              },
+              {
+                "id": "sky",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "layers",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "science",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "pole",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "surface",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "music",
+                "state": "off",
+                "frac": null
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "stage fractions suppressed when total integer percent is unchanged",
+      "finishedAt": 41068,
+      "analyses": 1,
+      "at180": null,
+      "snapshots": [
+        {
+          "at": 1050,
+          "pending": 42,
+          "lastEmitted": {
+            "at": 1008,
+            "p": {
+              "pct": 19,
+              "step": "start.stage.photo",
+              "done": false,
+              "stages": [
+                {
+                  "id": "app",
+                  "state": "done",
+                  "frac": null,
+                  "ms": 0
+                },
+                {
+                  "id": "photo",
+                  "state": "loading",
+                  "frac": 0.5800000000000001
+                },
+                {
+                  "id": "mountains",
+                  "state": "loading",
+                  "frac": null
+                },
+                {
+                  "id": "sky",
+                  "state": "done",
+                  "frac": null,
+                  "ms": 0
+                },
+                {
+                  "id": "layers",
+                  "state": "waiting",
+                  "frac": null
+                },
+                {
+                  "id": "science",
+                  "state": "waiting",
+                  "frac": null
+                },
+                {
+                  "id": "pole",
+                  "state": "waiting",
+                  "frac": null
+                },
+                {
+                  "id": "surface",
+                  "state": "waiting",
+                  "frac": null
+                },
+                {
+                  "id": "music",
+                  "state": "off",
+                  "frac": null
+                }
+              ]
+            }
+          }
+        },
+        {
+          "at": 1150,
+          "pending": 40,
+          "lastEmitted": {
+            "at": 1008,
+            "p": {
+              "pct": 19,
+              "step": "start.stage.photo",
+              "done": false,
+              "stages": [
+                {
+                  "id": "app",
+                  "state": "done",
+                  "frac": null,
+                  "ms": 0
+                },
+                {
+                  "id": "photo",
+                  "state": "loading",
+                  "frac": 0.5800000000000001
+                },
+                {
+                  "id": "mountains",
+                  "state": "loading",
+                  "frac": null
+                },
+                {
+                  "id": "sky",
+                  "state": "done",
+                  "frac": null,
+                  "ms": 0
+                },
+                {
+                  "id": "layers",
+                  "state": "waiting",
+                  "frac": null
+                },
+                {
+                  "id": "science",
+                  "state": "waiting",
+                  "frac": null
+                },
+                {
+                  "id": "pole",
+                  "state": "waiting",
+                  "frac": null
+                },
+                {
+                  "id": "surface",
+                  "state": "waiting",
+                  "frac": null
+                },
+                {
+                  "id": "music",
+                  "state": "off",
+                  "frac": null
+                }
+              ]
+            }
+          }
+        },
+        {
+          "at": 1250,
+          "pending": 38,
+          "lastEmitted": {
+            "at": 1200,
+            "p": {
+              "pct": 20,
+              "step": "start.stage.photo",
+              "done": false,
+              "stages": [
+                {
+                  "id": "app",
+                  "state": "done",
+                  "frac": null,
+                  "ms": 0
+                },
+                {
+                  "id": "photo",
+                  "state": "loading",
+                  "frac": 0.62
+                },
+                {
+                  "id": "mountains",
+                  "state": "loading",
+                  "frac": null
+                },
+                {
+                  "id": "sky",
+                  "state": "done",
+                  "frac": null,
+                  "ms": 0
+                },
+                {
+                  "id": "layers",
+                  "state": "waiting",
+                  "frac": null
+                },
+                {
+                  "id": "science",
+                  "state": "waiting",
+                  "frac": null
+                },
+                {
+                  "id": "pole",
+                  "state": "waiting",
+                  "frac": null
+                },
+                {
+                  "id": "surface",
+                  "state": "waiting",
+                  "frac": null
+                },
+                {
+                  "id": "music",
+                  "state": "off",
+                  "frac": null
+                }
+              ]
+            }
+          }
+        }
+      ],
+      "final": {
+        "pct": 100,
+        "step": "start.step.ready",
+        "done": true,
+        "stages": [
+          {
+            "id": "app",
+            "state": "done",
+            "frac": null,
+            "ms": 0
+          },
+          {
+            "id": "photo",
+            "state": "later",
+            "frac": null,
+            "ms": 20000
+          },
+          {
+            "id": "mountains",
+            "state": "later",
+            "frac": null,
+            "ms": 35068
+          },
+          {
+            "id": "sky",
+            "state": "done",
+            "frac": null,
+            "ms": 0
+          },
+          {
+            "id": "layers",
+            "state": "done",
+            "frac": null,
+            "ms": 0
+          },
+          {
+            "id": "science",
+            "state": "done",
+            "frac": null,
+            "ms": 0
+          },
+          {
+            "id": "pole",
+            "state": "done",
+            "frac": null,
+            "ms": 0
+          },
+          {
+            "id": "surface",
+            "state": "done",
+            "frac": null,
+            "ms": 0
+          },
+          {
+            "id": "music",
+            "state": "off",
+            "frac": null
+          }
+        ]
+      },
+      "emittedProgress": [
+        {
+          "at": 0,
+          "p": {
+            "pct": 0,
+            "step": "start.step.start",
+            "done": false,
+            "stages": [
+              {
+                "id": "app",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "photo",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "mountains",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "sky",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "layers",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "science",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "pole",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "surface",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "music",
+                "state": "waiting",
+                "frac": null
+              }
+            ]
+          }
+        },
+        {
+          "at": 0,
+          "p": {
+            "pct": 4,
+            "step": "start.step.start",
+            "done": false,
+            "stages": [
+              {
+                "id": "app",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "photo",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "mountains",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "sky",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "layers",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "science",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "pole",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "surface",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "music",
+                "state": "off",
+                "frac": null
+              }
+            ]
+          }
+        },
+        {
+          "at": 0,
+          "p": {
+            "pct": 4,
+            "step": "start.stage.sky",
+            "done": false,
+            "stages": [
+              {
+                "id": "app",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "photo",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "mountains",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "sky",
+                "state": "loading",
+                "frac": null
+              },
+              {
+                "id": "layers",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "science",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "pole",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "surface",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "music",
+                "state": "off",
+                "frac": null
+              }
+            ]
+          }
+        },
+        {
+          "at": 0,
+          "p": {
+            "pct": 4,
+            "step": "start.stage.mountains",
+            "done": false,
+            "stages": [
+              {
+                "id": "app",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "photo",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "mountains",
+                "state": "loading",
+                "frac": null
+              },
+              {
+                "id": "sky",
+                "state": "loading",
+                "frac": null
+              },
+              {
+                "id": "layers",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "science",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "pole",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "surface",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "music",
+                "state": "off",
+                "frac": null
+              }
+            ]
+          }
+        },
+        {
+          "at": 0,
+          "p": {
+            "pct": 4,
+            "step": "start.stage.photo",
+            "done": false,
+            "stages": [
+              {
+                "id": "app",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "photo",
+                "state": "loading",
+                "frac": null
+              },
+              {
+                "id": "mountains",
+                "state": "loading",
+                "frac": null
+              },
+              {
+                "id": "sky",
+                "state": "loading",
+                "frac": null
+              },
+              {
+                "id": "layers",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "science",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "pole",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "surface",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "music",
+                "state": "off",
+                "frac": null
+              }
+            ]
+          }
+        },
+        {
+          "at": 0,
+          "p": {
+            "pct": 13,
+            "step": "start.stage.photo",
+            "done": false,
+            "stages": [
+              {
+                "id": "app",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "photo",
+                "state": "loading",
+                "frac": null
+              },
+              {
+                "id": "mountains",
+                "state": "loading",
+                "frac": null
+              },
+              {
+                "id": "sky",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "layers",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "science",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "pole",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "surface",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "music",
+                "state": "off",
+                "frac": null
+              }
+            ]
+          }
+        },
+        {
+          "at": 1008,
+          "p": {
+            "pct": 19,
+            "step": "start.stage.photo",
+            "done": false,
+            "stages": [
+              {
+                "id": "app",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "photo",
+                "state": "loading",
+                "frac": 0.5800000000000001
+              },
+              {
+                "id": "mountains",
+                "state": "loading",
+                "frac": null
+              },
+              {
+                "id": "sky",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "layers",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "science",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "pole",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "surface",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "music",
+                "state": "off",
+                "frac": null
+              }
+            ]
+          }
+        },
+        {
+          "at": 1200,
+          "p": {
+            "pct": 20,
+            "step": "start.stage.photo",
+            "done": false,
+            "stages": [
+              {
+                "id": "app",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "photo",
+                "state": "loading",
+                "frac": 0.62
+              },
+              {
+                "id": "mountains",
+                "state": "loading",
+                "frac": null
+              },
+              {
+                "id": "sky",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "layers",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "science",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "pole",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "surface",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "music",
+                "state": "off",
+                "frac": null
+              }
+            ]
+          }
+        },
+        {
+          "at": 20000,
+          "p": {
+            "pct": 24,
+            "step": "start.stage.mountains",
+            "done": false,
+            "stages": [
+              {
+                "id": "app",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "photo",
+                "state": "later",
+                "frac": null,
+                "ms": 20000
+              },
+              {
+                "id": "mountains",
+                "state": "loading",
+                "frac": null
+              },
+              {
+                "id": "sky",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "layers",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "science",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "pole",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "surface",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "music",
+                "state": "off",
+                "frac": null
+              }
+            ]
+          }
+        },
+        {
+          "at": 35068,
+          "p": {
+            "pct": 50,
+            "step": "start.step.start",
+            "done": false,
+            "stages": [
+              {
+                "id": "app",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "photo",
+                "state": "later",
+                "frac": null,
+                "ms": 20000
+              },
+              {
+                "id": "mountains",
+                "state": "later",
+                "frac": null,
+                "ms": 35068
+              },
+              {
+                "id": "sky",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "layers",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "science",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "pole",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "surface",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "music",
+                "state": "off",
+                "frac": null
+              }
+            ]
+          }
+        },
+        {
+          "at": 35068,
+          "p": {
+            "pct": 50,
+            "step": "start.stage.science",
+            "done": false,
+            "stages": [
+              {
+                "id": "app",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "photo",
+                "state": "later",
+                "frac": null,
+                "ms": 20000
+              },
+              {
+                "id": "mountains",
+                "state": "later",
+                "frac": null,
+                "ms": 35068
+              },
+              {
+                "id": "sky",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "layers",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "science",
+                "state": "loading",
+                "frac": null
+              },
+              {
+                "id": "pole",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "surface",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "music",
+                "state": "off",
+                "frac": null
+              }
+            ]
+          }
+        },
+        {
+          "at": 35068,
+          "p": {
+            "pct": 50,
+            "step": "start.stage.layers",
+            "done": false,
+            "stages": [
+              {
+                "id": "app",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "photo",
+                "state": "later",
+                "frac": null,
+                "ms": 20000
+              },
+              {
+                "id": "mountains",
+                "state": "later",
+                "frac": null,
+                "ms": 35068
+              },
+              {
+                "id": "sky",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "layers",
+                "state": "loading",
+                "frac": null
+              },
+              {
+                "id": "science",
+                "state": "loading",
+                "frac": null
+              },
+              {
+                "id": "pole",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "surface",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "music",
+                "state": "off",
+                "frac": null
+              }
+            ]
+          }
+        },
+        {
+          "at": 35068,
+          "p": {
+            "pct": 50,
+            "step": "start.stage.layers",
+            "done": false,
+            "stages": [
+              {
+                "id": "app",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "photo",
+                "state": "later",
+                "frac": null,
+                "ms": 20000
+              },
+              {
+                "id": "mountains",
+                "state": "later",
+                "frac": null,
+                "ms": 35068
+              },
+              {
+                "id": "sky",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "layers",
+                "state": "loading",
+                "frac": null
+              },
+              {
+                "id": "science",
+                "state": "loading",
+                "frac": null
+              },
+              {
+                "id": "pole",
+                "state": "waiting",
+                "frac": null
+              },
+              {
+                "id": "surface",
+                "state": "loading",
+                "frac": null
+              },
+              {
+                "id": "music",
+                "state": "off",
+                "frac": null
+              }
+            ]
+          }
+        },
+        {
+          "at": 35068,
+          "p": {
+            "pct": 50,
+            "step": "start.stage.layers",
+            "done": false,
+            "stages": [
+              {
+                "id": "app",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "photo",
+                "state": "later",
+                "frac": null,
+                "ms": 20000
+              },
+              {
+                "id": "mountains",
+                "state": "later",
+                "frac": null,
+                "ms": 35068
+              },
+              {
+                "id": "sky",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "layers",
+                "state": "loading",
+                "frac": null
+              },
+              {
+                "id": "science",
+                "state": "loading",
+                "frac": null
+              },
+              {
+                "id": "pole",
+                "state": "loading",
+                "frac": null
+              },
+              {
+                "id": "surface",
+                "state": "loading",
+                "frac": null
+              },
+              {
+                "id": "music",
+                "state": "off",
+                "frac": null
+              }
+            ]
+          }
+        },
+        {
+          "at": 35068,
+          "p": {
+            "pct": 66,
+            "step": "start.stage.layers",
+            "done": false,
+            "stages": [
+              {
+                "id": "app",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "photo",
+                "state": "later",
+                "frac": null,
+                "ms": 20000
+              },
+              {
+                "id": "mountains",
+                "state": "later",
+                "frac": null,
+                "ms": 35068
+              },
+              {
+                "id": "sky",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "layers",
+                "state": "loading",
+                "frac": null
+              },
+              {
+                "id": "science",
+                "state": "loading",
+                "frac": null
+              },
+              {
+                "id": "pole",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "surface",
+                "state": "loading",
+                "frac": null
+              },
+              {
+                "id": "music",
+                "state": "off",
+                "frac": null
+              }
+            ]
+          }
+        },
+        {
+          "at": 35068,
+          "p": {
+            "pct": 74,
+            "step": "start.stage.layers",
+            "done": false,
+            "stages": [
+              {
+                "id": "app",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "photo",
+                "state": "later",
+                "frac": null,
+                "ms": 20000
+              },
+              {
+                "id": "mountains",
+                "state": "later",
+                "frac": null,
+                "ms": 35068
+              },
+              {
+                "id": "sky",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "layers",
+                "state": "loading",
+                "frac": null
+              },
+              {
+                "id": "science",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "pole",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "surface",
+                "state": "loading",
+                "frac": null
+              },
+              {
+                "id": "music",
+                "state": "off",
+                "frac": null
+              }
+            ]
+          }
+        },
+        {
+          "at": 35068,
+          "p": {
+            "pct": 89,
+            "step": "start.stage.layers",
+            "done": false,
+            "stages": [
+              {
+                "id": "app",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "photo",
+                "state": "later",
+                "frac": null,
+                "ms": 20000
+              },
+              {
+                "id": "mountains",
+                "state": "later",
+                "frac": null,
+                "ms": 35068
+              },
+              {
+                "id": "sky",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "layers",
+                "state": "loading",
+                "frac": null
+              },
+              {
+                "id": "science",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "pole",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "surface",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "music",
+                "state": "off",
+                "frac": null
+              }
+            ]
+          }
+        },
+        {
+          "at": 35068,
+          "p": {
+            "pct": 99,
+            "step": "start.step.start",
+            "done": false,
+            "stages": [
+              {
+                "id": "app",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "photo",
+                "state": "later",
+                "frac": null,
+                "ms": 20000
+              },
+              {
+                "id": "mountains",
+                "state": "later",
+                "frac": null,
+                "ms": 35068
+              },
+              {
+                "id": "sky",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "layers",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "science",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "pole",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "surface",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "music",
+                "state": "off",
+                "frac": null
+              }
+            ]
+          }
+        },
+        {
+          "at": 41068,
+          "p": {
+            "pct": 100,
+            "step": "start.step.ready",
+            "done": true,
+            "stages": [
+              {
+                "id": "app",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "photo",
+                "state": "later",
+                "frac": null,
+                "ms": 20000
+              },
+              {
+                "id": "mountains",
+                "state": "later",
+                "frac": null,
+                "ms": 35068
+              },
+              {
+                "id": "sky",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "layers",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "science",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "pole",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "surface",
+                "state": "done",
+                "frac": null,
+                "ms": 0
+              },
+              {
+                "id": "music",
+                "state": "off",
+                "frac": null
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

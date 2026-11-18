@@ -1,0 +1,79 @@
+{
+  "burst": [
+    {
+      "status": 400,
+      "guard": "2026-11-16",
+      "body": "{\"error\":\"bad-request\"}"
+    },
+    {
+      "status": 400,
+      "guard": "2026-11-16",
+      "body": "{\"error\":\"bad-request\"}"
+    },
+    {
+      "status": 400,
+      "guard": "2026-11-16",
+      "body": "{\"error\":\"bad-request\"}"
+    },
+    {
+      "status": 400,
+      "guard": "2026-11-16",
+      "body": "{\"error\":\"bad-request\"}"
+    },
+    {
+      "status": 400,
+      "guard": "2026-11-16",
+      "body": "{\"error\":\"bad-request\"}"
+    },
+    {
+      "status": 400,
+      "guard": "2026-11-16",
+      "body": "{\"error\":\"bad-request\"}"
+    },
+    {
+      "status": 400,
+      "guard": "2026-11-16",
+      "body": "{\"error\":\"bad-request\"}"
+    },
+    {
+      "status": 400,
+      "guard": "2026-11-16",
+      "body": "{\"error\":\"bad-request\"}"
+    },
+    {
+      "status": 400,
+      "guard": "2026-11-16",
+      "body": "{\"error\":\"bad-request\"}"
+    },
+    {
+      "status": 400,
+      "guard": "2026-11-16",
+      "body": "{\"error\":\"bad-request\"}"
+    },
+    {
+      "status": 400,
+      "guard": "2026-11-16",
+      "body": "{\"error\":\"bad-request\"}"
+    },
+    {
+      "status": 400,
+      "guard": "2026-11-16",
+      "body": "{\"error\":\"bad-request\"}"
+    },
+    {
+      "status": 400,
+      "guard": "2026-11-16",
+      "body": "{\"error\":\"bad-request\"}"
+    },
+    {
+      "status": 400,
+      "guard": "2026-11-16",
+      "body": "{\"error\":\"bad-request\"}"
+    }
+  ],
+  "afterDelay": {
+    "status": 429,
+    "guard": null,
+    "body": ""
+  }
+}

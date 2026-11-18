@@ -1,0 +1,32 @@
+To: irt@ezecomcorp.com
+Subject: Investigation request: suspected automated abuse from 113.130.126.113 on 2026-11-15 17:00–18:00 UTC
+
+Hello EZECOM Incident Response Team,
+
+I operate MOONDA at https://moonda.us. I am reporting suspected automated abuse against our paid AI proxy endpoint, https://moonda.us/api/ai.
+
+Incident window:
+- 16 November 2026, 00:00–01:00 Asia/Phnom_Penh (UTC+7)
+- 15 November 2026, 17:00–18:00 UTC
+
+Source observed by Cloudflare: 113.130.126.113.
+
+Cloudflare's incident-window view shows 1,079 requests to /api/ai, with 1,074 attributed to this address. User-agent totals across this view include 980 Python/3.14 aiohttp/3.14.5 requests and 88 curl/8.22.0 requests. Activity concentrated around 00:06–00:14 Cambodia time. An individual sampled record at 00:14:00 confirms a Python aiohttp POST from this address to the endpoint. The view shows 362 HTTP 200 responses, 709 HTTP 503 responses, six HTTP 499 disconnects and two HTTP 405 GETs. These analytics may be sampled; I have retained native JSON exports and their hashes.
+
+Separately, our DeepSeek per-key billing export records 353 Pro calls, 15,947,611 tokens and CNY37.4647827 charged during that hour. The billing export cannot be matched one-to-one to Cloudflare requests, so I am not claiming every billed call has been individually attributed to this source.
+
+Please investigate the reported network activity and preserve any relevant address-assignment and connection records still available for the stated window. Please advise what further technical details or formal process you require. I do not have the source port in the recovered Cloudflare record.
+
+This report does not identify the individual operating that connection. A shared network, proxy or compromised device is possible, and I am not alleging involvement by a named person or group. I am requesting an internal investigation, not public disclosure of subscriber information.
+
+Our API key has been replaced, the old key revoked, and server-side usage controls deployed.
+
+Evidence available:
+- Cloudflare native top-client-IP, user-agent and status-code JSON exports
+- Exact timestamp/filter details and representative sampled-record observations
+- DeepSeek per-key CSV usage/billing export
+- Incident summary and evidence hashes
+
+Please acknowledge receipt and provide a case reference.
+
+MOONDA operator

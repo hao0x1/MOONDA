@@ -1,0 +1,363 @@
+{
+  "url": "https://moonda.us/",
+  "expectedHash": "index-CJg0x8Jm.js",
+  "startedAt": "2026-11-15T04:53:38.071Z",
+  "profile": "/Volumes/CodexWork/Projects/MOONDA/outputs/pitch-2026-11-15/live-after/chrome-profile",
+  "profileExisted": false,
+  "viewport": {
+    "width": 1440,
+    "height": 900,
+    "deviceScaleFactor": 2
+  },
+  "pageErrors": [],
+  "consoleErrors": [],
+  "httpErrors": {
+    "sameSite": [],
+    "external": []
+  },
+  "requestFailures": {
+    "sameSite": [],
+    "external": []
+  },
+  "renderErrors": [],
+  "runs": [
+    {
+      "name": "cold",
+      "navigationStatus": 200,
+      "finalUrl": "https://moonda.us/",
+      "htmlSha256": "2f4faf86e0488a60b7d8e859430a7da3ea31da398eb10174f1717236b06aafb4",
+      "htmlIndexes": [],
+      "ready": true,
+      "readyMs": 51200,
+      "progress": {
+        "pct": 100,
+        "step": "Ready",
+        "done": true,
+        "stages": [
+          {
+            "id": "app",
+            "state": "done",
+            "frac": null,
+            "ms": 2715
+          },
+          {
+            "id": "photo",
+            "state": "done",
+            "frac": null,
+            "ms": 13259
+          },
+          {
+            "id": "mountains",
+            "state": "done",
+            "frac": null,
+            "ms": 20291
+          },
+          {
+            "id": "sky",
+            "state": "done",
+            "frac": null,
+            "ms": 16672
+          },
+          {
+            "id": "layers",
+            "state": "later",
+            "frac": null,
+            "ms": 24589
+          },
+          {
+            "id": "science",
+            "state": "done",
+            "frac": null,
+            "ms": 365
+          },
+          {
+            "id": "pole",
+            "state": "later",
+            "frac": null,
+            "ms": 27693
+          },
+          {
+            "id": "surface",
+            "state": "done",
+            "frac": null,
+            "ms": 7
+          },
+          {
+            "id": "music",
+            "state": "done",
+            "frac": null,
+            "ms": 2819
+          }
+        ]
+      },
+      "preloadTrace": [
+        "Getting the south pole ready…: sharp after 5624 ms, 0 photo jobs left trek×1 science×3",
+        "Building the 3D mountains…: timed out after 12500 ms, 8 photo jobs left trek×7 synth×2",
+        "Sharpening the landing area…: sharp after 9568 ms, 0 photo jobs left trek×1"
+      ],
+      "layerWarm": {
+        "ms": 24588,
+        "filesReady": true,
+        "globeReady": false,
+        "flatReady": false
+      },
+      "poleHeightWarm": {
+        "ms": 20001,
+        "ready": false,
+        "running": false
+      },
+      "render": {
+        "loop": true,
+        "errorOverlay": null,
+        "errors": []
+      },
+      "lander": {
+        "phase": "off",
+        "active": false,
+        "placed": false,
+        "stats": {
+          "enterMs": 0,
+          "loadMs": 0,
+          "loadTimedOut": false,
+          "detailMs": 12766,
+          "rocksMs": 2198,
+          "recentreMs": 0,
+          "recentres": 0,
+          "exitMs": 0,
+          "shadowBuildMs": 0,
+          "shadowSweepMs": 0,
+          "meanBuildMs": 0,
+          "sunHere": -1,
+          "worstFrame": {
+            "out": 0,
+            "load": 0,
+            "in": 0,
+            "leaveOut": 0,
+            "leaveLoad": 0,
+            "leaveIn": 0
+          },
+          "cameraClearanceM": 0,
+          "cameraMinClearanceM": null,
+          "cameraMinBeforeM": null,
+          "cameraGroundSource": "none",
+          "cameraGroundLevel": -1,
+          "cameraGuardLifts": 0,
+          "cameraGuardMaxLiftM": 0,
+          "cameraBoomClips": 0,
+          "cameraGuardMissing": 0,
+          "cameraGuardReselects": 0,
+          "roverGroundReseats": 0,
+          "groundReadyMode": "waiting",
+          "groundSourceLevel": -1,
+          "groundCameraSourceLevel": -1,
+          "groundWheelSourceLevel": -1,
+          "groundCentreSourceLevel": -1,
+          "openMeterMs": 0,
+          "openParkMs": 0,
+          "openRocksMs": 0,
+          "fineFirstMs": -1,
+          "shadowReadyMs": -1,
+          "driveGpuReadyMs": -1,
+          "openQueueHigh": -1,
+          "openQueueMedium": -1,
+          "openQueueLow": -1
+        },
+        "rocksShown": 0,
+        "roverReady": true,
+        "resolutionScale": 1,
+        "msaaSamples": 2,
+        "driver": null
+      },
+      "title": "MOONDA · Moon landing site explorer",
+      "indexScripts": [
+        "https://moonda.us/assets/index-CJg0x8Jm.js"
+      ],
+      "resourceIndexes": [
+        "https://moonda.us/assets/index-CJg0x8Jm.js",
+        "https://moonda.us/assets/index-CJg0x8Jm.js"
+      ],
+      "timing": [
+        {
+          "type": "navigate",
+          "responseStart": 924.2999999523163,
+          "domContentLoadedEventEnd": 1190.3999999761581,
+          "transferSize": 3621,
+          "encodedBodySize": 3321
+        }
+      ],
+      "expectedHashMatches": true,
+      "enterClicked": ".start-enter-quiet:not([disabled])"
+    }
+  ],
+  "landing": {
+    "ready": true,
+    "readyMs": 1778,
+    "progress": {
+      "pct": 100,
+      "step": "Ready",
+      "done": true,
+      "stages": [
+        {
+          "id": "app",
+          "state": "done",
+          "frac": null,
+          "ms": 2715
+        },
+        {
+          "id": "photo",
+          "state": "done",
+          "frac": null,
+          "ms": 13259
+        },
+        {
+          "id": "mountains",
+          "state": "done",
+          "frac": null,
+          "ms": 20291
+        },
+        {
+          "id": "sky",
+          "state": "done",
+          "frac": null,
+          "ms": 16672
+        },
+        {
+          "id": "layers",
+          "state": "later",
+          "frac": null,
+          "ms": 24589
+        },
+        {
+          "id": "science",
+          "state": "done",
+          "frac": null,
+          "ms": 365
+        },
+        {
+          "id": "pole",
+          "state": "later",
+          "frac": null,
+          "ms": 27693
+        },
+        {
+          "id": "surface",
+          "state": "done",
+          "frac": null,
+          "ms": 7
+        },
+        {
+          "id": "music",
+          "state": "done",
+          "frac": null,
+          "ms": 2819
+        }
+      ]
+    },
+    "preloadTrace": [
+      "Getting the south pole ready…: sharp after 5624 ms, 0 photo jobs left trek×1 science×3",
+      "Building the 3D mountains…: timed out after 12500 ms, 8 photo jobs left trek×7 synth×2",
+      "Sharpening the landing area…: sharp after 9568 ms, 0 photo jobs left trek×1"
+    ],
+    "layerWarm": {
+      "ms": 24588,
+      "filesReady": true,
+      "globeReady": false,
+      "flatReady": false
+    },
+    "poleHeightWarm": {
+      "ms": 20001,
+      "ready": false,
+      "running": false
+    },
+    "render": {
+      "loop": true,
+      "errorOverlay": null,
+      "errors": []
+    },
+    "lander": {
+      "phase": "on",
+      "active": true,
+      "placed": true,
+      "stats": {
+        "enterMs": 1672,
+        "loadMs": 1289,
+        "loadTimedOut": false,
+        "detailMs": 12766,
+        "rocksMs": 2198,
+        "recentreMs": 0,
+        "recentres": 0,
+        "exitMs": 0,
+        "shadowBuildMs": 27,
+        "shadowSweepMs": 1.8,
+        "meanBuildMs": 9,
+        "sunHere": 1,
+        "worstFrame": {
+          "out": 17,
+          "load": 67,
+          "in": 83,
+          "leaveOut": 0,
+          "leaveLoad": 0,
+          "leaveIn": 0
+        },
+        "cameraClearanceM": 2.0000000000750333,
+        "cameraMinClearanceM": 1.2840266162443186,
+        "cameraMinBeforeM": 1.2840266162443186,
+        "cameraGroundSource": "ancestor",
+        "cameraGroundLevel": 18,
+        "cameraGuardLifts": 0,
+        "cameraGuardMaxLiftM": 0,
+        "cameraBoomClips": 0,
+        "cameraGuardMissing": 0,
+        "cameraGuardReselects": 0,
+        "roverGroundReseats": 5,
+        "groundReadyMode": "fine",
+        "groundSourceLevel": 18,
+        "groundCameraSourceLevel": 18,
+        "groundWheelSourceLevel": 18,
+        "groundCentreSourceLevel": 18,
+        "openMeterMs": 1,
+        "openParkMs": 0,
+        "openRocksMs": 31,
+        "fineFirstMs": 1293,
+        "shadowReadyMs": 789,
+        "driveGpuReadyMs": 189,
+        "openQueueHigh": 0,
+        "openQueueMedium": 224,
+        "openQueueLow": 0
+      },
+      "rocksShown": 65,
+      "roverReady": true,
+      "resolutionScale": 0.7856742013183862,
+      "msaaSamples": 2,
+      "driver": {
+        "speed": 0,
+        "odometer": 0,
+        "bodyH": 1954.589711932754,
+        "pitch": 0.03479608925961098,
+        "roll": -0.02225942697527874
+      }
+    },
+    "title": "MOONDA · Moon landing site explorer",
+    "indexScripts": [
+      "https://moonda.us/assets/index-CJg0x8Jm.js"
+    ],
+    "resourceIndexes": [
+      "https://moonda.us/assets/index-CJg0x8Jm.js",
+      "https://moonda.us/assets/index-CJg0x8Jm.js"
+    ],
+    "timing": [
+      {
+        "type": "navigate",
+        "responseStart": 924.2999999523163,
+        "domContentLoadedEventEnd": 1190.3999999761581,
+        "transferSize": 3621,
+        "encodedBodySize": 3321
+      }
+    ]
+  },
+  "driving": null,
+  "checks": {},
+  "ok": false,
+  "failure": "TypeError: Cannot read properties of undefined (reading 'setView')\n    at evaluate (evaluate at file:///Volumes/CodexWork/Projects/MOONDA/outputs/pitch-2026-11-15/live-check.mjs:206:18, <anonymous>:1:28)\n    at #evaluate (file:///Volumes/CodexWork/Projects/MOONDA/app/node_modules/puppeteer-core/lib/puppeteer/cdp/ExecutionContext.js:402:19)\n    at async ExecutionContext.evaluate (file:///Volumes/CodexWork/Projects/MOONDA/app/node_modules/puppeteer-core/lib/puppeteer/cdp/ExecutionContext.js:288:16)\n    at async IsolatedWorld.evaluate (file:///Volumes/CodexWork/Projects/MOONDA/app/node_modules/puppeteer-core/lib/puppeteer/cdp/IsolatedWorld.js:104:16)\n    at async CdpFrame.evaluate (file:///Volumes/CodexWork/Projects/MOONDA/app/node_modules/puppeteer-core/lib/puppeteer/api/Frame.js:364:20)\n    at async CdpPage.evaluate (file:///Volumes/CodexWork/Projects/MOONDA/app/node_modules/puppeteer-core/lib/puppeteer/api/Page.js:832:20)\n    at async file:///Volumes/CodexWork/Projects/MOONDA/outputs/pitch-2026-11-15/live-check.mjs:206:7",
+  "finishedAt": "2026-11-15T04:54:34.313Z"
+}

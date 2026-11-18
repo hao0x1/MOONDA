@@ -1,0 +1,14 @@
+[
+  {
+    "url": "https://moonda.us/",
+    "entry": "./assets/index--Ch_e90l.js",
+    "recovery": true,
+    "bytes": 13629
+  },
+  {
+    "url": "https://moonda-lunar-navigator.netlify.app/",
+    "entry": "./assets/index--Ch_e90l.js",
+    "recovery": true,
+    "bytes": 13955
+  }
+]

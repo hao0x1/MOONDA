@@ -1,0 +1,29 @@
+To: api-service@deepseek.com
+Subject: Suspected abuse of MOONDA paid API proxy — usage review and evidence preservation request
+
+Hello DeepSeek API Support,
+
+I operate MOONDA at https://moonda.us and request a review of suspected unauthorized automated usage through our public AI proxy.
+
+Account email: [enter the email used for the DeepSeek account]
+Affected API key label: moonda (old key now revoked; no full API key attached)
+Window: 16 November 2026, 00:00–01:00 Asia/Phnom_Penh / 15 November 2026, 17:00–18:00 UTC
+Model: deepseek-v4-pro
+
+Your per-key export records:
+- 353 requests
+- 15,947,611 total tokens
+- 13,140,608 cached input tokens
+- 266,761 uncached input tokens
+- 2,540,242 output tokens
+- CNY37.4647827 charged during this window
+
+Cloudflare's view of https://moonda.us/api/ai shows a contemporaneous scripted burst: 1,079 endpoint requests, with 1,074 attributed to one source IP, and Python aiohttp/curl user agents prominent. These are separate edge and provider records and cannot be matched one-to-one. Because MOONDA proxies requests server-side, your records may show our hosting provider's egress address rather than the original website visitor.
+
+Please preserve relevant per-key usage, request and billing records still available; confirm the billed usage for this window; investigate the reported pattern; and advise whether any billing adjustment is available under your policies. I understand an adjustment is not guaranteed.
+
+We found an unprotected public proxy, which could be abused without stealing the underlying key. We have not established that the API key itself was leaked or identified the person operating the client connection. The key has been replaced and revoked, rate limits and a shared allowance deployed, and relevant exports retained.
+
+I can provide the per-key CSV export, screenshots and our incident summary. Please advise the appropriate secure attachment channel and provide a case reference. No full credentials are included in this report.
+
+MOONDA operator

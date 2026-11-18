@@ -1,0 +1,32 @@
+{
+  "site": "https://moonda.us",
+  "deployId": "6afa3c5cd63d38cf54aea16b",
+  "deployLog": "https://app.netlify.com/projects/moonda-lunar-navigator/deploys/6afa3c5cd63d38cf54aea16b",
+  "branch": "codex/moonda-ai-abuse-guard-2026-11-16",
+  "commit": "3f1823a",
+  "buildPassed": true,
+  "offlineProxyPassed": true,
+  "offlinePermitRacesPassed": true,
+  "offlineHandlerPassed": true,
+  "nativeRateLimitVerified": 429,
+  "oldCredentialVerifiedInvalid": 401,
+  "primaryBrowserAfterRevocation": "Replacement key verified.",
+  "finalRequest": {
+    "status": 200,
+    "requestId": "01M7GQS8YDXG4R9Y4XRSQWKVBP",
+    "guard": "2026-11-16",
+    "done": true,
+    "elapsedSeconds": 5.07
+  },
+  "durableCompletionReceipt": {
+    "key": "v1/audit/2026-11-16/eb3d456f-01db-48e7-8c8f-9d41e2a0413c",
+    "reason": "complete",
+    "usage": {
+      "prompt_tokens": 8,
+      "completion_tokens": 2,
+      "total_tokens": 10,
+      "prompt_cache_hit_tokens": 0,
+      "prompt_cache_miss_tokens": 8
+    }
+  }
+}

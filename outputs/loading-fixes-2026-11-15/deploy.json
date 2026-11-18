@@ -1,0 +1,10 @@
+{
+  "site_id": "269d4d9b-4cc9-4a41-a232-73bbcb6eb3ed",
+  "site_name": "moonda-lunar-navigator",
+  "deploy_id": "6af9da67b22b60a285b07763",
+  "deploy_url": "https://6af9da67b22b60a285b07763--moonda-lunar-navigator.netlify.app",
+  "logs": "https://app.netlify.com/projects/moonda-lunar-navigator/deploys/6af9da67b22b60a285b07763",
+  "function_logs": "https://app.netlify.com/projects/moonda-lunar-navigator/logs/functions",
+  "edge_function_logs": "https://app.netlify.com/projects/moonda-lunar-navigator/logs/edge-functions",
+  "url": "https://moonda.us"
+}

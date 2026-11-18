@@ -1,0 +1,146 @@
+{
+ "steps": [
+  {
+   "do": "eval",
+   "ms": 27213,
+   "note": "{\"done\":true}"
+  },
+  {
+   "do": "wait",
+   "ms": 702
+  },
+  {
+   "do": "eval",
+   "ms": 1,
+   "note": "{\"resolutionScale\":1,\"msaaSamples\":2,\"fxaa\":false,\"maxSSE\":1,\"useDefaultRenderLoop\":true}"
+  },
+  {
+   "do": "eval",
+   "ms": 3378,
+   "note": "{\"phase\":\"on\",\"stats\":{\"enterMs\":3104,\"loadMs\":2688,\"loadTimedOut\":false,\"detailMs\":3848,\"rocksMs\":1036,\"recentreMs\":0,\"recentres\":0,\"exitMs\":0,\"shadowBuildMs\":32,\"shadowSweepMs\":9.1,\"meanBuildMs\":12,"
+  },
+  {
+   "do": "wait",
+   "ms": 2502
+  },
+  {
+   "do": "eval",
+   "ms": 5263,
+   "note": "{\"near\":{\"frames\":24,\"samples\":276,\"maxFloatingM\":0.0008737369591926836,\"maxAbsoluteErrorM\":0.0018465693733560329,\"violations\":[],\"directions\":[{\"yaw\":214.18785095215412,\"frames\":6,\"samples\":78},{\"yaw"
+  },
+  {
+   "do": "eval",
+   "ms": 0,
+   "note": "{\"passed\":true,\"nearSamples\":276,\"farSamples\":53}"
+  }
+ ],
+ "measures": {},
+ "evals": {
+  "startup": {
+   "done": true
+  },
+  "mainMoonBefore": {
+   "resolutionScale": 1,
+   "msaaSamples": 2,
+   "fxaa": false,
+   "maxSSE": 1,
+   "useDefaultRenderLoop": true
+  },
+  "roverReady": {
+   "phase": "on",
+   "stats": {
+    "enterMs": 3104,
+    "loadMs": 2688,
+    "loadTimedOut": false,
+    "detailMs": 3848,
+    "rocksMs": 1036,
+    "recentreMs": 0,
+    "recentres": 0,
+    "exitMs": 0,
+    "shadowBuildMs": 32,
+    "shadowSweepMs": 9.1,
+    "meanBuildMs": 12,
+    "sunHere": 1,
+    "worstFrame": {
+     "out": 17,
+     "load": 83,
+     "in": 117,
+     "leaveOut": 0,
+     "leaveLoad": 0,
+     "leaveIn": 0
+    },
+    "cameraClearanceM": 2.0000000000752607,
+    "cameraMinClearanceM": 1.2840266162443186,
+    "cameraMinBeforeM": 1.2840266162443186,
+    "cameraGroundSource": "ancestor",
+    "cameraGroundLevel": 15,
+    "cameraGuardLifts": 0,
+    "cameraGuardMaxLiftM": 0,
+    "cameraBoomClips": 0,
+    "cameraGuardMissing": 0,
+    "cameraGuardReselects": 0,
+    "roverGroundReseats": 5,
+    "groundReadyMode": "fine",
+    "groundSourceLevel": 15,
+    "groundCameraSourceLevel": 15,
+    "groundWheelSourceLevel": 18,
+    "groundCentreSourceLevel": 18,
+    "openMeterMs": 1,
+    "openParkMs": 0,
+    "openRocksMs": 40,
+    "fineFirstMs": 2691,
+    "shadowReadyMs": 2488,
+    "driveGpuReadyMs": 188,
+    "openQueueHigh": 0,
+    "openQueueMedium": 204,
+    "openQueueLow": 0
+   }
+  },
+  "rockSeats": {
+   "near": {
+    "frames": 24,
+    "samples": 276,
+    "maxFloatingM": 0.0008737369591926836,
+    "maxAbsoluteErrorM": 0.0018465693733560329,
+    "violations": [],
+    "directions": [
+     {
+      "yaw": 214.18785095215412,
+      "frames": 6,
+      "samples": 78
+     },
+     {
+      "yaw": 304.1878509521541,
+      "frames": 6,
+      "samples": 60
+     },
+     {
+      "yaw": 34.18785095215412,
+      "frames": 6,
+      "samples": 54
+     },
+     {
+      "yaw": 124.18785095215412,
+      "frames": 6,
+      "samples": 84
+     }
+    ]
+   },
+   "far": {
+    "samples": 53,
+    "maxFloatingM": 0.0018233425801099656,
+    "maxAbsoluteErrorM": 0.0018824595706519176
+   },
+   "toleranceM": 0.03,
+   "passed": true
+  },
+  "rockSeatAssertion": {
+   "passed": true,
+   "nearSamples": 276,
+   "farSamples": 53
+  }
+ },
+ "errors": [],
+ "shots": [],
+ "gpu": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5, Unspecified Version)"
+}

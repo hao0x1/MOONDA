@@ -1,0 +1,111 @@
+{
+  "date_local": "2026-11-15",
+  "scope": "Identification only. No application code changes or deployments.",
+  "incident_limit": "The exact reported incident was not captured. Failure paths were verified through current-source inspection and controlled fault injection; ordinary live startup was also measured.",
+  "live_primary": {
+    "cold_ready_seconds": 106.3,
+    "warm_reload_ready_seconds": 20.5,
+    "browser_errors": 0,
+    "production_bundle": "index-CKwODPQr.js",
+    "timing_resolution_seconds": 5
+  },
+  "findings": [
+    {
+      "id": "BOOT_STREAM_NO_TIMEOUT",
+      "impact": "high",
+      "finding": "App bootstrap waits indefinitely on a stalled fetch or stream before React and its watchdog exist.",
+      "source": "app/index.html:76",
+      "evidence": "Exact bootstrap function in VM: stalled 58% stream and unresolved fetch insert no module script.",
+      "limitation": "Can cause an indefinitely stuck App row; screenshot already passed this row."
+    },
+    {
+      "id": "MODULE_LOAD_NO_RECOVERY",
+      "impact": "medium",
+      "finding": "Injected module script has no error handler, retry, or error state.",
+      "source": "app/index.html:70",
+      "evidence": "Source inspection.",
+      "limitation": "A module load error can leave the static boot screen indefinitely."
+    },
+    {
+      "id": "PHOTO_METADATA_GATES_FALLBACK",
+      "impact": "high",
+      "finding": "Untimed base.json and polar index requests can keep providers returning wait, including the remote fallback.",
+      "source": "app/src/moon/imagery.ts:687",
+      "evidence": "Actual provider function VM checks: one pending fetch, repeated wait from local and remote providers. Polar equivalent at 1045/1061.",
+      "limitation": "Permanent underlying imagery wait; outer startup screen may time out."
+    },
+    {
+      "id": "TERRAIN_FETCH_NO_DEADLINE",
+      "impact": "medium",
+      "finding": "Height-map retries only run after rejection; stalled headers or body have no per-request timeout.",
+      "source": "app/src/science/heights.ts:13",
+      "evidence": "Source inspection; live cold DEM transfers were very slow but completed.",
+      "limitation": "Mountains can wait to the 90-second outer limit; underlying terrain request remains pending."
+    },
+    {
+      "id": "MANIFEST_PROMISE_NEVER_RESET",
+      "impact": "medium",
+      "finding": "A failed manifest resolves to an empty list and stays cached; a stalled manifest promise is also reused indefinitely.",
+      "source": "app/src/science/layerValues.ts:8",
+      "evidence": "Actual function VM: healthy network replacement still returns empty list after initial failure, fetch count 1. MoonMap 573 awaits manifest outside its nominal 5-second warming budget.",
+      "limitation": "Reload can recover missing layers; stalled manifest can extend layer stage to 90-second limit."
+    },
+    {
+      "id": "IMAGERY_WORKER_FAILURE_STRANDS_REQUESTS",
+      "impact": "medium",
+      "finding": "Worker error permanently removes worker and leaves warm/value/control promises unresolved.",
+      "source": "app/src/moon/imagery.ts:374",
+      "evidence": "Exact class test: three callback maps stay size 1; no promise settles after registered error; worker null.",
+      "limitation": "Layer startup delay up to outer timeout; existing value reads can remain pending indefinitely."
+    },
+    {
+      "id": "SCIENCE_UI_WORKER_NO_RECOVERY",
+      "impact": "medium",
+      "finding": "Calculator UI hooks have no timeout or worker error handler, and a loading cache entry suppresses repeated requests.",
+      "source": "app/src/science/client.ts:29",
+      "evidence": "Exact-source VM with nonresponding worker: cached loading retained, repeated spot sends no new request.",
+      "limitation": "Permanent calculator-card loading; separate from the screenshot photo stage."
+    },
+    {
+      "id": "EMERGENCY_UI_UNLOCK_BEFORE_MAP",
+      "impact": "medium",
+      "finding": "App 180-second fallback sets only UI completion while map navigation remains disabled until actual preload completion.",
+      "source": "app/src/App.tsx:145",
+      "evidence": "Replayable exact preload source with fake clock: completion 201058ms, done false at 180000ms. Navigation linkage in MoonMap 552/612.",
+      "limitation": "Enter can open a temporarily locked map, and continuing preload can move the camera."
+    },
+    {
+      "id": "FAILED_PRELOAD_REPORTED_DONE",
+      "impact": "medium",
+      "finding": "Timeout helper treats rejection as success; layer supporting-file result is discarded.",
+      "source": "app/src/moon/preload.ts:84",
+      "evidence": "Replayable fake-clock test: rejected DEM reports Mountains done and launches science; supporting 404 reports Layers done.",
+      "limitation": "Successful-looking rows do not reliably mean usable assets."
+    },
+    {
+      "id": "MISLEADING_PROGRESS",
+      "impact": "low",
+      "finding": "Fraction derives from a changing queue and can move backward; event dedup also suppresses row-only changes.",
+      "source": "app/src/moon/preload.ts:99",
+      "evidence": "Live primary cold progress 14% to11%, and 86% to83%. Exact-source test retains displayed photo 58% while work advances to 60%; dedup at 172.",
+      "limitation": "Creates false impression of freezing; does not itself stop loading."
+    },
+    {
+      "id": "TERRAIN_OFF_SURFACE_INFINITE_WAIT",
+      "impact": "high",
+      "finding": "Stand here with 3D mountains disabled cannot park rover or satisfy required surface coverage; timeout is inside the impossible guard.",
+      "source": "app/src/moon/lander.ts:2067",
+      "evidence": "Exact-method VM: valid level 18 camera ground, safe clearance, five coverage frames; readiness false at 4s and 1h. Terrain provider change MoonMap 689.",
+      "limitation": "Deterministic surface loading hang under this setting; not the initial screenshot. No live UI reproduction yet."
+    }
+  ],
+  "artifacts": [
+    "outputs/startup-audit-2026-11-15/state/startup-state-repro.mjs",
+    "outputs/startup-audit-2026-11-15/state/startup-state-results.json",
+    "outputs/startup-audit-2026-11-15/live-repro/result.json"
+  ],
+  "live_fallback": {
+    "probe": "capped at 60 seconds; incomplete, not an infinite-hang conclusion",
+    "observed_failure": "Music request cylinder-five.m4a failed with net::ERR_HTTP2_PROTOCOL_ERROR; music stage released at its 20-second timeout."
+  }
+}

@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <!-- Tab icon: the skyline M mark (MOONDA/brand/logo/final). The SVG follows the browser's light/dark theme. -->
+    <link rel="icon" type="image/png" sizes="32x32" href="./favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="./favicon-192.png" />
+    <link rel="icon" type="image/png" sizes="512x512" href="./favicon-512.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#05060a" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="description" content="MOONDA — explore the Moon like a map and check any south-pole landing spot for sunlight and Earth view." />
+    <title>MOONDA · Moon landing site explorer</title>
+    <style>html,body{background:#05060a;height:100%;margin:0}.intro-bg{z-index:99;pointer-events:none;background:#05060a;transition:opacity .48s ease-out;position:fixed;inset:0}.intro-bg video{object-fit:cover;width:100%;height:100%;position:absolute;inset:0}.intro-bg:after{content:"";background:radial-gradient(60% 75% at 50% 48%,#05060a75 0%,#05060a33 60%,#05060a0f 100%);position:absolute;inset:0}.intro-bg.gone{opacity:0}.boot{z-index:100;box-sizing:border-box;padding-top:max(24px, calc(50vh - 370px * var(--sz,1)));color:#eeeff1;background:0 0;justify-content:center;align-items:flex-start;font-family:Google Sans Flex Variable,system-ui,-apple-system,sans-serif;display:flex;position:fixed;inset:0}.boot-col{zoom:var(--sz,1);flex-direction:column;align-items:center;display:flex}.boot-name{letter-spacing:.05em;white-space:nowrap;align-items:baseline;font-size:50px;font-weight:860;line-height:1;display:inline-flex}.boot-name svg{width:auto;height:.74em;aspect-ratio:88/77;flex:none;align-self:baseline;height:1.03cap;margin:0 .07em 0 .03em;display:block}.boot-name span:last-child{margin-right:-.05em}.boot-tag{color:#b3b5bc;margin:16px 0 0;font-size:14px}.boot-col{width:min(560px,100% - 32px)}.boot-stages{border-top:1px solid #ffffff14;width:100%;margin:24px 0 0;padding:0;list-style:none}.boot-stages li{color:#b3b5bc;border-bottom:1px solid #ffffff14;align-items:center;gap:12px;height:32px;font-size:14px;display:flex;position:relative}.boot-stages li>span:first-child{flex:1}.boot-stages .on>span:first-child{color:#eeeff1}.boot-stages .q{color:#8c8e97;font-size:12px}.boot-stages .n{color:#8c8e97;font-family:Geist Mono Variable,ui-monospace,SF Mono,Menlo,monospace;font-size:12px}.boot-line{height:1px;position:absolute;bottom:-1px;left:0;right:0;overflow:hidden}.boot-line i{transform-origin:0;transform:scaleX(var(--f,0));background:#eeeff1;transition:transform .4s cubic-bezier(.2,.7,.2,1);position:absolute;inset:0}.boot-line.busy i{width:30%;animation:1.4s ease-in-out infinite boot-busy;transform:none}@keyframes boot-busy{0%{transform:translate(-100%)}to{transform:translate(340%)}}@media (prefers-reduced-motion:reduce){.boot-line.busy i{opacity:.4;width:100%;animation:none}}</style>
+    <script>
+      // The start screen is drawn at a size that fits the window height: full size from 960 px tall, smaller below.
+      (function () { function fit() { document.documentElement.style.setProperty('--sz', String(Math.max(0.7, Math.min(1, innerHeight / 960)))); } fit(); addEventListener('resize', fit); })();
+      // CesiumJS loads its workers and assets from here (works locally and on any static host).
+      window.CESIUM_BASE_URL = new URL('cesium/', document.baseURI).href;
+      // The app's code (about 6 MB) is downloaded here with a visible percentage on the "App" row, then started
+      // from the browser cache: on a first visit with nothing cached the page would otherwise sit on the video
+      // with no sign of progress. The production build calls this in place of its <script type="module">
+      // (vite.config.ts, bootLoader); the dev server loads the code itself and the row just shows it is busy.
+      window.__bootLoad = function (src, size) {
+        function show(f) {
+          var n = document.getElementById('boot-app-n'), l = document.getElementById('boot-app-line');
+          if (n) n.textContent = Math.round(f * 100) + '%';
+          if (l) { l.classList.remove('busy'); l.style.setProperty('--f', String(f)); }
+        }
+        function start() {
+          var s = document.createElement('script');
+          s.type = 'module'; s.crossOrigin = ''; s.src = src;
+          document.head.appendChild(s);
+        }
+        if (!size || !window.fetch || !window.ReadableStream) { start(); return; }
+        fetch(src, { credentials: 'same-origin' }).then(function (r) {
+          if (!r.ok || !r.body) throw new Error(String(r.status));
+          var reader = r.body.getReader(), got = 0;
+          function pump() {
+            return reader.read().then(function (x) {
+              if (x.done) return;
+              got += x.value.length; show(Math.min(0.99, got / size));
+              return pump();
+            });
+          }
+          return pump();
+        }).then(function () { show(1); }, function () { /* the module script below loads it the normal way */ }).then(start);
+      };
+    </script>
+    <script>window.__bootLoad("./assets/index-CJg0x8Jm.js", 6413517)</script>
+    <link rel="stylesheet" crossorigin href="./assets/index-C6YWK4tw.css">
+  </head>
+  <body>
+    <div class="intro-bg" id="intro-bg" aria-hidden="true">
+      <video id="intro-video" src="./intro/space.mp4" poster="./intro/space.jpg" autoplay muted loop playsinline preload="auto"></video>
+    </div>
+    <div id="root">
+      <div class="boot" role="status" aria-label="Loading MOONDA">
+        <div class="boot-col">
+          <div class="boot-name" role="img" aria-label="MOONDA"><span aria-hidden="true">M</span><svg viewBox="0 0 88 77" aria-hidden="true"><ellipse cx="44" cy="38.5" rx="44" ry="38.5" fill="#eeeff1" /><ellipse cx="50.5" cy="34.75" rx="37.5" ry="34.75" fill="#fabc05" /></svg><span aria-hidden="true">ONDA.</span></div>
+          <div class="boot-tag">Explore the Moon. Find a place to land.</div>
+          <ul class="boot-stages" aria-label="What is being loaded">
+            <li class="on"><span>App</span><span class="n" id="boot-app-n"></span><span class="boot-line busy" id="boot-app-line" aria-hidden="true"><i></i></span></li>
+            <li><span>Moon photo</span><span class="q">Waiting</span></li>
+            <li><span>Mountains</span><span class="q">Waiting</span></li>
+            <li><span>Night sky</span><span class="q">Waiting</span></li>
+            <li><span>Map layers</span><span class="q">Waiting</span></li>
+            <li><span>Landing-site calculator</span><span class="q">Waiting</span></li>
+            <li><span>South pole views</span><span class="q">Waiting</span></li>
+            <li><span>Surface view</span><span class="q">Waiting</span></li>
+            <li><span>Music</span><span class="q">Waiting</span></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

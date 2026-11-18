@@ -1,0 +1,818 @@
+{
+ "steps": [
+  {
+   "do": "eval",
+   "ms": 27709,
+   "note": "{\"done\":true}"
+  },
+  {
+   "do": "wait",
+   "ms": 702
+  },
+  {
+   "do": "eval",
+   "ms": 27,
+   "note": "{\"resolutionScale\":1,\"msaaSamples\":2,\"fxaa\":false,\"maxSSE\":1,\"useDefaultRenderLoop\":true}"
+  },
+  {
+   "do": "eval",
+   "ms": 2963,
+   "note": "{\"phase\":\"on\",\"stats\":{\"enterMs\":2595,\"loadMs\":2129,\"loadTimedOut\":false,\"detailMs\":2794,\"rocksMs\":612,\"recentreMs\":0,\"recentres\":0,\"exitMs\":0,\"shadowBuildMs\":55,\"shadowSweepMs\":3.8,\"meanBuildMs\":18,\""
+  },
+  {
+   "do": "wait",
+   "ms": 2502
+  },
+  {
+   "do": "eval",
+   "ms": 6690,
+   "note": "ERROR: Error: Rock seats differ from selected terrain: {\"near\":{\"frames\":24,\"samples\":276,\"maxFloatingM\":0.04833213624874588,\"maxAbsoluteErrorM\":0.04833213624874588,\"directions\":[{\"yaw\":214.18785095215412,\"frames\":6,\"samples\":78},{\"yaw\":304.1878509521541,\"frames\":6,\"samples\":60},{\"yaw\":34.18785095215412,\"f"
+  },
+  {
+   "do": "eval",
+   "ms": 24,
+   "note": "{\"diagnostics\":{\"layers\":[\"photo\",\"polarPhoto\",\"terrain\",\"realSun\",\"stars\",\"skyNames\",\"names\",\"artemis\",\"missions\",\"sitesActive\",\"sitesPlanned\"],\"opacity\":{},\"layerDefs\":[\"psr\",\"waterice\",\"danger\",\"sl"
+  },
+  {
+   "do": "key",
+   "ms": 211
+  },
+  {
+   "do": "eval",
+   "ms": 708,
+   "note": "{\"diagnostics\":{\"layers\":[\"photo\",\"polarPhoto\",\"terrain\",\"realSun\",\"stars\",\"skyNames\",\"names\",\"artemis\",\"missions\",\"sitesActive\",\"sitesPlanned\"],\"opacity\":{},\"layerDefs\":[\"psr\",\"waterice\",\"danger\",\"sl"
+  },
+  {
+   "do": "shot",
+   "ms": 281,
+   "note": "/Volumes/CodexWork/Projects/MOONDA/outputs/pitch-2026-11-15/minimap-check/expanded-map.png"
+  },
+  {
+   "do": "eval",
+   "ms": 1,
+   "note": "\"Close the map (Esc or M)\""
+  },
+  {
+   "do": "key",
+   "ms": 42
+  },
+  {
+   "do": "eval",
+   "ms": 514,
+   "note": "{\"diagnostics\":{\"layers\":[\"photo\",\"polarPhoto\",\"terrain\",\"realSun\",\"stars\",\"skyNames\",\"names\",\"artemis\",\"missions\",\"sitesActive\",\"sitesPlanned\"],\"opacity\":{},\"layerDefs\":[\"psr\",\"waterice\",\"danger\",\"sl"
+  },
+  {
+   "do": "shot",
+   "ms": 540,
+   "note": "/Volumes/CodexWork/Projects/MOONDA/outputs/pitch-2026-11-15/minimap-check/rover-after-map.png"
+  },
+  {
+   "do": "eval",
+   "ms": 3,
+   "note": "\"requested\""
+  },
+  {
+   "do": "eval",
+   "ms": 1436,
+   "note": "{\"before\":{\"resolutionScale\":1,\"msaaSamples\":2,\"fxaa\":false,\"maxSSE\":1,\"useDefaultRenderLoop\":true},\"after\":{\"resolutionScale\":1,\"msaaSamples\":2,\"fxaa\":false,\"maxSSE\":1,\"useDefaultRenderLoop\":true},\"r"
+  },
+  {
+   "do": "shot",
+   "ms": 303,
+   "note": "/Volumes/CodexWork/Projects/MOONDA/outputs/pitch-2026-11-15/minimap-check/main-moon-restored.png"
+  }
+ ],
+ "measures": {},
+ "evals": {
+  "startup": {
+   "done": true
+  },
+  "mainMoonBefore": {
+   "resolutionScale": 1,
+   "msaaSamples": 2,
+   "fxaa": false,
+   "maxSSE": 1,
+   "useDefaultRenderLoop": true
+  },
+  "roverReady": {
+   "phase": "on",
+   "stats": {
+    "enterMs": 2595,
+    "loadMs": 2129,
+    "loadTimedOut": false,
+    "detailMs": 2794,
+    "rocksMs": 612,
+    "recentreMs": 0,
+    "recentres": 0,
+    "exitMs": 0,
+    "shadowBuildMs": 55,
+    "shadowSweepMs": 3.8,
+    "meanBuildMs": 18,
+    "sunHere": 1,
+    "worstFrame": {
+     "out": 67,
+     "load": 150,
+     "in": 300,
+     "leaveOut": 0,
+     "leaveLoad": 0,
+     "leaveIn": 0
+    },
+    "cameraClearanceM": 2.0000000000750333,
+    "cameraMinClearanceM": 1.2840266162443186,
+    "cameraMinBeforeM": 1.2840266162443186,
+    "cameraGroundSource": "ancestor",
+    "cameraGroundLevel": 18,
+    "cameraGuardLifts": 0,
+    "cameraGuardMaxLiftM": 0,
+    "cameraBoomClips": 0,
+    "cameraGuardMissing": 0,
+    "cameraGuardReselects": 0,
+    "roverGroundReseats": 5,
+    "groundReadyMode": "fine",
+    "groundSourceLevel": 15,
+    "groundCameraSourceLevel": 15,
+    "groundWheelSourceLevel": 18,
+    "groundCentreSourceLevel": 18,
+    "openMeterMs": 1,
+    "openParkMs": 0,
+    "openRocksMs": 79,
+    "fineFirstMs": 2148,
+    "shadowReadyMs": 829,
+    "driveGpuReadyMs": 212,
+    "openQueueHigh": 0,
+    "openQueueMedium": 224,
+    "openQueueLow": 0
+   }
+  },
+  "minimapBefore": {
+   "diagnostics": {
+    "layers": [
+     "photo",
+     "polarPhoto",
+     "terrain",
+     "realSun",
+     "stars",
+     "skyNames",
+     "names",
+     "artemis",
+     "missions",
+     "sitesActive",
+     "sitesPlanned"
+    ],
+    "opacity": {},
+    "layerDefs": [
+     "psr",
+     "waterice",
+     "danger",
+     "slope",
+     "craters",
+     "height"
+    ],
+    "realSun": true,
+    "covered": false,
+    "drawing": {
+     "width": 392,
+     "height": 392,
+     "pixelRatio": 2
+    },
+    "projection": "flat",
+    "blend": 0,
+    "imagery": {
+     "active": 0,
+     "pending": 0,
+     "cached": 29,
+     "bytes": 40370176,
+     "workerDecodes": 23,
+     "fallbackDecodes": 0,
+     "workerCrops": 0,
+     "fallbackCrops": 0,
+     "workerSourceCache": 0,
+     "networkStarts": 23,
+     "maxStartsPerFrame": 4,
+     "heightSpotWarm": {
+      "requests": 0,
+      "bytes": 0,
+      "active": 0,
+      "completed": 0,
+      "failed": 0,
+      "hits": 0,
+      "deduped": 0,
+      "expired": 0,
+      "skipped": 1,
+      "maxActive": 0,
+      "retained": 0,
+      "queued": 0
+     },
+     "landingScienceWarm": {
+      "calls": 1,
+      "running": 0,
+      "ready": 6,
+      "count": 6,
+      "timedOut": 0,
+      "lastMs": 473.1999999284744
+     },
+     "scienceBytes": 1572864,
+     "scienceTiles": 6,
+     "scienceByLayer": {
+      "slope": {
+       "tiles": 1,
+       "bytes": 262144,
+       "pending": 0
+      },
+      "heightGlobal": {
+       "tiles": 1,
+       "bytes": 262144,
+       "pending": 0
+      },
+      "heightPolar": {
+       "tiles": 1,
+       "bytes": 262144,
+       "pending": 0
+      },
+      "psr": {
+       "tiles": 1,
+       "bytes": 262144,
+       "pending": 0
+      },
+      "waterice": {
+       "tiles": 1,
+       "bytes": 262144,
+       "pending": 0
+      },
+      "danger": {
+       "tiles": 1,
+       "bytes": 262144,
+       "pending": 0
+      }
+     },
+     "scienceBudgetBytes": 25165824,
+     "scienceActive": 0,
+     "scienceStarts": 6,
+     "maxScienceStartsPerFrame": 4,
+     "sciencePipeline": {
+      "hits": 37,
+      "misses": 29,
+      "queued": 6,
+      "completed": 6,
+      "busy": 0,
+      "failed": 0,
+      "cancelled": 0,
+      "invalidatedTiles": 0,
+      "budgetEvictions": 0,
+      "totalBudgetEvictions": 0,
+      "evictedBytes": 0,
+      "queue": {
+       "calls": 6,
+       "totalMs": 929.8999999761581,
+       "maxMs": 377.10000002384186,
+       "lastMs": 377.10000002384186
+      },
+      "source": {
+       "calls": 6,
+       "totalMs": 416.9999998807907,
+       "maxMs": 114.19999992847443,
+       "lastMs": 70
+      },
+      "normalise": {
+       "calls": 6,
+       "totalMs": 480.39999997615814,
+       "maxMs": 182.10000002384186,
+       "lastMs": 26
+      },
+      "total": {
+       "calls": 6,
+       "totalMs": 1827.3999998569489,
+       "maxMs": 473.10000002384186,
+       "lastMs": 473.10000002384186
+      }
+     }
+    },
+    "gpu": {
+     "backgroundCpuMs": 0,
+     "maxUploadMs": 4.5,
+     "uploads": 1,
+     "pending": 0,
+     "readyLarge": 0,
+     "tileCrops": 0,
+     "tilePending": 0,
+     "maxSmallUploadMs": 4.5
+    }
+   },
+   "buttonLabel": "Open the larger map (M)",
+   "roverQuality": {
+    "resolutionScale": 0.7856742013183862,
+    "msaaSamples": 2,
+    "fxaa": false,
+    "maxSSE": 1.5,
+    "useDefaultRenderLoop": true
+   }
+  },
+  "expandedMap": {
+   "diagnostics": {
+    "layers": [
+     "photo",
+     "polarPhoto",
+     "terrain",
+     "realSun",
+     "stars",
+     "skyNames",
+     "names",
+     "artemis",
+     "missions",
+     "sitesActive",
+     "sitesPlanned"
+    ],
+    "opacity": {},
+    "layerDefs": [
+     "psr",
+     "waterice",
+     "danger",
+     "slope",
+     "craters",
+     "height"
+    ],
+    "realSun": true,
+    "covered": false,
+    "drawing": {
+     "width": 2154,
+     "height": 1393,
+     "pixelRatio": 1.6824434439317673
+    },
+    "projection": "flat",
+    "blend": 0,
+    "imagery": {
+     "active": 0,
+     "pending": 0,
+     "cached": 72,
+     "bytes": 85458944,
+     "workerDecodes": 66,
+     "fallbackDecodes": 0,
+     "workerCrops": 0,
+     "fallbackCrops": 0,
+     "workerSourceCache": 0,
+     "networkStarts": 66,
+     "maxStartsPerFrame": 4,
+     "heightSpotWarm": {
+      "requests": 0,
+      "bytes": 0,
+      "active": 0,
+      "completed": 0,
+      "failed": 0,
+      "hits": 0,
+      "deduped": 0,
+      "expired": 0,
+      "skipped": 1,
+      "maxActive": 0,
+      "retained": 0,
+      "queued": 0
+     },
+     "landingScienceWarm": {
+      "calls": 1,
+      "running": 0,
+      "ready": 6,
+      "count": 6,
+      "timedOut": 0,
+      "lastMs": 473.1999999284744
+     },
+     "scienceBytes": 1572864,
+     "scienceTiles": 6,
+     "scienceByLayer": {
+      "slope": {
+       "tiles": 1,
+       "bytes": 262144,
+       "pending": 0
+      },
+      "heightGlobal": {
+       "tiles": 1,
+       "bytes": 262144,
+       "pending": 0
+      },
+      "heightPolar": {
+       "tiles": 1,
+       "bytes": 262144,
+       "pending": 0
+      },
+      "psr": {
+       "tiles": 1,
+       "bytes": 262144,
+       "pending": 0
+      },
+      "waterice": {
+       "tiles": 1,
+       "bytes": 262144,
+       "pending": 0
+      },
+      "danger": {
+       "tiles": 1,
+       "bytes": 262144,
+       "pending": 0
+      }
+     },
+     "scienceBudgetBytes": 25165824,
+     "scienceActive": 0,
+     "scienceStarts": 6,
+     "maxScienceStartsPerFrame": 4,
+     "sciencePipeline": {
+      "hits": 37,
+      "misses": 29,
+      "queued": 6,
+      "completed": 6,
+      "busy": 0,
+      "failed": 0,
+      "cancelled": 0,
+      "invalidatedTiles": 0,
+      "budgetEvictions": 0,
+      "totalBudgetEvictions": 0,
+      "evictedBytes": 0,
+      "queue": {
+       "calls": 6,
+       "totalMs": 929.8999999761581,
+       "maxMs": 377.10000002384186,
+       "lastMs": 377.10000002384186
+      },
+      "source": {
+       "calls": 6,
+       "totalMs": 416.9999998807907,
+       "maxMs": 114.19999992847443,
+       "lastMs": 70
+      },
+      "normalise": {
+       "calls": 6,
+       "totalMs": 480.39999997615814,
+       "maxMs": 182.10000002384186,
+       "lastMs": 26
+      },
+      "total": {
+       "calls": 6,
+       "totalMs": 1827.3999998569489,
+       "maxMs": 473.10000002384186,
+       "lastMs": 473.10000002384186
+      }
+     }
+    },
+    "gpu": {
+     "backgroundCpuMs": 0,
+     "maxUploadMs": 4.899999976158142,
+     "uploads": 1,
+     "pending": 0,
+     "readyLarge": 0,
+     "tileCrops": 0,
+     "tilePending": 0,
+     "maxSmallUploadMs": 4.899999976158142
+    }
+   },
+   "css": {
+    "width": 1280,
+    "height": 828
+   },
+   "minimap": {
+    "layers": [
+     "photo",
+     "polarPhoto",
+     "terrain",
+     "realSun",
+     "stars",
+     "skyNames",
+     "names",
+     "artemis",
+     "missions",
+     "sitesActive",
+     "sitesPlanned"
+    ],
+    "opacity": {},
+    "layerDefs": [
+     "psr",
+     "waterice",
+     "danger",
+     "slope",
+     "craters",
+     "height"
+    ],
+    "realSun": true,
+    "covered": true,
+    "drawing": {
+     "width": 392,
+     "height": 392,
+     "pixelRatio": 2
+    },
+    "projection": "flat",
+    "blend": 0,
+    "imagery": {
+     "active": 0,
+     "pending": 0,
+     "cached": 72,
+     "bytes": 85458944,
+     "workerDecodes": 66,
+     "fallbackDecodes": 0,
+     "workerCrops": 0,
+     "fallbackCrops": 0,
+     "workerSourceCache": 0,
+     "networkStarts": 66,
+     "maxStartsPerFrame": 4,
+     "heightSpotWarm": {
+      "requests": 0,
+      "bytes": 0,
+      "active": 0,
+      "completed": 0,
+      "failed": 0,
+      "hits": 0,
+      "deduped": 0,
+      "expired": 0,
+      "skipped": 1,
+      "maxActive": 0,
+      "retained": 0,
+      "queued": 0
+     },
+     "landingScienceWarm": {
+      "calls": 1,
+      "running": 0,
+      "ready": 6,
+      "count": 6,
+      "timedOut": 0,
+      "lastMs": 473.1999999284744
+     },
+     "scienceBytes": 1572864,
+     "scienceTiles": 6,
+     "scienceByLayer": {
+      "slope": {
+       "tiles": 1,
+       "bytes": 262144,
+       "pending": 0
+      },
+      "heightGlobal": {
+       "tiles": 1,
+       "bytes": 262144,
+       "pending": 0
+      },
+      "heightPolar": {
+       "tiles": 1,
+       "bytes": 262144,
+       "pending": 0
+      },
+      "psr": {
+       "tiles": 1,
+       "bytes": 262144,
+       "pending": 0
+      },
+      "waterice": {
+       "tiles": 1,
+       "bytes": 262144,
+       "pending": 0
+      },
+      "danger": {
+       "tiles": 1,
+       "bytes": 262144,
+       "pending": 0
+      }
+     },
+     "scienceBudgetBytes": 25165824,
+     "scienceActive": 0,
+     "scienceStarts": 6,
+     "maxScienceStartsPerFrame": 4,
+     "sciencePipeline": {
+      "hits": 37,
+      "misses": 29,
+      "queued": 6,
+      "completed": 6,
+      "busy": 0,
+      "failed": 0,
+      "cancelled": 0,
+      "invalidatedTiles": 0,
+      "budgetEvictions": 0,
+      "totalBudgetEvictions": 0,
+      "evictedBytes": 0,
+      "queue": {
+       "calls": 6,
+       "totalMs": 929.8999999761581,
+       "maxMs": 377.10000002384186,
+       "lastMs": 377.10000002384186
+      },
+      "source": {
+       "calls": 6,
+       "totalMs": 416.9999998807907,
+       "maxMs": 114.19999992847443,
+       "lastMs": 70
+      },
+      "normalise": {
+       "calls": 6,
+       "totalMs": 480.39999997615814,
+       "maxMs": 182.10000002384186,
+       "lastMs": 26
+      },
+      "total": {
+       "calls": 6,
+       "totalMs": 1827.3999998569489,
+       "maxMs": 473.10000002384186,
+       "lastMs": 473.10000002384186
+      }
+     }
+    },
+    "gpu": {
+     "backgroundCpuMs": 0,
+     "maxUploadMs": 4.5,
+     "uploads": 1,
+     "pending": 0,
+     "readyLarge": 0,
+     "tileCrops": 0,
+     "tilePending": 0,
+     "maxSmallUploadMs": 4.5
+    }
+   },
+   "mainRenderLoop": false,
+   "centre": {
+    "lat": -89.45021821440515,
+    "lon": -137.3154495902176,
+    "heightM": 1954.5552371736005
+   }
+  },
+  "focusMapClose": "Close the map (Esc or M)",
+  "minimapAfter": {
+   "diagnostics": {
+    "layers": [
+     "photo",
+     "polarPhoto",
+     "terrain",
+     "realSun",
+     "stars",
+     "skyNames",
+     "names",
+     "artemis",
+     "missions",
+     "sitesActive",
+     "sitesPlanned"
+    ],
+    "opacity": {},
+    "layerDefs": [
+     "psr",
+     "waterice",
+     "danger",
+     "slope",
+     "craters",
+     "height"
+    ],
+    "realSun": true,
+    "covered": false,
+    "drawing": {
+     "width": 392,
+     "height": 392,
+     "pixelRatio": 2
+    },
+    "projection": "flat",
+    "blend": 0,
+    "imagery": {
+     "active": 0,
+     "pending": 0,
+     "cached": 72,
+     "bytes": 85458944,
+     "workerDecodes": 66,
+     "fallbackDecodes": 0,
+     "workerCrops": 0,
+     "fallbackCrops": 0,
+     "workerSourceCache": 0,
+     "networkStarts": 66,
+     "maxStartsPerFrame": 4,
+     "heightSpotWarm": {
+      "requests": 0,
+      "bytes": 0,
+      "active": 0,
+      "completed": 0,
+      "failed": 0,
+      "hits": 0,
+      "deduped": 0,
+      "expired": 0,
+      "skipped": 1,
+      "maxActive": 0,
+      "retained": 0,
+      "queued": 0
+     },
+     "landingScienceWarm": {
+      "calls": 1,
+      "running": 0,
+      "ready": 6,
+      "count": 6,
+      "timedOut": 0,
+      "lastMs": 473.1999999284744
+     },
+     "scienceBytes": 1572864,
+     "scienceTiles": 6,
+     "scienceByLayer": {
+      "slope": {
+       "tiles": 1,
+       "bytes": 262144,
+       "pending": 0
+      },
+      "heightGlobal": {
+       "tiles": 1,
+       "bytes": 262144,
+       "pending": 0
+      },
+      "heightPolar": {
+       "tiles": 1,
+       "bytes": 262144,
+       "pending": 0
+      },
+      "psr": {
+       "tiles": 1,
+       "bytes": 262144,
+       "pending": 0
+      },
+      "waterice": {
+       "tiles": 1,
+       "bytes": 262144,
+       "pending": 0
+      },
+      "danger": {
+       "tiles": 1,
+       "bytes": 262144,
+       "pending": 0
+      }
+     },
+     "scienceBudgetBytes": 25165824,
+     "scienceActive": 0,
+     "scienceStarts": 6,
+     "maxScienceStartsPerFrame": 4,
+     "sciencePipeline": {
+      "hits": 37,
+      "misses": 29,
+      "queued": 6,
+      "completed": 6,
+      "busy": 0,
+      "failed": 0,
+      "cancelled": 0,
+      "invalidatedTiles": 0,
+      "budgetEvictions": 0,
+      "totalBudgetEvictions": 0,
+      "evictedBytes": 0,
+      "queue": {
+       "calls": 6,
+       "totalMs": 929.8999999761581,
+       "maxMs": 377.10000002384186,
+       "lastMs": 377.10000002384186
+      },
+      "source": {
+       "calls": 6,
+       "totalMs": 416.9999998807907,
+       "maxMs": 114.19999992847443,
+       "lastMs": 70
+      },
+      "normalise": {
+       "calls": 6,
+       "totalMs": 480.39999997615814,
+       "maxMs": 182.10000002384186,
+       "lastMs": 26
+      },
+      "total": {
+       "calls": 6,
+       "totalMs": 1827.3999998569489,
+       "maxMs": 473.10000002384186,
+       "lastMs": 473.10000002384186
+      }
+     }
+    },
+    "gpu": {
+     "backgroundCpuMs": 0,
+     "maxUploadMs": 4.5,
+     "uploads": 1,
+     "pending": 0,
+     "readyLarge": 0,
+     "tileCrops": 0,
+     "tilePending": 0,
+     "maxSmallUploadMs": 4.5
+    }
+   },
+   "roverPhase": "on",
+   "roverQuality": {
+    "resolutionScale": 0.7856742013183862,
+    "msaaSamples": 2,
+    "fxaa": false,
+    "maxSSE": 1.5,
+    "useDefaultRenderLoop": true
+   }
+  },
+  "exitRover": "requested",
+  "mainMoonRestored": {
+   "before": {
+    "resolutionScale": 1,
+    "msaaSamples": 2,
+    "fxaa": false,
+    "maxSSE": 1,
+    "useDefaultRenderLoop": true
+   },
+   "after": {
+    "resolutionScale": 1,
+    "msaaSamples": 2,
+    "fxaa": false,
+    "maxSSE": 1,
+    "useDefaultRenderLoop": true
+   },
+   "restored": true
+  }
+ },
+ "errors": [],
+ "shots": [
+  "/Volumes/CodexWork/Projects/MOONDA/outputs/pitch-2026-11-15/minimap-check/expanded-map.png",
+  "/Volumes/CodexWork/Projects/MOONDA/outputs/pitch-2026-11-15/minimap-check/rover-after-map.png",
+  "/Volumes/CodexWork/Projects/MOONDA/outputs/pitch-2026-11-15/minimap-check/main-moon-restored.png"
+ ],
+ "gpu": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5, Unspecified Version)"
+}

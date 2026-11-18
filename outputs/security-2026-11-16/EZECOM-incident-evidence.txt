@@ -1,0 +1,19 @@
+MOONDA incident evidence summary
+Window: 2026-11-15 17:00:00–18:00:00 UTC / 2026-11-16 00:00–01:00 UTC+7
+Destination: https://moonda.us/api/ai
+Observed source: 113.130.126.113
+Cloudflare network label: AS38901 / EZECOM / Cambodia
+
+Cloudflare dashboard observations:
+- 1,079 requests to /api/ai; 1,074 from the stated IP; other source addresses omitted here.
+- User-agent totals: Python/3.14 aiohttp/3.14.5=980; curl/8.22.0=88.
+- Status totals: 200=362; 503=709; 499=6; 405=2.
+- POST-only view: 1,077 requests. Two GET/405 requests excluded.
+- Individual sampled record: 2026-11-15 17:14:00 UTC, source113.130.126.113, POST /api/ai, HTTP/1.1, Python/3.14 aiohttp/3.14.5, Not mitigated, Dynamic.
+
+Limitations: Cloudflare analytics may be sampled; user-agent strings are client-controlled. The individual operating the connection is unknown. Shared network/proxy/compromised-device use is possible. No source port was available. No request body, prompt or full API key was recovered. Edge and provider billing records cannot be matched one-to-one.
+
+Original native Cloudflare export SHA-256 values (retained by operator):
+7294d754f03b2b77ab3c5b3383b0979be606bd94d0b3f112a94e9c8497dd1eb5  top-client-ips_20261115T1700Z_20261115T1800Z.json
+008b4edc3272171146078b18660fa396711658620efc432435af7416359a420a  top-user-agents_20261115T1700Z_20261115T1800Z.json
+89bdc8c87621f78be92891b2868f7972dc87c4ea56a827684a998f3c642c4dce  requests-by-status-code_20261115T1700Z_20261115T1800Z.json

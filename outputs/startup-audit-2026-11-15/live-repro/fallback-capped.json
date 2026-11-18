@@ -1,0 +1,68 @@
+{
+  "at": "2026-11-15T16:00:54.468Z",
+  "elapsed": 60067,
+  "reason": "Diagnostic capped at60s per parent; startup completion not observed.",
+  "state": {
+    "progress": {
+      "pct": 79,
+      "step": "Map layers",
+      "done": false,
+      "stages": [
+        {
+          "id": "app",
+          "state": "done",
+          "frac": null,
+          "ms": 1959
+        },
+        {
+          "id": "photo",
+          "state": "later",
+          "frac": null,
+          "ms": 26009
+        },
+        {
+          "id": "mountains",
+          "state": "done",
+          "frac": null,
+          "ms": 46739
+        },
+        {
+          "id": "sky",
+          "state": "later",
+          "frac": null,
+          "ms": 30001
+        },
+        {
+          "id": "layers",
+          "state": "loading",
+          "frac": 0.45
+        },
+        {
+          "id": "science",
+          "state": "done",
+          "frac": null,
+          "ms": 1292
+        },
+        {
+          "id": "pole",
+          "state": "loading",
+          "frac": 0.09523809523809523
+        },
+        {
+          "id": "surface",
+          "state": "done",
+          "frac": null,
+          "ms": 18
+        },
+        {
+          "id": "music",
+          "state": "later",
+          "frac": null,
+          "ms": 20001
+        }
+      ]
+    },
+    "trace": [],
+    "body": "Getting the view ready…\nSun\nEarth\nLayers\nCompare\nខ្មែរ\nTutorial\nAI\n2D\nLANDER ARRIVES\n18 Nov 2026 • 02:00 UTC\nMISSION LENGTH\n14 days\nTime since landing (days)\n0\n1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n11\n12\n13\n14\nProjecting time\n02:00 UTC\n18 Nov, 2026\n18 Nov, 09:00 in Cambodia • day 0.0 of 14\nMove the pointer over the Moon to see where it is\nEye height 820 km\nM\nONDA.\n\nExplore the Moon. Find a place to land.\n\nApp\n2.0 s\nMoon photo\nFinishes in the background\nMountains\n46.7 s\nNight sky\nFinishes in the background\nMap layers\n45%\nLanding-site calculator\n1.3 s\nSouth pole views\n10%\nSurface view\nMusic\nFinishes in the background\nGraphics\nFull detail\nThe sharpest Moon, the full night sky and every effect. For a recent laptop or desktop.\nRecommended for this device\nSmooth\nLighter graphics that stay fluid on phones, tablets and older computers.\nEnglish\nខ្មែរ\nMusic\nGetting ready… 79%\nJust enter\nSkip waiting"
+  }
+}
